@@ -1,0 +1,60 @@
+{
+  "name": "telaio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed.mjs",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset --force && node prisma/seed.mjs",
+    "docker:build": "./scripts/container.sh build",
+    "docker:up": "./scripts/container.sh up",
+    "docker:down": "./scripts/container.sh down",
+    "docker:logs": "./scripts/container.sh logs",
+    "utenti": "node scripts/utente.mjs elenco",
+    "utenti:crea": "node scripts/utente.mjs crea"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1120.0",
+    "@aws-sdk/s3-request-presigner": "^3.1120.0",
+    "@prisma/client": "^6.19.3",
+    "@radix-ui/react-avatar": "^1.2.6",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-separator": "^1.1.15",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "ioredis": "^6.0.0",
+    "lucide-react": "^1.34.0",
+    "next": "16.3.3",
+    "nodemailer": "^9.0.6",
+    "pdfkit": "^0.20.1",
+    "prisma": "^6.19.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "playwright": "^1.62.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
+  }
+}
