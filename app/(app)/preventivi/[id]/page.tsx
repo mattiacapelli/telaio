@@ -57,11 +57,11 @@ export default async function PreventivoPage({
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/preventivi"
-          className="h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-xs text-muted hover:border-border2 hover:text-text"
+          className="h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-md text-muted hover:border-border2 hover:text-text"
         >
           ← Preventivi
         </Link>
-        <span className="text-xs text-faint">
+        <span className="text-md text-faint">
           {p.numero}
           {etichetta && ` · ${etichetta}`} · {p.cliente.ragioneSociale}
         </span>
@@ -70,7 +70,7 @@ export default async function PreventivoPage({
           href={`/api/preventivi/${p.id}/pdf`}
           target="_blank"
           rel="noopener"
-          className="flex h-[24px] items-center gap-1.5 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-xs text-muted transition-colors hover:bg-[var(--alpha-light)] hover:text-text"
+          className="flex h-[24px] items-center gap-1.5 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-md text-muted transition-colors hover:bg-[var(--alpha-light)] hover:text-text"
         >
           <FileDown size={13} /> PDF
         </a>
@@ -114,7 +114,7 @@ export default async function PreventivoPage({
               {etichetta && <Badge tono="accento">{etichetta}</Badge>}
               <Badge>{STATI[p.stato]}</Badge>
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted">
+            <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-md text-muted">
               <Chip testo={p.cliente.ragioneSociale} />
               {p.cliente.ragioneSociale}
               {p.referente && (
@@ -131,11 +131,11 @@ export default async function PreventivoPage({
             <div className="text-lg font-semibold">
               {eurCent(riepilogo.totale)}
             </div>
-            <div className="text-xxs text-faint">
+            <div className="text-xs text-faint">
               imponibile {eurCent(riepilogo.imponibile)} · IVA{" "}
               {n(p.aliquotaIva)}%
             </div>
-            <div className="text-xxs text-faint">
+            <div className="text-xs text-faint">
               {p.scadeIl ? `scade ${data(p.scadeIl)}` : "senza scadenza"}
               {p.validitaGiorni ? ` · validità ${p.validitaGiorni} gg` : ""}
             </div>
@@ -146,7 +146,7 @@ export default async function PreventivoPage({
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHead titolo={`Voci${etichetta ? ` · ${etichetta}` : ""}`} />
-          <div className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-xxs font-medium text-faint">
+          <div className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-xs font-medium text-faint">
             <span>Descrizione</span>
             <span className="text-right">Q.tà</span>
             <span className="text-right">Prezzo</span>
@@ -159,12 +159,12 @@ export default async function PreventivoPage({
             return (
               <div
                 key={v.id}
-                className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-xs last:border-0"
+                className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-md last:border-0"
               >
                 <div className="min-w-0">
                   <div className="truncate">{v.descrizione}</div>
                   {v.nota && (
-                    <div className="truncate text-xxs text-faint">{v.nota}</div>
+                    <div className="truncate text-xs text-faint">{v.nota}</div>
                   )}
                 </div>
                 <span className="text-right text-muted">
@@ -183,7 +183,7 @@ export default async function PreventivoPage({
           })}
 
           {/* Riepilogo fiscale in coda alle voci. */}
-          <div className="border-t border-border px-3 py-2.5 text-xs">
+          <div className="border-t border-border px-3 py-2.5 text-md">
             {riepilogo.scontiRiga > 0 && (
               <div className="flex items-center py-0.5 text-muted">
                 <span>Sconti di riga</span>
@@ -220,7 +220,7 @@ export default async function PreventivoPage({
           <CardHead
             titolo="Revisioni"
             extra={
-              <span className="text-xxs text-faint">
+              <span className="text-xs text-faint">
                 {p.revisioni.length + 1} version
                 {p.revisioni.length === 0 ? "e" : "i"}
               </span>
@@ -231,25 +231,25 @@ export default async function PreventivoPage({
           <div className="flex items-start gap-3 border-b border-border bg-accent-soft px-3 py-2.5">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-medium">
+                <span className="text-md font-medium">
                   {etichetta || "Versione iniziale"}
                 </span>
                 <Badge tono="accento">corrente</Badge>
               </div>
-              <div className="text-xxs text-faint">
+              <div className="text-xs text-faint">
                 {p.voci.length} voci · aggiornato {dataEstesa(p.updatedAt)}
               </div>
               {p.motivoCorrente && (
-                <div className="mt-1 text-xs text-muted">
+                <div className="mt-1 text-md text-muted">
                   &ldquo;{p.motivoCorrente}&rdquo;
                 </div>
               )}
             </div>
-            <span className="text-xs font-semibold">{eur(p.imponibile)}</span>
+            <span className="text-md font-semibold">{eur(p.imponibile)}</span>
           </div>
 
           {p.revisioni.length === 0 ? (
-            <div className="px-3 py-5 text-center text-xs text-faint">
+            <div className="px-3 py-5 text-center text-md text-faint">
               Nessuna revisione precedente.
               <br />
               Le modifiche a un preventivo già inviato ne creeranno una.
@@ -263,20 +263,20 @@ export default async function PreventivoPage({
                   className="flex items-start gap-3 border-b border-border px-3 py-2.5 last:border-0"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs">
+                    <div className="text-md">
                       {etichettaRevisione(r.numero) || "Versione iniziale"}
                     </div>
-                    <div className="text-xxs text-faint">
+                    <div className="text-xs text-faint">
                       {voci.length} voci · {dataEstesa(r.creataIl)}
                       {r.autore && ` · ${r.autore}`}
                     </div>
                     {r.motivo && (
-                      <div className="mt-1 text-xs text-muted">
+                      <div className="mt-1 text-md text-muted">
                         &ldquo;{r.motivo}&rdquo;
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-muted">{eur(r.imponibile)}</span>
+                  <span className="text-md text-muted">{eur(r.imponibile)}</span>
                   <a
                     href={`/api/preventivi/${p.id}/pdf?revisione=${r.numero}`}
                     target="_blank"
@@ -325,8 +325,8 @@ function Testo({
 }) {
   return (
     <div className={ampio ? "sm:col-span-2" : undefined}>
-      <div className="text-xxs text-faint">{etichetta}</div>
-      <div className="mt-0.5 whitespace-pre-wrap text-xs">{valore}</div>
+      <div className="text-xs text-faint">{etichetta}</div>
+      <div className="mt-0.5 whitespace-pre-wrap text-md">{valore}</div>
     </div>
   );
 }

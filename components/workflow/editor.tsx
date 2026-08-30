@@ -112,7 +112,7 @@ export function EditorWorkflow({
             </Select>
           </Campo>
         )}
-        <label className="flex h-[32px] items-center gap-1.5 text-xs text-muted">
+        <label className="flex h-[32px] items-center gap-1.5 text-md text-muted">
           <input
             type="checkbox"
             checked={d.attivo}
@@ -122,7 +122,7 @@ export function EditorWorkflow({
         </label>
 
         <div className="flex-1" />
-        {prova && <span className="text-xxs text-muted">{prova}</span>}
+        {prova && <span className="text-xs text-muted">{prova}</span>}
         <Button size="sm" variant="outline" onClick={eseguiProva}>
           <Play /> Prova
         </Button>
@@ -137,7 +137,7 @@ export function EditorWorkflow({
       </div>
 
       {errore && (
-        <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+        <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
           {errore}
         </div>
       )}

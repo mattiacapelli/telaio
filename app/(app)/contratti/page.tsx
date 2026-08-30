@@ -38,7 +38,7 @@ export default async function ContrattiPage() {
   return (
     <div className="tl-in flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted">
+        <span className="text-md text-muted">
           {contratti.length} contratti · {attivi.length} attivi
         </span>
         <div className="flex-1" />
@@ -51,7 +51,7 @@ export default async function ContrattiPage() {
             <Link
               key={c.id}
               href={`/contratti/${c.id}`}
-              className="flex items-center gap-1.5 rounded border px-2 py-1 text-xs"
+              className="flex items-center gap-1.5 rounded border px-2 py-1 text-md"
               style={{ borderColor: "var(--neg)", background: "var(--neg-soft)", color: "var(--neg)" }}
             >
               <AlertTriangle size={12} />
@@ -62,7 +62,7 @@ export default async function ContrattiPage() {
             <Link
               key={c.id}
               href={`/contratti/${c.id}`}
-              className="flex items-center gap-1.5 rounded border px-2 py-1 text-xs"
+              className="flex items-center gap-1.5 rounded border px-2 py-1 text-md"
               style={{ borderColor: "var(--neg)", background: "var(--neg-soft)", color: "var(--neg)" }}
             >
               <AlertTriangle size={12} />
@@ -103,13 +103,13 @@ export default async function ContrattiPage() {
               <FileSignature size={14} className="flex-none text-faint" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xxs text-faint">{c.numero}</span>
-                  <span className="truncate text-xs font-medium">{c.titolo}</span>
+                  <span className="text-xs text-faint">{c.numero}</span>
+                  <span className="truncate text-md font-medium">{c.titolo}</span>
                   <Badge tono={c.stato === "ATTIVO" ? "accento" : "neutro"}>
                     {STATI[c.stato]}
                   </Badge>
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-xxs text-faint">
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-faint">
                   <Chip testo={c.cliente} />
                   <span className="truncate">{c.cliente}</span>
                   <span>· {TIPI[c.tipo]}</span>
@@ -119,7 +119,7 @@ export default async function ContrattiPage() {
 
               {c.consumo && c.consumo.monteOre !== null && (
                 <div className="w-32 flex-none">
-                  <div className="mb-1 text-right text-xxs text-faint">
+                  <div className="mb-1 text-right text-xs text-faint">
                     <span className={c.consumo.residue !== null && c.consumo.residue < 0 ? "text-neg" : ""}>
                       {ore(c.consumo.consumate)} / {ore(c.consumo.monteOre)}
                     </span>
@@ -129,8 +129,8 @@ export default async function ContrattiPage() {
               )}
 
               <div className="w-24 flex-none text-right">
-                <div className="text-xs font-medium">{eur(c.canone)}</div>
-                <div className="text-xxs text-faint">{PERIODICITA[c.periodicita]}</div>
+                <div className="text-md font-medium">{eur(c.canone)}</div>
+                <div className="text-xs text-faint">{PERIODICITA[c.periodicita]}</div>
               </div>
             </Link>
           ))}

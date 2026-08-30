@@ -18,7 +18,7 @@ export default async function ClientiPage() {
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface px-3 py-2">
         <SyncTwenty ultimaSync={ultimaSync ? String(ultimaSync) : null} />
         <div className="flex-1" />
-        <span className="text-xs text-faint">
+        <span className="text-md text-faint">
           Sola lettura · l&apos;anagrafica si modifica nel CRM
         </span>
       </div>
@@ -30,7 +30,7 @@ export default async function ClientiPage() {
         />
       ) : (
         <Card>
-          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-border px-3 py-2 text-xxs font-medium text-faint">
+          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-border px-3 py-2 text-xs font-medium text-faint">
             <span className="flex items-center gap-1.5"><Building2 size={13} /> Cliente</span>
             <span className="flex items-center gap-1.5"><User size={13} /> Referente</span>
             <span className="flex items-center gap-1.5"><FolderKanban size={13} /> Progetti</span>
@@ -46,26 +46,26 @@ export default async function ClientiPage() {
               <div className="flex min-w-0 items-center gap-2">
                 <Chip testo={c.ragioneSociale} />
                 <div className="min-w-0">
-                  <div className="truncate text-xs font-medium">
+                  <div className="truncate text-md font-medium">
                     {c.ragioneSociale}
                   </div>
-                  <div className="truncate text-xxs text-faint">
+                  <div className="truncate text-xs text-faint">
                     {[c.settore, c.citta].filter(Boolean).join(" · ") || "—"}
                   </div>
                 </div>
               </div>
-              <span className="text-xs text-muted">{c.referente}</span>
-              <span className="text-xs text-muted">
+              <span className="text-md text-muted">{c.referente}</span>
+              <span className="text-md text-muted">
                 {c.attivi > 0
                   ? `${c.attivi} attiv${c.attivi === 1 ? "o" : "i"}`
                   : c.conclusi > 0
                     ? `${c.conclusi} conclus${c.conclusi === 1 ? "o" : "i"}`
                     : "—"}
               </span>
-              <span className="text-xs text-muted">
+              <span className="text-md text-muted">
                 {eurCent(c.tariffaOraria)}
               </span>
-              <span className="text-right text-xs">
+              <span className="text-right text-md">
                 {c.fatturato > 0 ? eur(c.fatturato) : "—"}
               </span>
             </Link>

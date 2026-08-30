@@ -53,14 +53,14 @@ export default async function TicketDettaglioPage({
       <aside className="flex w-[300px] flex-none flex-col overflow-y-auto border-r border-border bg-surface">
         <div className="flex flex-col items-center gap-2 px-3 py-5">
           <div
-            className="grid h-12 w-12 place-items-center rounded-md text-xs font-semibold"
+            className="grid h-12 w-12 place-items-center rounded-md text-md font-semibold"
             style={{ background: `${coloreDa(t.titolo)}26`, color: coloreDa(t.titolo) }}
           >
             #{t.numero}
           </div>
           <div className="text-center">
             <h1 className="text-md font-semibold">{t.titolo}</h1>
-            <div className="mt-0.5 text-xxs text-faint">{t.cliente.ragioneSociale}</div>
+            <div className="mt-0.5 text-xs text-faint">{t.cliente.ragioneSociale}</div>
           </div>
           <div className="mt-1 flex flex-wrap justify-center gap-1">
             <Badge tono={chiuso ? "neutro" : "accento"}>{STATI[t.stato]}</Badge>
@@ -86,7 +86,7 @@ export default async function TicketDettaglioPage({
           </div>
         </div>
 
-        <div className="px-3 pb-1 text-xs font-medium">Campi</div>
+        <div className="px-3 pb-1 text-md font-medium">Campi</div>
 
         <SezioneCampi titolo="Generale">
           <CampoRecord icona={<Tag size={12} />} etichetta="Stato">
@@ -174,13 +174,13 @@ export default async function TicketDettaglioPage({
               contenuto: (
                 <div className="p-4">
                   <div className="rounded border border-border p-3">
-                    <div className="mb-1 text-xs font-medium">Descrizione</div>
+                    <div className="mb-1 text-md font-medium">Descrizione</div>
                     {t.descrizione ? (
-                      <div className="whitespace-pre-wrap text-xs text-muted">
+                      <div className="whitespace-pre-wrap text-md text-muted">
                         {t.descrizione}
                       </div>
                     ) : (
-                      <div className="text-xs text-faint">
+                      <div className="text-md text-faint">
                         Nessuna descrizione. Aggiungila con «Modifica».
                       </div>
                     )}
@@ -188,7 +188,7 @@ export default async function TicketDettaglioPage({
 
                   {t.conContratto && t.oreDaFatturare > 0 && (
                     <div
-                      className="mt-3 flex items-start gap-1.5 rounded border px-2 py-1.5 text-xs"
+                      className="mt-3 flex items-start gap-1.5 rounded border px-2 py-1.5 text-md"
                       style={{
                         borderColor: "var(--neg)",
                         background: "var(--neg-soft)",
@@ -206,7 +206,7 @@ export default async function TicketDettaglioPage({
 
                   {!t.conContratto && t.oreDaFatturare > 0 && (
                     <div
-                      className="mt-3 flex items-center gap-1.5 rounded border px-2 py-1.5 text-xs"
+                      className="mt-3 flex items-center gap-1.5 rounded border px-2 py-1.5 text-md"
                       style={{
                         borderColor: "var(--pos)",
                         background: "var(--pos-soft)",
@@ -229,13 +229,13 @@ export default async function TicketDettaglioPage({
                 <div className="p-4">
                   <div className="rounded border border-border">
                     {t.registrazioni.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-xs text-faint">
+                      <div className="px-3 py-6 text-center text-md text-faint">
                         Nessuna ora registrata su questo ticket.
                       </div>
                     ) : (
                       t.registrazioni.map((r) => (
                         <div key={r.id}
-                          className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0">
+                          className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0">
                           <span className="w-12 flex-none text-faint">{data(r.data)}</span>
                           <span className="min-w-0 flex-1 truncate">{r.descrizione ?? "—"}</span>
                           {r.fatturata ? <Badge>fatturata</Badge> : <Badge tono="accento">da fatturare</Badge>}
@@ -257,7 +257,7 @@ export default async function TicketDettaglioPage({
               contenuto: (
                 <div className="p-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="text-xs text-muted">
+                    <span className="text-md text-muted">
                       {eur(t.costiTotali)} totali
                       {t.costiRimborsabili > 0 && ` · ${eur(t.costiRimborsabili)} da rimborsare`}
                     </span>
@@ -266,7 +266,7 @@ export default async function TicketDettaglioPage({
                   </div>
                   <div className="rounded border border-border">
                     {t.costi.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-xs text-faint">
+                      <div className="px-3 py-6 text-center text-md text-faint">
                         Nessun costo registrato. Trasferte, materiali e spese
                         sostenute per questo ticket compaiono qui.
                       </div>
@@ -276,14 +276,14 @@ export default async function TicketDettaglioPage({
                         return (
                           <div
                             key={c.id}
-                            className="group flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0"
+                            className="group flex items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0"
                           >
                             <Icona size={12} className="flex-none text-faint" />
                             <span className="w-12 flex-none text-faint">{data(c.data)}</span>
                             <div className="min-w-0 flex-1">
                               <div className="truncate">{c.descrizione}</div>
                               {c.quantita !== null && c.tariffa !== null && (
-                                <div className="text-xxs text-faint">
+                                <div className="text-xs text-faint">
                                   {c.quantita.toLocaleString("it-IT")} km ×{" "}
                                   {eurCent(c.tariffa)}
                                 </div>

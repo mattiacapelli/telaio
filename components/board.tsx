@@ -70,7 +70,7 @@ export function Board({
   return (
     <div className="flex flex-col gap-2">
       {errore && (
-        <div className="rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-xs text-neg">
+        <div className="rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-md text-neg">
           {errore}
         </div>
       )}
@@ -98,10 +98,10 @@ export function Board({
               )}
             >
               <div className="flex items-center gap-2 px-1.5 py-1">
-                <span className="text-xs font-medium text-text">
+                <span className="text-md font-medium text-text">
                   {col.titolo}
                 </span>
-                <span className="rounded bg-surface2 px-1.5 text-xxs text-faint">
+                <span className="rounded bg-surface2 px-1.5 text-xs text-faint">
                   {items.length}
                 </span>
               </div>
@@ -122,7 +122,7 @@ export function Board({
                   />
                 ))}
                 {items.length === 0 && (
-                  <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-faint">
+                  <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-md text-faint">
                     Trascina qui
                   </div>
                 )}
@@ -181,7 +181,7 @@ function CardTrascinabile({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
           <div className="absolute right-1.5 top-8 z-20 w-44 overflow-hidden rounded-md border border-border bg-surface py-1 shadow-[var(--shadow)]">
-            <div className="px-2.5 py-1 text-xxs text-faint">Sposta in</div>
+            <div className="px-2.5 py-1 text-xs text-faint">Sposta in</div>
             {colonne
               .filter((c) => c.stato !== elemento.stato)
               .map((c) => (
@@ -191,7 +191,7 @@ function CardTrascinabile({
                     setMenu(false);
                     onSposta(c.stato);
                   }}
-                  className="w-full px-2.5 py-1.5 text-left text-xs text-muted transition-colors hover:bg-surface2 hover:text-text"
+                  className="w-full px-2.5 py-1.5 text-left text-md text-muted transition-colors hover:bg-surface2 hover:text-text"
                 >
                   {c.titolo}
                 </button>

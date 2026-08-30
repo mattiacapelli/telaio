@@ -40,15 +40,15 @@ export default async function FatturePage() {
       contenuto: (
         <>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium">{f.numero}</span>
+            <span className="text-md font-medium">{f.numero}</span>
             <div className="flex-1" />
-            <span className="text-xs font-semibold">{eur(f.imponibile)}</span>
+            <span className="text-md font-semibold">{eur(f.imponibile)}</span>
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+          <div className="mt-1 flex items-center gap-1.5 text-md text-muted">
             <Chip testo={f.cliente} />
             <span className="truncate">{f.cliente}</span>
           </div>
-          <div className="mt-2 flex items-center gap-2 text-xxs text-faint">
+          <div className="mt-2 flex items-center gap-2 text-xs text-faint">
             {ritardo !== null ? (
               <Badge tono="attenzione">+{ritardo} gg</Badge>
             ) : f.scadeIl ? (
@@ -74,7 +74,7 @@ export default async function FatturePage() {
         colonne={COLONNE}
         elementi={elementi}
         intestazione={
-          <span className="text-xs text-muted">
+          <span className="text-md text-muted">
             Emesso <strong className="text-text">{eur(emesso)}</strong> · incassato{" "}
             <strong className="text-text">{eur(incassato)}</strong> · da incassare{" "}
             <strong className="text-text">{eur(emesso - incassato)}</strong>

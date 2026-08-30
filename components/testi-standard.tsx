@@ -31,7 +31,7 @@ export function TestiStandard({ testi }: { testi: Testo[] }) {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <span className="text-xxs text-faint">
+        <span className="text-xs text-faint">
           {testi.length} testi · {testi.filter((t) => t.predefinito).length} predefiniti
         </span>
         <div className="flex-1" />
@@ -39,7 +39,7 @@ export function TestiStandard({ testi }: { testi: Testo[] }) {
       </div>
 
       {testi.length === 0 ? (
-        <div className="px-3 py-5 text-center text-xs text-faint">
+        <div className="px-3 py-5 text-center text-md text-faint">
           Nessun testo salvato. I testi predefiniti vengono inseriti
           automaticamente nei nuovi preventivi e contratti.
         </div>
@@ -48,17 +48,17 @@ export function TestiStandard({ testi }: { testi: Testo[] }) {
           <div key={t.id} className="group flex items-start gap-2 border-b border-border px-3 py-2 last:border-0">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="truncate text-xs font-medium">{t.titolo}</span>
+                <span className="truncate text-md font-medium">{t.titolo}</span>
                 {t.predefinito && (
                   <Badge tono="accento">
                     <Star size={9} /> predefinito
                   </Badge>
                 )}
               </div>
-              <div className="mt-0.5 text-xxs text-faint">
+              <div className="mt-0.5 text-xs text-faint">
                 {ETICHETTE_CAMPO[t.campo] ?? t.campo} · {AMBITI[t.ambito]}
               </div>
-              <div className="mt-1 line-clamp-2 text-xxs text-muted">{t.testo}</div>
+              <div className="mt-1 line-clamp-2 text-xs text-muted">{t.testo}</div>
             </div>
             <FormTesto testo={t} onFatto={() => router.refresh()} />
             <button
@@ -185,7 +185,7 @@ function FormTesto({ testo, onFatto }: { testo?: Testo; onFatto: () => void }) {
               />
             </Campo>
 
-            <label className="flex items-center gap-1.5 text-xs text-muted">
+            <label className="flex items-center gap-1.5 text-md text-muted">
               <input
                 type="checkbox"
                 checked={d.predefinito}
@@ -195,7 +195,7 @@ function FormTesto({ testo, onFatto }: { testo?: Testo; onFatto: () => void }) {
             </label>
 
             {errore && (
-              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
                 {errore}
               </div>
             )}

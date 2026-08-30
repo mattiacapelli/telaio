@@ -46,7 +46,7 @@ export function FormLogin({ da }: { da?: string }) {
       className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5"
     >
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-xs text-muted">
+        <label htmlFor="email" className="text-md text-muted">
           Email
         </label>
         <input
@@ -56,12 +56,12 @@ export function FormLogin({ da }: { da?: string }) {
           required
           autoComplete="email"
           autoFocus
-          className="rounded-lg border border-border bg-surface2 px-3 py-2 text-xs text-text outline-none focus:border-accent-line"
+          className="rounded-lg border border-border bg-surface2 px-3 py-2 text-md text-text outline-none focus:border-accent-line"
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-xs text-muted">
+        <label htmlFor="password" className="text-md text-muted">
           Password
         </label>
         <input
@@ -70,14 +70,14 @@ export function FormLogin({ da }: { da?: string }) {
           type="password"
           required
           autoComplete="current-password"
-          className="rounded-lg border border-border bg-surface2 px-3 py-2 text-xs text-text outline-none focus:border-accent-line"
+          className="rounded-lg border border-border bg-surface2 px-3 py-2 text-md text-text outline-none focus:border-accent-line"
         />
       </div>
 
       {errore && (
         <div
           role="alert"
-          className="rounded-lg border border-border2 bg-surface3 px-3 py-2 text-xs"
+          className="rounded-lg border border-border2 bg-surface3 px-3 py-2 text-md"
         >
           {errore}
         </div>
@@ -86,7 +86,7 @@ export function FormLogin({ da }: { da?: string }) {
       <button
         type="submit"
         disabled={inCorso}
-        className="mt-1 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="mt-1 rounded-lg bg-accent px-3 py-2 text-md font-semibold text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         {inCorso ? "Accesso in corso…" : "Accedi"}
       </button>

@@ -93,10 +93,10 @@ export function DocumentiProgetto({
         }`}
       >
         <Upload size={16} className="text-faint" />
-        <div className="text-xs text-muted">
+        <div className="text-md text-muted">
           {inCorso ? "Carico…" : "Trascina un file o clicca per sceglierlo"}
         </div>
-        <div className="text-xxs text-faint">Massimo 25 MB</div>
+        <div className="text-xs text-faint">Massimo 25 MB</div>
       </div>
       <input
         ref={input}
@@ -110,13 +110,13 @@ export function DocumentiProgetto({
       />
 
       {errore && (
-        <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+        <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
           {errore}
         </div>
       )}
 
       {documenti.length === 0 ? (
-        <div className="py-3 text-center text-xxs text-faint">
+        <div className="py-3 text-center text-xs text-faint">
           Nessun documento allegato
         </div>
       ) : (
@@ -128,8 +128,8 @@ export function DocumentiProgetto({
             >
               <FileText size={14} className="flex-none text-faint" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-xs">{d.nome}</div>
-                <div className="text-xxs text-faint">
+                <div className="truncate text-md">{d.nome}</div>
+                <div className="text-xs text-faint">
                   {pesoLeggibile(d.dimensione)} · {dataEstesa(d.createdAt)}
                   {d.caricatoDa && ` · ${d.caricatoDa}`}
                 </div>
@@ -191,7 +191,7 @@ export function NoteProgetto({
           onChange={(e) => setTesto(e.target.value)}
           rows={2}
           placeholder="Annota una decisione, una promessa fatta al cliente…"
-          className="w-full resize-y rounded border border-border bg-surface2 px-2 py-1.5 text-xs outline-none placeholder:text-faint focus:border-accent-line focus:ring-1 focus:ring-accent-line"
+          className="w-full resize-y rounded border border-border bg-surface2 px-2 py-1.5 text-md outline-none placeholder:text-faint focus:border-accent-line focus:ring-1 focus:ring-accent-line"
         />
         <div className="flex">
           <div className="flex-1" />
@@ -202,13 +202,13 @@ export function NoteProgetto({
       </form>
 
       {note.length === 0 ? (
-        <div className="py-3 text-center text-xxs text-faint">Nessuna nota</div>
+        <div className="py-3 text-center text-xs text-faint">Nessuna nota</div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {note.map((nt) => (
             <div key={nt.id} className="rounded border border-border bg-surface2 px-2 py-1.5">
-              <div className="whitespace-pre-wrap text-xs">{nt.testo}</div>
-              <div className="mt-1 text-xxs text-faint">
+              <div className="whitespace-pre-wrap text-md">{nt.testo}</div>
+              <div className="mt-1 text-xs text-faint">
                 {dataEstesa(nt.createdAt)}
                 {nt.autore && ` · ${nt.autore}`}
               </div>

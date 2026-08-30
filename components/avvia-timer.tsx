@@ -38,7 +38,7 @@ export function AvviaTimer({
     <button
       onClick={avvia}
       disabled={inCorso}
-      className="flex-none h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-xs text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+      className="flex-none h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-md text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
     >
       Avvia
     </button>

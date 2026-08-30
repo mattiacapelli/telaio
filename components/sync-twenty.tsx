@@ -44,7 +44,7 @@ export function SyncTwenty({ ultimaSync }: { ultimaSync: string | null }) {
           stato === "errore" ? "bg-neg" : "bg-accent"
         } ${stato === "corso" ? "tl-pulse" : ""}`}
       />
-      <span className="text-xs text-muted">
+      <span className="text-md text-muted">
         {stato === "errore"
           ? `Sincronizzazione non riuscita: ${messaggio}`
           : messaggio
@@ -54,7 +54,7 @@ export function SyncTwenty({ ultimaSync }: { ultimaSync: string | null }) {
       <button
         onClick={sincronizza}
         disabled={stato === "corso"}
-        className="h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-xs text-muted transition-colors hover:bg-[var(--alpha-light)] hover:text-text disabled:opacity-50"
+        className="h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-md text-muted transition-colors hover:bg-[var(--alpha-light)] hover:text-text disabled:opacity-50"
       >
         {stato === "corso" ? "Sincronizzo…" : "Sincronizza ora"}
       </button>

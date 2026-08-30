@@ -32,7 +32,7 @@ const DialogContent = React.forwardRef<
             {titolo}
           </DialogPrimitive.Title>
           {descrizione && (
-            <DialogPrimitive.Description className="mt-0.5 text-xs text-muted">
+            <DialogPrimitive.Description className="mt-0.5 text-md text-muted">
               {descrizione}
             </DialogPrimitive.Description>
           )}

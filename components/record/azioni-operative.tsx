@@ -111,7 +111,7 @@ export function ModificaAttivita({
               </Campo>
             )}
             {errore && (
-              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
                 {errore}
               </div>
             )}
@@ -210,7 +210,7 @@ export function ModificaTicket({
                 </Select>
               </Campo>
             </div>
-            <label className="flex items-center gap-1.5 text-xs text-muted">
+            <label className="flex items-center gap-1.5 text-md text-muted">
               <input
                 type="checkbox"
                 checked={d.conContratto}
@@ -219,7 +219,7 @@ export function ModificaTicket({
               Coperto da contratto di assistenza
             </label>
             {errore && (
-              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
                 {errore}
               </div>
             )}
@@ -263,7 +263,7 @@ export function CambiaStatoRapido({
           body: JSON.stringify({ stato: ev.target.value }),
         })
       }
-      className="h-6 w-auto text-xxs"
+      className="h-6 w-auto text-xs"
     >
       {stati.map((s) => (
         <option key={s.v} value={s.v}>{s.e}</option>

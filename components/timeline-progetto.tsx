@@ -60,7 +60,7 @@ function meseDi(d: Date | string) {
 export function TimelineProgetto({ eventi }: { eventi: Evento[] }) {
   if (eventi.length === 0) {
     return (
-      <div className="px-3 py-8 text-center text-xs text-faint">
+      <div className="px-3 py-8 text-center text-md text-faint">
         Nessun evento registrato.
         <br />
         Le azioni sul progetto compariranno qui.
@@ -81,7 +81,7 @@ export function TimelineProgetto({ eventi }: { eventi: Evento[] }) {
     <div className="p-4">
       {gruppi.map((g) => (
         <div key={g.mese} className="mb-4 last:mb-0">
-          <div className="mb-2 text-xs text-faint">{g.mese}</div>
+          <div className="mb-2 text-md text-faint">{g.mese}</div>
           <div className="relative">
             {/* Filo verticale che lega gli eventi del mese. */}
             <div
@@ -117,7 +117,7 @@ function Riga({ evento }: { evento: Evento }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <span className="text-xs">{evento.testo}</span>
+            <span className="text-md">{evento.testo}</span>
             {espandibile && (
               <button
                 onClick={() => setAperto((v) => !v)}
@@ -127,16 +127,16 @@ function Riga({ evento }: { evento: Evento }) {
               </button>
             )}
             {evento.autore && (
-              <span className="ml-1.5 text-xxs text-faint">· {evento.autore}</span>
+              <span className="ml-1.5 text-xs text-faint">· {evento.autore}</span>
             )}
           </div>
-          <span className="flex-none text-xxs text-faint">
+          <span className="flex-none text-xs text-faint">
             {quantoFa(evento.createdAt)}
           </span>
         </div>
 
         {espandibile && aperto && (
-          <div className="mt-1.5 rounded border border-border bg-surface2 px-2.5 py-2 text-xs text-muted">
+          <div className="mt-1.5 rounded border border-border bg-surface2 px-2.5 py-2 text-md text-muted">
             {evento.dettaglio}
           </div>
         )}

@@ -48,7 +48,7 @@ export default async function AttivitaDettaglioPage({
           <div className="text-center">
             <h1 className="text-md font-semibold">{a.titolo}</h1>
             {a.progetto && (
-              <div className="mt-0.5 text-xxs text-faint">{a.progetto.nome}</div>
+              <div className="mt-0.5 text-xs text-faint">{a.progetto.nome}</div>
             )}
           </div>
           <div className="mt-1 flex flex-wrap justify-center gap-1">
@@ -72,7 +72,7 @@ export default async function AttivitaDettaglioPage({
           </div>
         </div>
 
-        <div className="px-3 pb-1 text-xs font-medium">Campi</div>
+        <div className="px-3 pb-1 text-md font-medium">Campi</div>
 
         <SezioneCampi titolo="Generale">
           <CampoRecord icona={<Tag size={12} />} etichetta="Stato">
@@ -141,9 +141,9 @@ export default async function AttivitaDettaglioPage({
                     <div className="mb-4">
                       <div className="mb-2 flex items-baseline gap-2">
                         <span className="text-lg font-semibold">{ore(a.oreFatte)}</span>
-                        <span className="text-xs text-muted">su {ore(a.stimaOre)}</span>
+                        <span className="text-md text-muted">su {ore(a.stimaOre)}</span>
                         <div className="flex-1" />
-                        <span className={`text-xs ${oltre ? "text-neg" : "text-muted"}`}>
+                        <span className={`text-md ${oltre ? "text-neg" : "text-muted"}`}>
                           {Math.round((a.oreFatte / a.stimaOre) * 100)}%
                         </span>
                       </div>
@@ -152,13 +152,13 @@ export default async function AttivitaDettaglioPage({
                   )}
                   <div className="rounded border border-border">
                     {a.registrazioni.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-xs text-faint">
+                      <div className="px-3 py-6 text-center text-md text-faint">
                         Nessuna ora registrata. Avvia il timer per iniziare.
                       </div>
                     ) : (
                       a.registrazioni.map((r) => (
                         <div key={r.id}
-                          className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0">
+                          className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0">
                           <span className="w-12 flex-none text-faint">{data(r.data)}</span>
                           <span className="min-w-0 flex-1 truncate">{r.descrizione ?? "—"}</span>
                           {r.fatturata ? <Badge>fatturata</Badge> : <Badge tono="accento">da fatturare</Badge>}

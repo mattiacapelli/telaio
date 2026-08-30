@@ -35,14 +35,14 @@ export default async function AttivitaPage() {
     etichetta: a.titolo,
     contenuto: (
       <>
-        <Link href={`/attivita/${a.id}`} className="block text-xs font-medium hover:underline">
+        <Link href={`/attivita/${a.id}`} className="block text-md font-medium hover:underline">
           {a.titolo}
         </Link>
-        <div className="truncate text-xs text-muted">{a.progetto}</div>
+        <div className="truncate text-md text-muted">{a.progetto}</div>
         {a.stato === "BLOCCATA" ? (
-          <div className="mt-2 text-xxs text-faint">{a.bloccoNota ?? "Bloccata"}</div>
+          <div className="mt-2 text-xs text-faint">{a.bloccoNota ?? "Bloccata"}</div>
         ) : (
-          <div className="mt-2 flex items-center gap-2 text-xxs text-faint">
+          <div className="mt-2 flex items-center gap-2 text-xs text-faint">
             <span>
               {a.oreFatte.toLocaleString("it-IT", { maximumFractionDigits: 2 })}/
               {a.stimaOre.toLocaleString("it-IT", { maximumFractionDigits: 0 })} h
@@ -70,7 +70,7 @@ export default async function AttivitaPage() {
         colonne={COLONNE}
         elementi={elementi}
         intestazione={
-          <span className="text-xs text-muted">{attivita.length} attività</span>
+          <span className="text-md text-muted">{attivita.length} attività</span>
         }
         colonneTabella={[
           { intestazione: "Attività", larghezza: "minmax(0, 1.8fr)", icona: <CircleCheck key="i1" size={13} /> },
@@ -86,7 +86,7 @@ export default async function AttivitaPage() {
             <div key="c1" className="min-w-0">
               <div className="truncate font-medium">{x.titolo}</div>
               {x.bloccoNota && (
-                <div className="truncate text-xxs text-faint">{x.bloccoNota}</div>
+                <div className="truncate text-xs text-faint">{x.bloccoNota}</div>
               )}
             </div>,
             <span key="c2" className="truncate text-muted">{x.progetto}</span>,

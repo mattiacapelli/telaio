@@ -69,7 +69,7 @@ export function AzioniContratto({
           </Button>
         )}
       </div>
-      {esito && <div className="text-center text-xxs text-muted">{esito}</div>}
+      {esito && <div className="text-center text-xs text-muted">{esito}</div>}
     </div>
   );
 }

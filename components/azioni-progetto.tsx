@@ -34,7 +34,7 @@ function useAzione() {
 function Errore({ testo }: { testo: string | null }) {
   if (!testo) return null;
   return (
-    <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+    <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
       {testo}
     </div>
   );
@@ -125,7 +125,7 @@ export function ModificaProgetto({
             </Campo>
 
             <div className="rounded border border-border bg-surface2 p-2">
-              <div className="mb-2 text-xs font-medium">Repository GitHub</div>
+              <div className="mb-2 text-md font-medium">Repository GitHub</div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <Campo etichetta="Repository" nota="owner/repo oppure URL — facoltativa">
                   <Input

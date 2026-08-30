@@ -31,7 +31,7 @@ export default async function LoginPage({
           </div>
           <div>
             <div className="text-sm font-semibold tracking-tight">Telaio</div>
-            <div className="text-xxs uppercase tracking-wider text-faint">
+            <div className="text-xs uppercase tracking-wider text-faint">
               Studio Ferrero
             </div>
           </div>
@@ -39,7 +39,7 @@ export default async function LoginPage({
 
         <FormLogin da={da} />
 
-        <p className="mt-4 text-center text-xxs text-faint">
+        <p className="mt-4 text-center text-xs text-faint">
           Accesso riservato. Gli account sono creati dall&apos;amministratore.
         </p>
       </div>

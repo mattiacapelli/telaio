@@ -35,14 +35,14 @@ export default async function ProgettiPage() {
     etichetta: p.nome,
     contenuto: (
       <>
-        <Link href={`/progetti/${p.id}`} className="text-xs font-medium hover:underline">
+        <Link href={`/progetti/${p.id}`} className="text-md font-medium hover:underline">
           {p.nome}
         </Link>
-        <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+        <div className="mt-1 flex items-center gap-1.5 text-md text-muted">
           <Chip testo={p.cliente} />
           <span className="truncate">{p.cliente}</span>
         </div>
-        <div className="mt-2 flex items-center gap-2 text-xs">
+        <div className="mt-2 flex items-center gap-2 text-md">
           <span className="font-semibold">{eur(p.valore)}</span>
           <div className="flex-1" />
           <span className="text-muted">
@@ -56,7 +56,7 @@ export default async function ProgettiPage() {
             <Barra valore={p.oreFatte} max={p.budgetOre} />
           </div>
         )}
-        <div className="mt-2 text-xxs text-faint">
+        <div className="mt-2 text-xs text-faint">
           {p.note
             ? p.note
             : p.milestone
@@ -79,7 +79,7 @@ export default async function ProgettiPage() {
         colonne={COLONNE}
         elementi={elementi}
         intestazione={
-          <span className="text-xs text-muted">{progetti.length} progetti</span>
+          <span className="text-md text-muted">{progetti.length} progetti</span>
         }
         colonneTabella={[
           { intestazione: "Progetto", larghezza: "minmax(0, 1.6fr)", icona: <FolderKanban key="i1" size={13} /> },

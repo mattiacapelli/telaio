@@ -47,22 +47,22 @@ export default async function TicketPage() {
     contenuto: (
       <>
         <div className="flex items-center gap-2">
-          <span className="text-xxs text-faint">#{t.numero}</span>
+          <span className="text-xs text-faint">#{t.numero}</span>
           <Badge tono={t.priorita === "ALTA" ? "attenzione" : "neutro"}>
             {PRIORITA[t.priorita]}
           </Badge>
         </div>
-        <Link href={`/ticket/${t.id}`} className="mt-1 block text-xs font-medium hover:underline">
+        <Link href={`/ticket/${t.id}`} className="mt-1 block text-md font-medium hover:underline">
           {t.titolo}
         </Link>
-        <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+        <div className="mt-1 flex items-center gap-1.5 text-md text-muted">
           <Chip testo={t.cliente} />
           <span className="truncate">
             {t.cliente}
             {t.progetto && ` · ${t.progetto}`}
           </span>
         </div>
-        <div className="mt-2 flex items-center gap-2 text-xxs text-faint">
+        <div className="mt-2 flex items-center gap-2 text-xs text-faint">
           <span>{ore(t.ore)}</span>
           <span>· aperto {daGiorni(t.apertoIl)} gg</span>
           <div className="flex-1" />
@@ -114,7 +114,7 @@ export default async function TicketPage() {
         colonne={COLONNE}
         elementi={elementi}
         intestazione={
-          <span className="text-xs text-muted">{ticket.length} ticket</span>
+          <span className="text-md text-muted">{ticket.length} ticket</span>
         }
         colonneTabella={[
           { intestazione: "N.", larghezza: "60px", icona: <LifeBuoy key="i1" size={13} /> },

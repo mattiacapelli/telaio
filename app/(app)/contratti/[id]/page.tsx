@@ -40,7 +40,7 @@ export default async function ContrattoPage({
           </div>
           <div className="text-center">
             <h1 className="text-md font-semibold">{c.titolo}</h1>
-            <div className="mt-0.5 text-xxs text-faint">
+            <div className="mt-0.5 text-xs text-faint">
               {c.numero} · {c.cliente.ragioneSociale}
             </div>
           </div>
@@ -56,7 +56,7 @@ export default async function ContrattoPage({
           </div>
         </div>
 
-        <div className="px-3 pb-1 text-xs font-medium">Campi</div>
+        <div className="px-3 pb-1 text-md font-medium">Campi</div>
 
         <SezioneCampi titolo="Generale">
           <CampoRecord icona={<Tag size={12} />} etichetta="Tipo">{TIPI[c.tipo]}</CampoRecord>
@@ -110,7 +110,7 @@ export default async function ContrattoPage({
 
         {c.note && (
           <SezioneCampi titolo="Note" apertaDiDefault={false}>
-            <div className="px-3 py-1 text-xs text-muted whitespace-pre-wrap">{c.note}</div>
+            <div className="px-3 py-1 text-md text-muted whitespace-pre-wrap">{c.note}</div>
           </SezioneCampi>
         )}
       </aside>
@@ -128,7 +128,7 @@ export default async function ContrattoPage({
                     <>
                       {esaurito && (
                         <div
-                          className="flex items-center gap-1.5 rounded border px-2 py-1.5 text-xs"
+                          className="flex items-center gap-1.5 rounded border px-2 py-1.5 text-md"
                           style={{ borderColor: "var(--neg)", background: "var(--neg-soft)", color: "var(--neg)" }}
                         >
                           <AlertTriangle size={12} />
@@ -139,14 +139,14 @@ export default async function ContrattoPage({
                       <div>
                         <div className="mb-2 flex items-baseline gap-2">
                           <span className="text-lg font-semibold">{ore(c.consumo.consumate)}</span>
-                          <span className="text-xs text-muted">su {ore(c.consumo.monteOre)}</span>
+                          <span className="text-md text-muted">su {ore(c.consumo.monteOre)}</span>
                           <div className="flex-1" />
-                          <span className={`text-xs ${esaurito ? "text-neg" : "text-muted"}`}>
+                          <span className={`text-md ${esaurito ? "text-neg" : "text-muted"}`}>
                             {Math.round(c.consumo.percentuale)}%
                           </span>
                         </div>
                         <Barra valore={c.consumo.consumate} max={c.consumo.monteOre} />
-                        <div className="mt-1.5 text-xxs text-faint">
+                        <div className="mt-1.5 text-xs text-faint">
                           Periodo {data(c.consumo.inizio)} – {data(c.consumo.fine)}
                           {c.consumo.residue !== null && c.consumo.residue > 0 &&
                             ` · restano ${ore(c.consumo.residue)}`}
@@ -154,27 +154,27 @@ export default async function ContrattoPage({
                       </div>
                     </>
                   ) : (
-                    <div className="text-xs text-faint">
+                    <div className="text-md text-faint">
                       Questo contratto non prevede un monte ore.
                     </div>
                   )}
 
                   <div>
-                    <div className="mb-1.5 text-xs font-medium">Periodi</div>
+                    <div className="mb-1.5 text-md font-medium">Periodi</div>
                     <div className="rounded border border-border">
                       {c.periodi.length === 0 ? (
-                        <div className="px-3 py-5 text-center text-xs text-faint">
+                        <div className="px-3 py-5 text-center text-md text-faint">
                           Nessun periodo fatturato
                         </div>
                       ) : (
                         c.periodi.map((p) => (
-                          <div key={p.id} className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0">
+                          <div key={p.id} className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0">
                             <Receipt size={12} className="flex-none text-faint" />
                             <span className="min-w-0 flex-1">
                               {data(p.inizioIl)} – {data(p.fineIl)}
                             </span>
                             {p.monteOre !== null && (
-                              <span className="text-xxs text-faint">{ore(p.monteOre)} incluse</span>
+                              <span className="text-xs text-faint">{ore(p.monteOre)} incluse</span>
                             )}
                             {p.fatturato ? <Badge>fatturato</Badge> : <Badge tono="accento">da fatturare</Badge>}
                           </div>
@@ -194,7 +194,7 @@ export default async function ContrattoPage({
                 <div className="p-4">
                   <div className="rounded border border-border">
                     {c.ticket.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-xs text-faint">
+                      <div className="px-3 py-6 text-center text-md text-faint">
                         Nessun ticket collegato a questo contratto
                       </div>
                     ) : (
@@ -202,11 +202,11 @@ export default async function ContrattoPage({
                         <Link
                           key={t.id}
                           href={`/ticket/${t.id}`}
-                          className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0 hover:bg-[var(--alpha-lighter)]"
+                          className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0 hover:bg-[var(--alpha-lighter)]"
                         >
                           <span className="flex-none text-faint">#{t.numero}</span>
                           <span className="min-w-0 flex-1 truncate">{t.titolo}</span>
-                          <span className="text-xxs text-faint">{data(t.apertoIl)}</span>
+                          <span className="text-xs text-faint">{data(t.apertoIl)}</span>
                           <span className="w-14 flex-none text-right font-medium">{ore(t.ore)}</span>
                         </Link>
                       ))

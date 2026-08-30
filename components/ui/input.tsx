@@ -43,9 +43,9 @@ export function Campo({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-muted">{etichetta}</span>
+      <span className="text-md text-muted">{etichetta}</span>
       {children}
-      {nota && <span className="text-xxs text-faint">{nota}</span>}
+      {nota && <span className="text-xs text-faint">{nota}</span>}
     </label>
   );
 }

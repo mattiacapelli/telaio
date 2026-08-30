@@ -76,11 +76,11 @@ function Sezione({
   return (
     <section className="border-b border-border px-5 py-4 last:border-0">
       <div className="mb-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+        <h3 className="text-md font-semibold uppercase tracking-wide text-muted">
           {titolo}
         </h3>
         {descrizione && (
-          <p className="mt-0.5 text-xs text-faint">{descrizione}</p>
+          <p className="mt-0.5 text-md text-faint">{descrizione}</p>
         )}
       </div>
       {children}
@@ -266,7 +266,7 @@ export function CorpoPreventivo({
                       value={v.nota}
                       onChange={(e) => voce(i, "nota", e.target.value)}
                       placeholder="Nota o dettaglio (facoltativo)"
-                      className="text-xs"
+                      className="text-md"
                     />
                   </div>
                   <button
@@ -317,8 +317,8 @@ export function CorpoPreventivo({
                     />
                   </Campo>
                   <div className="text-right">
-                    <div className="text-xxs text-faint">Totale riga</div>
-                    <div className="mt-1 h-8 text-xs font-semibold leading-8">
+                    <div className="text-xs text-faint">Totale riga</div>
+                    <div className="mt-1 h-8 text-md font-semibold leading-8">
                       {eur(tot)}
                     </div>
                   </div>
@@ -364,7 +364,7 @@ export function CorpoPreventivo({
           </Campo>
         </div>
 
-        <div className="mt-3 rounded-md border border-border bg-surface2 px-3 py-2 text-xs">
+        <div className="mt-3 rounded-md border border-border bg-surface2 px-3 py-2 text-md">
           <Riga etichetta="Somma voci" valore={eurCent(riepilogo.lordo)} />
           {riepilogo.scontiRiga > 0 && (
             <Riga

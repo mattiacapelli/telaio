@@ -72,7 +72,7 @@ export default async function ProgettoPage({
           </div>
           <div className="text-center">
             <h1 className="text-md font-semibold">{p.nome}</h1>
-            <div className="mt-0.5 text-xxs text-faint">
+            <div className="mt-0.5 text-xs text-faint">
               {p.cliente.ragioneSociale}
             </div>
           </div>
@@ -100,7 +100,7 @@ export default async function ProgettoPage({
           </div>
         </div>
 
-        <div className="px-3 pb-1 text-xs font-medium">Campi</div>
+        <div className="px-3 pb-1 text-md font-medium">Campi</div>
 
         <SezioneCampi titolo="Generale">
           <CampoRecord icona={<Building2 size={12} />} etichetta="Cliente">
@@ -227,9 +227,9 @@ export default async function ProgettoPage({
                   <div>
                     <div className="mb-2 flex items-baseline gap-2">
                       <span className="text-lg font-semibold">{ore(p.oreFatte)}</span>
-                      <span className="text-xs text-muted">su {ore(p.budgetOre)}</span>
+                      <span className="text-md text-muted">su {ore(p.budgetOre)}</span>
                       <div className="flex-1" />
-                      <span className={`text-xs ${oltreBudget ? "text-neg" : "text-muted"}`}>
+                      <span className={`text-md ${oltreBudget ? "text-neg" : "text-muted"}`}>
                         {Math.round(p.budgetOre > 0 ? (p.oreFatte / p.budgetOre) * 100 : 0)}%
                       </span>
                     </div>
@@ -237,7 +237,7 @@ export default async function ProgettoPage({
                   </div>
 
                   <div>
-                    <div className="mb-2 text-xs font-medium">Ore per settimana</div>
+                    <div className="mb-2 text-md font-medium">Ore per settimana</div>
                     <div className="flex h-24 items-end gap-1.5">
                       {p.settimane.map((s, i) => (
                         <div key={i} className="flex flex-1 flex-col items-center gap-1">
@@ -252,23 +252,23 @@ export default async function ProgettoPage({
                               }}
                             />
                           </div>
-                          <span className="text-xxs text-faint">{s.etichetta}</span>
+                          <span className="text-xs text-faint">{s.etichetta}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <div className="mb-1.5 text-xs font-medium">Ore registrate</div>
+                    <div className="mb-1.5 text-md font-medium">Ore registrate</div>
                     <div className="rounded border border-border">
                       {p.registrazioni.length === 0 ? (
-                        <div className="px-3 py-5 text-center text-xs text-faint">
+                        <div className="px-3 py-5 text-center text-md text-faint">
                           Nessuna ora registrata
                         </div>
                       ) : (
                         p.registrazioni.map((r) => (
                           <div key={r.id}
-                            className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0">
+                            className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0">
                             <span className="w-12 flex-none text-faint">{data(r.data)}</span>
                             <span className="min-w-0 flex-1 truncate">{r.descrizione}</span>
                             {r.fatturata ? <Badge>fatturata</Badge> : <Badge tono="accento">da fatturare</Badge>}
@@ -291,13 +291,13 @@ export default async function ProgettoPage({
               contenuto: (
                 <div className="p-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="text-xs text-muted">{fatte}/{p.attivita.length} completate</span>
+                    <span className="text-md text-muted">{fatte}/{p.attivita.length} completate</span>
                     <div className="flex-1" />
                     <NuovaAttivita progettoId={p.id} />
                   </div>
                   <div className="rounded border border-border">
                     {p.attivita.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-xs text-faint">Nessuna attività</div>
+                      <div className="px-3 py-6 text-center text-md text-faint">Nessuna attività</div>
                     ) : (
                       p.attivita.map((a) => (
                         <div key={a.id}
@@ -306,11 +306,11 @@ export default async function ProgettoPage({
                           <div className="min-w-0 flex-1">
                             <Link
                               href={`/attivita/${a.id}`}
-                              className={`block truncate text-xs hover:underline ${a.stato === "FATTA" ? "text-muted line-through" : ""}`}
+                              className={`block truncate text-md hover:underline ${a.stato === "FATTA" ? "text-muted line-through" : ""}`}
                             >
                               {a.titolo}
                             </Link>
-                            <div className="text-xxs text-faint">
+                            <div className="text-xs text-faint">
                               {a.oreFatte.toLocaleString("it-IT", { maximumFractionDigits: 2 })}/
                               {a.stimaOre.toLocaleString("it-IT")} h
                               {a.scadenzaIl && ` · ${data(a.scadenzaIl)}`}
@@ -330,23 +330,23 @@ export default async function ProgettoPage({
                   </div>
 
                   <div className="mt-4 mb-2 flex items-center gap-2">
-                    <span className="text-xs font-medium">Milestone</span>
+                    <span className="text-md font-medium">Milestone</span>
                     <div className="flex-1" />
                     <NuovaMilestone progettoId={p.id} />
                   </div>
                   <div className="rounded border border-border">
                     {p.milestone.length === 0 ? (
-                      <div className="px-3 py-5 text-center text-xs text-faint">Nessuna milestone</div>
+                      <div className="px-3 py-5 text-center text-md text-faint">Nessuna milestone</div>
                     ) : (
                       p.milestone.map((m) => (
                         <div key={m.id}
                           className="flex items-center gap-2 border-b border-border px-2 py-1.5 last:border-0">
                           <SpuntaMilestone id={m.id} completata={m.completata} />
                           <Flag size={12} className="flex-none text-faint" />
-                          <span className={`flex-1 text-xs ${m.completata ? "text-muted line-through" : ""}`}>
+                          <span className={`flex-1 text-md ${m.completata ? "text-muted line-through" : ""}`}>
                             {m.titolo}
                           </span>
-                          <span className="text-xxs text-faint">{data(m.scadenzaIl)}</span>
+                          <span className="text-xs text-faint">{data(m.scadenzaIl)}</span>
                         </div>
                       ))
                     )}
@@ -354,17 +354,17 @@ export default async function ProgettoPage({
 
                   {ticketAperti.length > 0 && (
                     <>
-                      <div className="mb-2 mt-4 text-xs font-medium">Ticket aperti</div>
+                      <div className="mb-2 mt-4 text-md font-medium">Ticket aperti</div>
                       <div className="rounded border border-border">
                         {ticketAperti.map((t) => (
                           <div key={t.id}
-                            className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0">
+                            className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0">
                             <LifeBuoy size={12} className="flex-none text-faint" />
                             <span className="text-faint">#{t.numero}</span>
                             <Link href={`/ticket/${t.id}`} className="min-w-0 flex-1 truncate hover:underline">
                               {t.titolo}
                             </Link>
-                            <span className="text-xxs text-faint">{data(t.apertoIl)}</span>
+                            <span className="text-xs text-faint">{data(t.apertoIl)}</span>
                           </div>
                         ))}
                       </div>
@@ -444,7 +444,7 @@ function Segnale({
 }) {
   return (
     <div
-      className="flex items-center gap-1.5 rounded border px-2 py-1 text-xs"
+      className="flex items-center gap-1.5 rounded border px-2 py-1 text-md"
       style={{
         borderColor: `var(--${tono})`,
         background: `var(--${tono}-soft)`,

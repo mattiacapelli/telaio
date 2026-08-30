@@ -14,14 +14,14 @@ export function Stat({
 }) {
   return (
     <Card className="p-4">
-      <div className="text-xs text-muted">{etichetta}</div>
+      <div className="text-md text-muted">{etichetta}</div>
       <div className="mt-1.5 text-lg font-semibold tracking-tight">
         {valore}
         {unita && (
           <span className="ml-1 text-sm font-normal text-muted">{unita}</span>
         )}
       </div>
-      {nota && <div className="mt-1 text-xs text-faint">{nota}</div>}
+      {nota && <div className="mt-1 text-md text-faint">{nota}</div>}
     </Card>
   );
 }
@@ -45,7 +45,7 @@ export function Vuoto({
   return (
     <Card className="flex flex-col items-center gap-2 px-6 py-14 text-center">
       <div className="text-sm font-semibold">{titolo}</div>
-      {nota && <div className="max-w-md text-xs text-muted">{nota}</div>}
+      {nota && <div className="max-w-md text-md text-muted">{nota}</div>}
       {azione && <div className="mt-2">{azione}</div>}
     </Card>
   );

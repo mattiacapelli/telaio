@@ -67,15 +67,15 @@ export function GeneraDaOre() {
       >
         <div className="max-h-[60vh] overflow-y-auto px-4 py-3">
           {errore && (
-            <div className="mb-2 rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-xs text-neg">
+            <div className="mb-2 rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-md text-neg">
               {errore}
             </div>
           )}
 
           {proposte === null ? (
-            <div className="py-8 text-center text-xs text-faint">Carico…</div>
+            <div className="py-8 text-center text-md text-faint">Carico…</div>
           ) : proposte.length === 0 ? (
-            <div className="py-8 text-center text-xs text-faint">
+            <div className="py-8 text-center text-md text-faint">
               Nessuna ora da fatturare.
             </div>
           ) : (
@@ -86,12 +86,12 @@ export function GeneraDaOre() {
                   className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-xs font-medium">{p.cliente}</div>
-                    <div className="text-xxs text-faint">
+                    <div className="truncate text-md font-medium">{p.cliente}</div>
+                    <div className="text-xs text-faint">
                       {ore(p.ore)} da fatturare
                     </div>
                   </div>
-                  <span className="text-xs font-semibold">{eur(p.importo)}</span>
+                  <span className="text-md font-semibold">{eur(p.importo)}</span>
                   <Button
                     size="sm"
                     onClick={() => genera(p.clienteId)}
@@ -217,7 +217,7 @@ export function NuovaFattura({
 
             <div className="mt-4">
               <div className="mb-1.5 flex items-center gap-2">
-                <span className="text-xs font-medium">Righe</span>
+                <span className="text-md font-medium">Righe</span>
                 <div className="flex-1" />
                 <Button
                   type="button"
@@ -268,14 +268,14 @@ export function NuovaFattura({
             </div>
 
             {errore && (
-              <div className="mt-3 rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-xs text-neg">
+              <div className="mt-3 rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-md text-neg">
                 {errore}
               </div>
             )}
           </div>
 
           <div className="flex flex-none items-center gap-2 border-t border-border px-4 py-3">
-            <span className="text-xs text-muted">
+            <span className="text-md text-muted">
               Imponibile <strong className="text-text">{eur(totale)}</strong>
             </span>
             <div className="flex-1" />

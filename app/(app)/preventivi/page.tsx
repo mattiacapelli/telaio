@@ -52,21 +52,21 @@ export default async function PreventiviPage() {
       contenuto: (
         <>
           <div className="flex items-center gap-1.5">
-            <span className="text-xxs text-faint">{p.numero}</span>
+            <span className="text-xs text-faint">{p.numero}</span>
             {p.revisione && <Badge tono="accento">{p.revisione}</Badge>}
           </div>
           <Link
             href={`/preventivi/${p.id}`}
-            className="mt-0.5 block text-xs font-medium hover:underline"
+            className="mt-0.5 block text-md font-medium hover:underline"
           >
             {p.titolo}
           </Link>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+          <div className="mt-1 flex items-center gap-1.5 text-md text-muted">
             <Chip testo={p.cliente} />
             <span className="truncate">{p.cliente}</span>
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs font-semibold">{eur(p.imponibile)}</span>
+            <span className="text-md font-semibold">{eur(p.imponibile)}</span>
             <div className="flex-1" />
             {giorni !== null && giorni >= 0 ? (
               <Badge tono={giorni <= 7 ? "attenzione" : "neutro"}>
@@ -93,7 +93,7 @@ export default async function PreventiviPage() {
         colonne={COLONNE}
         elementi={elementi}
         intestazione={
-          <span className="text-xs text-muted">
+          <span className="text-md text-muted">
             {preventivi.length} preventivi ·{" "}
             <strong className="text-text">{eur(inTrattativa)}</strong> in trattativa
           </span>

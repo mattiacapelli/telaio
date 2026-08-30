@@ -95,7 +95,7 @@ export function ProblemiProgetto({
     <div className="flex flex-col">
       <div className="flex items-center gap-2 border-b border-border px-2 py-2">
         <h2 className="text-md font-medium">Criticità</h2>
-        <span className="text-xxs text-faint">
+        <span className="text-xs text-faint">
           {problemi.filter((p) => !CHIUSI.includes(p.stato)).length} aperte
         </span>
         <div className="flex-1" />
@@ -130,7 +130,7 @@ export function ProblemiProgetto({
                   </Campo>
                 </div>
                 {errore && (
-                  <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+                  <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
                     {errore}
                   </div>
                 )}
@@ -150,7 +150,7 @@ export function ProblemiProgetto({
       </div>
 
       {problemi.length === 0 ? (
-        <div className="px-3 py-5 text-center text-xs text-faint">
+        <div className="px-3 py-5 text-center text-md text-faint">
           Nessuna criticità segnalata
         </div>
       ) : (
@@ -172,13 +172,13 @@ export function ProblemiProgetto({
                 }`}
               />
               <div className="min-w-0 flex-1">
-                <div className={`text-xs ${chiuso ? "text-muted line-through" : ""}`}>
+                <div className={`text-md ${chiuso ? "text-muted line-through" : ""}`}>
                   {p.titolo}
                 </div>
                 {p.descrizione && (
-                  <div className="mt-0.5 text-xxs text-faint">{p.descrizione}</div>
+                  <div className="mt-0.5 text-xs text-faint">{p.descrizione}</div>
                 )}
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xxs text-faint">
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-faint">
                   <Badge tono={chiuso ? "neutro" : p.gravita === "CRITICA" ? "attenzione" : "neutro"}>
                     {GRAVITA[p.gravita]}
                   </Badge>

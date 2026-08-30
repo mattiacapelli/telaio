@@ -168,7 +168,7 @@ export function CanvasWorkflow({
                   className="h-2 w-2 flex-none rounded-sm"
                   style={{ background: `var(--tile-${d?.tinta ?? "gray"}-ic)` }}
                 />
-                <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                <span className="min-w-0 flex-1 truncate text-md font-medium">
                   {d?.etichetta ?? b.tipo}
                 </span>
                 <button
@@ -178,7 +178,7 @@ export function CanvasWorkflow({
                   <X size={11} />
                 </button>
               </div>
-              <div className="truncate px-2 pb-1.5 text-xxs text-faint">{riassunto(b)}</div>
+              <div className="truncate px-2 pb-1.5 text-xs text-faint">{riassunto(b)}</div>
               <button
                 onMouseDown={(e) => {
                   e.stopPropagation();
@@ -193,7 +193,7 @@ export function CanvasWorkflow({
         })}
 
         {blocchi.length === 0 && (
-          <div className="pointer-events-none absolute inset-0 grid place-items-center text-xs text-faint">
+          <div className="pointer-events-none absolute inset-0 grid place-items-center text-md text-faint">
             Aggiungi un blocco per iniziare
           </div>
         )}
@@ -209,7 +209,7 @@ export function CanvasWorkflow({
             >
               {(["innesco", "condizione", "azione"] as const).map((cat) => (
                 <div key={cat}>
-                  <div className="px-2 py-1 text-xxs font-medium uppercase text-faint">
+                  <div className="px-2 py-1 text-xs font-medium uppercase text-faint">
                     {cat === "innesco" ? "Inneschi" : cat === "condizione" ? "Condizioni" : "Azioni"}
                   </div>
                   {CATALOGO.filter((d) => d.categoria === cat).map((d) => (
@@ -223,8 +223,8 @@ export function CanvasWorkflow({
                         style={{ background: `var(--tile-${d.tinta}-ic)` }}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs">{d.etichetta}</span>
-                        <span className="block truncate text-xxs text-faint">{d.descrizione}</span>
+                        <span className="block truncate text-md">{d.etichetta}</span>
+                        <span className="block truncate text-xs text-faint">{d.descrizione}</span>
                       </span>
                     </button>
                   ))}
@@ -237,12 +237,12 @@ export function CanvasWorkflow({
 
       <div className="w-64 flex-none overflow-y-auto border-l border-border bg-surface">
         {!blocco ? (
-          <div className="p-3 text-xs text-faint">Seleziona un blocco per configurarlo.</div>
+          <div className="p-3 text-md text-faint">Seleziona un blocco per configurarlo.</div>
         ) : (
           <div className="flex flex-col gap-3 p-3">
             <div>
-              <div className="text-xs font-medium">{definizione(blocco.tipo)?.etichetta}</div>
-              <div className="mt-0.5 text-xxs text-faint">
+              <div className="text-md font-medium">{definizione(blocco.tipo)?.etichetta}</div>
+              <div className="mt-0.5 text-xs text-faint">
                 {definizione(blocco.tipo)?.descrizione}
               </div>
             </div>
@@ -281,10 +281,10 @@ export function CanvasWorkflow({
             ))}
 
             {(definizione(blocco.tipo)?.campi.length ?? 0) === 0 && (
-              <div className="text-xxs text-faint">Nessuna opzione da configurare.</div>
+              <div className="text-xs text-faint">Nessuna opzione da configurare.</div>
             )}
 
-            <div className="text-xxs text-faint">
+            <div className="text-xs text-faint">
               Nei testi puoi usare segnaposto come{" "}
               <code className="text-muted">{"{numero}"}</code>,{" "}
               <code className="text-muted">{"{cliente}"}</code>,{" "}

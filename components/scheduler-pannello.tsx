@@ -47,34 +47,34 @@ export function SchedulerPannello({
     <div className="flex flex-col gap-2 p-3">
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded bg-surface2 px-2 py-1.5">
-          <div className="text-xxs text-faint">Stato</div>
-          <div className="mt-0.5 text-xs">
+          <div className="text-xs text-faint">Stato</div>
+          <div className="mt-0.5 text-md">
             {configurato ? `Attivo · ogni ${Math.round(intervallo / 60)} minuti` : "Non configurato"}
           </div>
         </div>
         <div className="rounded bg-surface2 px-2 py-1.5">
-          <div className="text-xxs text-faint">Ultima esecuzione</div>
-          <div className="mt-0.5 text-xs">
+          <div className="text-xs text-faint">Ultima esecuzione</div>
+          <div className="mt-0.5 text-md">
             {ultima ? new Date(ultima).toLocaleString("it-IT") : "mai"}
           </div>
         </div>
       </div>
 
       {!configurato && (
-        <div className="rounded border border-border bg-surface2 px-2 py-1.5 text-xs text-muted">
+        <div className="rounded border border-border bg-surface2 px-2 py-1.5 text-md text-muted">
           Imposta <code className="text-text">SCHEDULER_TOKEN</code> in{" "}
           <code className="text-text">.env</code> perché le attività ricorrenti
           partano da sole nel container. Puoi comunque eseguirle a mano qui.
         </div>
       )}
 
-      <div className="text-xxs text-faint">
+      <div className="text-xs text-faint">
         Controlla le scadenze dei contratti, applica i rinnovi automatici, crea
         gli avvisi su monte ore e scadenze, ed esegue i workflow a tempo.
       </div>
 
       <div className="flex items-center gap-2">
-        {esito && <span className="text-xxs text-muted">{esito}</span>}
+        {esito && <span className="text-xs text-muted">{esito}</span>}
         <div className="flex-1" />
         <Button size="sm" variant="outline" onClick={esegui} disabled={inCorso}>
           <RefreshCw /> {inCorso ? "Eseguo…" : "Esegui adesso"}

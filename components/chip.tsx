@@ -28,7 +28,7 @@ export function Chip({
   return (
     <span
       className={cn(
-        "grid h-[18px] w-[18px] flex-none place-items-center rounded text-xxs font-semibold",
+        "grid h-[18px] w-[18px] flex-none place-items-center rounded text-xs font-semibold",
         className,
       )}
       style={{ background: `${colore}26`, color: colore }}

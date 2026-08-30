@@ -35,7 +35,7 @@ export default async function IncassiPage() {
   return (
     <div className="tl-in flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted">
+        <span className="text-md text-muted">
           {daIncassare.length} fatture da incassare
         </span>
         <div className="flex-1" />
@@ -83,11 +83,11 @@ export default async function IncassiPage() {
                       style={{ height: `${(m.incassato / max) * 100}%` }}
                     />
                   </div>
-                  <span className="text-xxs text-faint">{MESI[i]}</span>
+                  <span className="text-xs text-faint">{MESI[i]}</span>
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex items-center gap-4 text-xxs text-muted">
+            <div className="mt-3 flex items-center gap-4 text-xs text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-sm bg-accent-line" />
                 Fatturato
@@ -102,7 +102,7 @@ export default async function IncassiPage() {
 
         <Card>
           <CardHead titolo="Pagamenti ricevuti" />
-          <div className="grid grid-cols-[60px_2fr_1fr_1fr] gap-2 border-b border-border px-4 py-2 text-xxs font-semibold uppercase tracking-wide text-faint">
+          <div className="grid grid-cols-[60px_2fr_1fr_1fr] gap-2 border-b border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-faint">
             <span>Data</span>
             <span>Fattura / cliente</span>
             <span>Metodo</span>
@@ -114,17 +114,17 @@ export default async function IncassiPage() {
               key={m.id}
               className="group grid grid-cols-[60px_2fr_1fr_1fr_24px] items-center gap-2 border-b border-border px-3 py-2 last:border-0"
             >
-              <span className="text-xs text-muted">{data(m.data)}</span>
+              <span className="text-md text-muted">{data(m.data)}</span>
               <div className="min-w-0">
-                <div className="truncate text-xs">
+                <div className="truncate text-md">
                   {m.fattura} · {m.cliente}
                 </div>
                 {m.nota && (
-                  <div className="truncate text-xxs text-faint">{m.nota}</div>
+                  <div className="truncate text-xs text-faint">{m.nota}</div>
                 )}
               </div>
-              <span className="text-xs text-muted">{METODI[m.metodo]}</span>
-              <span className="text-right text-xs font-medium">
+              <span className="text-md text-muted">{METODI[m.metodo]}</span>
+              <span className="text-right text-md font-medium">
                 {eur(m.importo)}
               </span>
               <EliminaIncasso id={m.id} />

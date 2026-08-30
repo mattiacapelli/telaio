@@ -29,23 +29,23 @@ export default async function ClientePage({
       <div className="flex items-center gap-3">
         <Link
           href="/clienti"
-          className="h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-xs text-muted hover:border-border2 hover:text-text"
+          className="h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-md text-muted hover:border-border2 hover:text-text"
         >
           ← Clienti
         </Link>
-        <span className="text-xs text-faint">
+        <span className="text-md text-faint">
           {c.ragioneSociale} · scheda cliente
         </span>
       </div>
 
       <Card className="p-4">
         <div className="flex flex-wrap items-start gap-3">
-          <div className="grid h-11 w-11 flex-none place-items-center rounded-md bg-surface3 text-xs font-semibold">
+          <div className="grid h-11 w-11 flex-none place-items-center rounded-md bg-surface3 text-md font-semibold">
             {c.sigla}
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold">{c.ragioneSociale}</div>
-            <div className="text-xs text-muted">
+            <div className="text-md text-muted">
               {[c.partitaIva && `P.IVA ${c.partitaIva}`, c.citta]
                 .filter(Boolean)
                 .join(" · ") || "—"}
@@ -66,7 +66,7 @@ export default async function ClientePage({
             ["Incassato", eur(incassato)],
           ].map(([k, v]) => (
             <div key={k} className="rounded-md bg-surface2 px-3 py-2">
-              <div className="text-xxs text-faint">{k}</div>
+              <div className="text-xs text-faint">{k}</div>
               <div className="mt-0.5 text-sm font-medium">{v}</div>
             </div>
           ))}
@@ -77,7 +77,7 @@ export default async function ClientePage({
         <Card>
           <CardHead titolo="Referenti" />
           {c.referenti.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-faint">
+            <div className="px-4 py-6 text-center text-md text-faint">
               Nessun referente
             </div>
           ) : (
@@ -87,10 +87,10 @@ export default async function ClientePage({
                 className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-0"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs">
+                  <div className="text-md">
                     {r.nome} {r.cognome}
                   </div>
-                  <div className="truncate text-xxs text-faint">
+                  <div className="truncate text-xs text-faint">
                     {[r.ruolo, r.email].filter(Boolean).join(" · ") || "—"}
                   </div>
                 </div>
@@ -103,7 +103,7 @@ export default async function ClientePage({
         <Card>
           <CardHead titolo="Progetti" />
           {c.progetti.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-faint">
+            <div className="px-4 py-6 text-center text-md text-faint">
               Nessun progetto
             </div>
           ) : (
@@ -114,13 +114,13 @@ export default async function ClientePage({
                 className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-0 hover:bg-surface2"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs">{p.nome}</div>
-                  <div className="text-xxs text-faint">
+                  <div className="truncate text-md">{p.nome}</div>
+                  <div className="text-xs text-faint">
                     {ore(p.registrazioni.reduce((s, r) => s + n(r.ore), 0))} /{" "}
                     {ore(p.budgetOre)}
                   </div>
                 </div>
-                <span className="text-xs text-muted">{eur(p.valore)}</span>
+                <span className="text-md text-muted">{eur(p.valore)}</span>
               </Link>
             ))
           )}
@@ -130,13 +130,13 @@ export default async function ClientePage({
           <CardHead
             titolo="Ticket e interventi"
             extra={
-              <Link href="/ticket" className="text-xs text-muted hover:text-text">
+              <Link href="/ticket" className="text-md text-muted hover:text-text">
                 Tutti
               </Link>
             }
           />
           {c.ticket.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-faint">
+            <div className="px-4 py-6 text-center text-md text-faint">
               Nessun ticket
             </div>
           ) : (
@@ -145,8 +145,8 @@ export default async function ClientePage({
                 key={t.id}
                 className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-0"
               >
-                <span className="text-xs text-faint">#{t.numero}</span>
-                <div className="min-w-0 flex-1 truncate text-xs">
+                <span className="text-md text-faint">#{t.numero}</span>
+                <div className="min-w-0 flex-1 truncate text-md">
                   {t.titolo}
                 </div>
                 <Badge>{t.stato.toLowerCase().replace("_", " ")}</Badge>
@@ -158,7 +158,7 @@ export default async function ClientePage({
         <Card>
           <CardHead titolo="Fatture" />
           {c.fatture.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-faint">
+            <div className="px-4 py-6 text-center text-md text-faint">
               Nessuna fattura
             </div>
           ) : (
@@ -167,11 +167,11 @@ export default async function ClientePage({
                 key={f.id}
                 className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-0"
               >
-                <span className="text-xs">{f.numero}</span>
-                <div className="flex-1 text-xxs text-faint">
+                <span className="text-md">{f.numero}</span>
+                <div className="flex-1 text-xs text-faint">
                   {f.emessaIl ? data(f.emessaIl) : "da emettere"}
                 </div>
-                <span className="text-xs">{eur(f.imponibile)}</span>
+                <span className="text-md">{eur(f.imponibile)}</span>
               </div>
             ))
           )}

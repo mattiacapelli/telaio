@@ -101,7 +101,7 @@ export function Sidebar() {
     >
       {/* Intestazione workspace, come la riga "Mattia Capelli" di Twenty. */}
       <div className="flex h-[48px] flex-none items-center gap-2 px-2">
-        <div className="grid h-[24px] w-[24px] flex-none place-items-center rounded bg-accent text-xxs font-semibold text-accent-fg">
+        <div className="grid h-[24px] w-[24px] flex-none place-items-center rounded bg-accent text-xs font-semibold text-accent-fg">
           T
         </div>
         {!collapsed && (
@@ -120,7 +120,7 @@ export function Sidebar() {
 
       <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-2">
         {!collapsed && (
-          <div className="px-1 pb-1 pt-3 text-xs font-medium text-faint">
+          <div className="px-1 pb-1 pt-3 text-md font-medium text-faint">
             Operativo
           </div>
         )}
@@ -129,7 +129,7 @@ export function Sidebar() {
         ))}
 
         {!collapsed && (
-          <div className="px-1 pb-1 pt-3 text-xs font-medium text-faint">
+          <div className="px-1 pb-1 pt-3 text-md font-medium text-faint">
             Denaro
           </div>
         )}
@@ -138,7 +138,7 @@ export function Sidebar() {
         ))}
 
         {!collapsed && (
-          <div className="px-1 pb-1 pt-3 text-xs font-medium text-faint">
+          <div className="px-1 pb-1 pt-3 text-md font-medium text-faint">
             Automazione
           </div>
         )}

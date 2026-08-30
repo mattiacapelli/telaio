@@ -59,7 +59,7 @@ export function ModificaPreventivo({
 
   if (bloccato) {
     return (
-      <span className="text-xs text-faint">
+      <span className="text-md text-faint">
         Preventivo accettato: non modificabile
       </span>
     );
@@ -93,16 +93,16 @@ export function ModificaPreventivo({
               setMotivo={setMotivo}
             />
             {errore && (
-              <div className="mx-5 mb-4 rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-xs text-neg">
+              <div className="mx-5 mb-4 rounded-md border border-[var(--neg)] bg-[var(--neg-soft)] px-3 py-2 text-md text-neg">
                 {errore}
               </div>
             )}
           </div>
 
           <div className="flex flex-none items-center gap-2 border-t border-border px-5 py-3">
-            <div className="text-xs text-muted">
+            <div className="text-md text-muted">
               Totale{" "}
-              <strong className="text-xs text-text">
+              <strong className="text-md text-text">
                 {eurCent(riepilogo.totale)}
               </strong>
             </div>

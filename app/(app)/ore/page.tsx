@@ -47,7 +47,7 @@ export default async function OrePage({
           >
             ‹
           </a>
-          <div className="px-2 text-xs font-medium">{periodo}</div>
+          <div className="px-2 text-md font-medium">{periodo}</div>
           <a
             href={`/ore?s=${offset + 1}`}
             className="grid h-6 w-6 place-items-center rounded border border-border2 bg-[var(--alpha-lighter)] text-muted hover:bg-[var(--alpha-light)] hover:text-text"
@@ -57,7 +57,7 @@ export default async function OrePage({
           {offset !== 0 && (
             <a
               href="/ore"
-              className="ml-1 h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-xs text-muted hover:text-text"
+              className="ml-1 h-6 rounded border border-border2 bg-[var(--alpha-lighter)] px-2 text-md text-muted hover:text-text"
             >
               Questa settimana
             </a>
@@ -69,7 +69,7 @@ export default async function OrePage({
           attivita={riferimenti.attivita}
           ticket={riferimenti.ticket}
         />
-        <span className="text-xs text-muted">
+        <span className="text-md text-muted">
           Totale settimana <strong className="text-text">{ore(settimana.totale)}</strong> · da
           fatturare <strong className="text-text">{ore(settimana.daFatturare)}</strong>
         </span>
@@ -83,7 +83,7 @@ export default async function OrePage({
       ) : (
         <Card className="overflow-x-auto">
           <div className="min-w-[720px]">
-            <div className="grid grid-cols-[minmax(200px,2fr)_repeat(7,1fr)_70px] gap-1 border-b border-border px-3 py-2 text-xxs font-semibold uppercase tracking-wide text-faint">
+            <div className="grid grid-cols-[minmax(200px,2fr)_repeat(7,1fr)_70px] gap-1 border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-faint">
               <span>Progetto / attività</span>
               {giorni.map((g) => (
                 <span key={g.nome} className="text-center">
@@ -99,8 +99,8 @@ export default async function OrePage({
                 className="grid grid-cols-[minmax(200px,2fr)_repeat(7,1fr)_70px] items-center gap-1 border-b border-border px-3 py-2 last:border-0"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-xs">{r.etichetta}</div>
-                  <div className="truncate text-xxs text-faint">
+                  <div className="truncate text-md">{r.etichetta}</div>
+                  <div className="truncate text-xs text-faint">
                     {r.contesto}
                   </div>
                 </div>
@@ -111,7 +111,7 @@ export default async function OrePage({
                   return (
                     <div key={i} className="flex h-6 items-center justify-center">
                       {h > 0 ? (
-                        <span className="text-center text-xs tabular-nums text-text">
+                        <span className="text-center text-md tabular-nums text-text">
                           {h.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                         </span>
                       ) : (
@@ -126,7 +126,7 @@ export default async function OrePage({
                     </div>
                   );
                 })}
-                <span className="text-right text-xs font-semibold tabular-nums">
+                <span className="text-right text-md font-semibold tabular-nums">
                   {r.totale.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                 </span>
               </div>

@@ -50,7 +50,7 @@ export function NoteOperative({
           onChange={(e) => setTesto(e.target.value)}
           rows={2}
           placeholder="Annota un aggiornamento…"
-          className="w-full resize-y rounded border border-border bg-surface2 px-2 py-1.5 text-xs outline-none placeholder:text-faint focus:border-accent-line focus:ring-1 focus:ring-accent-line"
+          className="w-full resize-y rounded border border-border bg-surface2 px-2 py-1.5 text-md outline-none placeholder:text-faint focus:border-accent-line focus:ring-1 focus:ring-accent-line"
         />
         <div className="flex">
           <div className="flex-1" />
@@ -61,13 +61,13 @@ export function NoteOperative({
       </form>
 
       {note.length === 0 ? (
-        <div className="py-3 text-center text-xxs text-faint">Nessuna nota</div>
+        <div className="py-3 text-center text-xs text-faint">Nessuna nota</div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {note.map((nt) => (
             <div key={nt.id} className="rounded border border-border bg-surface2 px-2 py-1.5">
-              <div className="whitespace-pre-wrap text-xs">{nt.testo}</div>
-              <div className="mt-1 text-xxs text-faint">
+              <div className="whitespace-pre-wrap text-md">{nt.testo}</div>
+              <div className="mt-1 text-xs text-faint">
                 {dataEstesa(nt.createdAt)}
                 {nt.autore && ` · ${nt.autore}`}
               </div>

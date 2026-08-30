@@ -116,15 +116,15 @@ function TimerPill() {
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-accent-line bg-accent-soft px-3 py-1.5">
       <span className="tl-pulse h-1.5 w-1.5 rounded-full bg-accent" />
-      <div className="text-xs font-semibold tabular-nums">{clock}</div>
+      <div className="text-md font-semibold tabular-nums">{clock}</div>
       {etichetta && (
-        <span className="max-w-[180px] truncate text-xs text-muted">
+        <span className="max-w-[180px] truncate text-md text-muted">
           {etichetta}
         </span>
       )}
       <button
         onClick={stop}
-        className="rounded-md border border-border px-2 py-0.5 text-xs text-muted transition-colors hover:border-border2 hover:text-text"
+        className="rounded-md border border-border px-2 py-0.5 text-md text-muted transition-colors hover:border-border2 hover:text-text"
       >
         Stop
       </button>
@@ -159,7 +159,7 @@ function MenuUtente({ nome }: { nome: string }) {
         title={nome}
         aria-haspopup="menu"
         aria-expanded={aperto}
-        className="grid h-[28px] w-[28px] place-items-center rounded-md bg-accent-soft text-xxs font-medium text-[var(--accent-text)] transition-colors hover:bg-accent-line"
+        className="grid h-[28px] w-[28px] place-items-center rounded-md bg-accent-soft text-xs font-medium text-[var(--accent-text)] transition-colors hover:bg-accent-line"
       >
         {iniziali}
       </button>
@@ -176,13 +176,13 @@ function MenuUtente({ nome }: { nome: string }) {
             className="absolute right-0 z-20 mt-1.5 w-52 overflow-hidden rounded-md border border-border bg-surface shadow-[var(--shadow)]"
           >
             <div className="border-b border-border px-3 py-2">
-              <div className="truncate text-xs font-medium">{nome}</div>
-              <div className="text-xs text-faint">connesso</div>
+              <div className="truncate text-md font-medium">{nome}</div>
+              <div className="text-md text-faint">connesso</div>
             </div>
             <button
               onClick={esci}
               disabled={inCorso}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-muted transition-colors hover:bg-surface2 hover:text-text disabled:opacity-50"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-md text-muted transition-colors hover:bg-surface2 hover:text-text disabled:opacity-50"
             >
               <LogOut size={14} />
               {inCorso ? "Esco…" : "Esci"}

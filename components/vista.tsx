@@ -45,7 +45,7 @@ export function SelettoreVista({
           title={label}
           aria-pressed={vista === v}
           className={cn(
-            "flex h-6 items-center gap-1 rounded-[3px] px-2 text-xxs transition-colors",
+            "flex h-6 items-center gap-1 rounded-[3px] px-2 text-xs transition-colors",
             vista === v
               ? "bg-surface text-text shadow-[var(--shadow)]"
               : "text-muted hover:text-text",
@@ -117,7 +117,7 @@ export function Tabella({
     <div className="overflow-x-auto rounded border border-border bg-surface">
       <div className="min-w-[720px]">
         <div
-          className="grid gap-2 border-b border-border px-2 py-2 text-xxs font-medium text-faint"
+          className="grid gap-2 border-b border-border px-2 py-2 text-xs font-medium text-faint"
           style={{ gridTemplateColumns: griglia }}
         >
           {colonne.map((c) => (
@@ -135,14 +135,14 @@ export function Tabella({
         </div>
 
         {righe.length === 0 ? (
-          <div className="px-3 py-8 text-center text-xs text-faint">
+          <div className="px-3 py-8 text-center text-md text-faint">
             Nessun elemento
           </div>
         ) : (
           righe.map((r) => {
             const contenuto = (
               <div
-                className="grid items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0 hover:bg-[var(--alpha-lighter)]"
+                className="grid items-center gap-2 border-b border-border px-2 py-1.5 text-md last:border-0 hover:bg-[var(--alpha-lighter)]"
                 style={{ gridTemplateColumns: griglia }}
               >
                 {colonne.map((c, i) => (

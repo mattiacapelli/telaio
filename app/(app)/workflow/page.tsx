@@ -31,7 +31,7 @@ export default async function WorkflowPage() {
   return (
     <div className="tl-in flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted">
+        <span className="text-md text-muted">
           {workflow.length} workflow · {workflow.filter((w) => w.attivo).length} attivi
         </span>
         <div className="flex-1" />
@@ -60,17 +60,17 @@ export default async function WorkflowPage() {
                 <IconaWorkflow size={14} className="flex-none text-faint" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="truncate text-xs font-medium">{w.nome}</span>
+                    <span className="truncate text-md font-medium">{w.nome}</span>
                     {!w.attivo && <Badge>disattivo</Badge>}
                   </div>
-                  <div className="truncate text-xxs text-faint">
+                  <div className="truncate text-xs text-faint">
                     {etichettaInnesco(w.innesco, w.eventoChiave)}
                     {w.esecuzioni > 0 && ` · ${w.esecuzioni} esecuzioni`}
                     {w.ultimaEsecuzione && ` · ultima ${dataEstesa(w.ultimaEsecuzione)}`}
                   </div>
                 </div>
                 {ultimo && (
-                  <span className="max-w-[240px] truncate text-xxs text-faint">
+                  <span className="max-w-[240px] truncate text-xs text-faint">
                     {ultimo.esito}
                   </span>
                 )}

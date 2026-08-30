@@ -188,7 +188,7 @@ export function RegistraCosto({
               </Campo>
             )}
 
-            <label className="flex items-center gap-1.5 text-xs text-muted">
+            <label className="flex items-center gap-1.5 text-md text-muted">
               <input
                 type="checkbox"
                 checked={d.rimborsabile}
@@ -198,14 +198,14 @@ export function RegistraCosto({
             </label>
 
             {errore && (
-              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">
+              <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-md text-neg">
                 {errore}
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2 border-t border-border px-4 py-3">
-            <span className="text-xs text-muted">
+            <span className="text-md text-muted">
               Totale <strong className="text-text">{eur(totale)}</strong>
             </span>
             <div className="flex-1" />
