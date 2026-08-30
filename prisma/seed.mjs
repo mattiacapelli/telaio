@@ -521,6 +521,48 @@ async function main() {
     ],
   });
 
+  // ------------------------------------------------------- modelli PDF
+  // Riprodotti qui invece di importare lib/pdf/blocchi.ts: il seed gira come
+  // .mjs puro, senza il transpiler TypeScript del resto dell'app.
+  const bloccoBase = (id, tipo, config) => ({ id, tipo, attivo: true, config });
+
+  await prisma.modelloPdf.create({
+    data: {
+      nome: "Modello standard",
+      ambito: "PREVENTIVO",
+      descrizione: "Intestazione, destinatario, voci e riepilogo",
+      predefinito: true,
+      blocchi: [
+        bloccoBase("b0", "intestazione", { mostraPartitaIva: true, mostraIban: false }),
+        bloccoBase("b1", "titolo", { prefisso: "", mostraRevisione: true }),
+        bloccoBase("b2", "destinatario", { mostraPartitaIva: true, mostraReferente: true, mostraDate: true }),
+        bloccoBase("b3", "testo", { campo: "premessa", titolo: "", giustificato: true }),
+        bloccoBase("b4", "voci", { mostraUnita: true, mostraSconto: true, mostraNote: true }),
+        bloccoBase("b5", "riepilogo", { mostraSconti: true }),
+        bloccoBase("b6", "testo", { campo: "modalitaPagamento", titolo: "Condizioni", giustificato: true }),
+      ],
+    },
+  });
+
+  await prisma.modelloPdf.create({
+    data: {
+      nome: "Modello standard",
+      ambito: "CONTRATTO",
+      descrizione: "Parti, oggetto, corrispettivo e firme",
+      predefinito: true,
+      blocchi: [
+        bloccoBase("b0", "intestazione", { mostraPartitaIva: true, mostraIban: false }),
+        bloccoBase("b1", "titolo", { prefisso: "", mostraRevisione: false }),
+        bloccoBase("b2", "parti", { etichettaPrima: "TRA", etichettaSeconda: "E" }),
+        bloccoBase("b3", "testo", { campo: "premessa", titolo: "Premessa", giustificato: true }),
+        bloccoBase("b4", "testo", { campo: "oggetto", titolo: "Oggetto", giustificato: true }),
+        bloccoBase("b5", "corrispettivo", { mostraMonteOre: true }),
+        bloccoBase("b6", "testo", { campo: "condizioniPagamento", titolo: "Condizioni di pagamento", giustificato: true }),
+        bloccoBase("b7", "firme", { etichettaPrima: "Il prestatore", etichettaSeconda: "Il committente" }),
+      ],
+    },
+  });
+
   console.log("Seed completato.");
   console.log("  accesso: marco@studioferrero.it / " + (process.env.SEED_PASSWORD ?? "Telaio2026!"));
 }

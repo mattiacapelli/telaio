@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
-import { generaPdfPreventivo } from "@/lib/pdf";
+import { generaPdf } from "@/lib/pdf/generatore";
+import { modelloPerDocumento } from "@/lib/pdf/modelli";
+import { calcolaPreventivo } from "@/lib/calcoli";
 import { etichettaRevisione, type VoceCongelata } from "@/lib/revisioni";
 import { n } from "@/lib/format";
 
@@ -72,7 +74,10 @@ export async function GET(
     numeroRevisione = rev.numero;
   }
 
-  const pdf = await generaPdfPreventivo({
+  const { blocchi, stile } = await modelloPerDocumento("PREVENTIVO", p.modelloPdfId);
+  const riepilogo = calcolaPreventivo(voci, n(p.scontoPercento), n(p.aliquotaIva));
+
+  const pdf = await generaPdf({
     numero: p.numero,
     revisione: etichettaRevisione(numeroRevisione) || undefined,
     titolo,
@@ -85,19 +90,22 @@ export async function GET(
       ragioneSociale: p.cliente.ragioneSociale,
       partitaIva: p.cliente.partitaIva,
       citta: p.cliente.citta,
+      referente: p.referente ? `${p.referente.nome} ${p.referente.cognome}` : null,
     },
-    referente: p.referente ? `${p.referente.nome} ${p.referente.cognome}` : null,
     dataEmissione: p.inviatoIl ?? p.createdAt,
     scadeIl: p.scadeIl,
     validitaGiorni: p.validitaGiorni,
-    premessa: p.premessa,
-    tempiConsegna: p.tempiConsegna,
-    modalitaPagamento: p.modalitaPagamento,
-    note: p.note,
+    testi: {
+      premessa: p.premessa,
+      tempiConsegna: p.tempiConsegna,
+      modalitaPagamento: p.modalitaPagamento,
+      note: p.note,
+    },
     scontoPercento: n(p.scontoPercento),
     aliquotaIva: n(p.aliquotaIva),
+    riepilogo,
     voci,
-  });
+  }, blocchi, stile);
 
   const nomeFile = `${p.numero.replace(/\//g, "-")}${
     numeroRevisione > 1 ? `-r${numeroRevisione}` : ""

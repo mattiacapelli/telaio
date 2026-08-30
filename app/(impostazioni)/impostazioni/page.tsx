@@ -4,14 +4,15 @@ import { redis } from "@/lib/redis";
 import { SyncTwenty } from "@/components/sync-twenty";
 import { SchedulerPannello } from "@/components/scheduler-pannello";
 import { TestiStandard } from "@/components/testi-standard";
+import { ElencoModelli } from "@/components/pdf-builder/elenco-modelli";
 import { NavigazioneImpostazioni } from "@/components/impostazioni/navigazione";
 import { Sezione, Riquadro, Riga, Stato, Dato, ZonaPericolosa } from "@/components/impostazioni/blocchi";
 import { ModificaDatiStudio } from "@/components/impostazioni/dati-studio";
 import { Button } from "@/components/ui/button";
 import { eurCent, n } from "@/lib/format";
 import {
-  Building2, FileText, Car, RefreshCw, Plug, Clock, Users,
-  Database, KeyRound, Mail, GitCommit,
+  Building2, FileText, RefreshCw, Plug, Clock, Users,
+  Database, KeyRound, Mail, GitCommit, LayoutTemplate,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -31,13 +32,14 @@ const MODALITA_TRASFERTA: Record<string, string> = {
 };
 
 export default async function ImpostazioniPage() {
-  const [{ imp, clienti, referenti }, ultima, testi, utenti] = await Promise.all([
+  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf] = await Promise.all([
     getImpostazioni(),
     ultimaEsecuzione(),
     prisma.testoStandard.findMany({
       orderBy: [{ ambito: "asc" }, { ordine: "asc" }, { titolo: "asc" }],
     }),
     prisma.utente.findMany({ orderBy: { email: "asc" } }),
+    prisma.modelloPdf.findMany({ orderBy: [{ ambito: "asc" }, { nome: "asc" }] }),
   ]);
 
   const twentyAttivo = Boolean(process.env.TWENTY_API_KEY);
@@ -179,6 +181,20 @@ export default async function ImpostazioniPage() {
         },
 
         // ------------------------------------------------------ integrazioni
+        {
+          chiave: "modelli-pdf",
+          etichetta: "Modelli PDF",
+          icona: <LayoutTemplate size={14} />,
+          gruppo: "Studio",
+          contenuto: (
+            <Sezione
+              titolo="Modelli PDF"
+              descrizione="Compongono i documenti a blocchi: apri un modello per riordinare, attivare o configurare le sue sezioni con il builder."
+            >
+              <ElencoModelli modelli={modelliPdf} />
+            </Sezione>
+          ),
+        },
         {
           chiave: "twenty",
           etichetta: "Twenty CRM",

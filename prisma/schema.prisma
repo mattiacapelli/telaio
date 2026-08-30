@@ -96,6 +96,8 @@ model Preventivo {
 
   cliente            Cliente              @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   referente          Referente?           @relation(fields: [referenteId], references: [id], onDelete: SetNull)
+  modelloPdf         ModelloPdf?          @relation(fields: [modelloPdfId], references: [id], onDelete: SetNull)
+  modelloPdfId       String?
   voci               VocePreventivo[]
   progetto           Progetto?
   revisioni          RevisionePreventivo[]
@@ -610,6 +612,8 @@ model Contratto {
 
   cliente   Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   progetto  Progetto?        @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  modelloPdf   ModelloPdf?   @relation(fields: [modelloPdfId], references: [id], onDelete: SetNull)
+  modelloPdfId String?
   periodi   PeriodoContratto[]
   documenti Documento[]
   ticket    Ticket[]
@@ -704,6 +708,33 @@ model Notifica {
   createdAt DateTime  @default(now())
 
   @@index([lettaIl, createdAt])
+}
+
+/// Modello di stampa: quali blocchi compongono il PDF e in che ordine.
+///
+/// I blocchi sono salvati come JSON perché la loro configurazione cambia col
+/// tipo — l'intestazione ha il logo, la tabella voci ha le colonne — e un
+/// modello relazionale per ogni variante renderebbe rigido qualcosa che deve
+/// poter crescere.
+model ModelloPdf {
+  id        String   @id @default(cuid())
+  nome      String
+  /// PREVENTIVO o CONTRATTO: determina quali blocchi sono disponibili.
+  ambito    String
+  descrizione String?
+  /// Usato quando il documento non ne indica uno proprio.
+  predefinito Boolean @default(false)
+  /// Blocchi in ordine di stampa, con la loro configurazione.
+  blocchi   Json     @default("[]")
+  /// Margini, colore d'accento e dimensioni del testo.
+  stile     Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  preventivi Preventivo[]
+  contratti  Contratto[]
+
+  @@index([ambito, predefinito])
 }
 
 /// Testo standard riutilizzabile nei documenti (clausole di pagamento,
