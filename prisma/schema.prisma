@@ -537,6 +537,11 @@ model Contratto {
   rinnovoAutomatico Boolean        @default(false)
   /// Preavviso di disdetta, in giorni.
   preavvisoGiorni   Int            @default(30)
+  /// Testi del documento, copiati dai modelli alla creazione.
+  premessa    String?
+  oggetto     String?
+  condizioniPagamento String?
+  condizioniServizio  String?
   note        String?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
@@ -637,6 +642,29 @@ model Notifica {
   createdAt DateTime  @default(now())
 
   @@index([lettaIl, createdAt])
+}
+
+/// Testo standard riutilizzabile nei documenti (clausole di pagamento,
+/// premesse, condizioni di fornitura).
+///
+/// Sono modelli, non testi fissi: al momento della creazione vengono copiati
+/// nel documento, che resta poi indipendente. Modificare un modello non
+/// riscrive i documenti già emessi.
+model TestoStandard {
+  id        String   @id @default(cuid())
+  /// Dove si applica: PREVENTIVO, CONTRATTO o ENTRAMBI.
+  ambito    String   @default("ENTRAMBI")
+  /// Quale campo del documento riempie: premessa, pagamento, consegna...
+  campo     String
+  titolo    String
+  testo     String
+  /// Usato automaticamente per i nuovi documenti di questo ambito e campo.
+  predefinito Boolean @default(false)
+  ordine    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ambito, campo])
 }
 
 /// Riga singola di configurazione dello studio + stato integrazione Twenty.

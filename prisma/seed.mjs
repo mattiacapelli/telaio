@@ -450,6 +450,77 @@ async function main() {
     },
   });
 
+  // ------------------------------------------------------- testi standard
+  await prisma.testoStandard.createMany({
+    data: [
+      {
+        ambito: "ENTRAMBI",
+        campo: "condizioniPagamento",
+        titolo: "Pagamento 30 giorni data fattura",
+        testo:
+          "Il corrispettivo è dovuto entro 30 giorni dalla data della fattura, " +
+          "mediante bonifico bancario sulle coordinate indicate. In caso di " +
+          "ritardo si applicano gli interessi di mora previsti dal D.Lgs. 231/2002.",
+        predefinito: true,
+        ordine: 0,
+      },
+      {
+        ambito: "PREVENTIVO",
+        campo: "premessa",
+        titolo: "Premessa standard preventivi",
+        testo:
+          "Il presente preventivo definisce le attività concordate e il relativo " +
+          "corrispettivo. Eventuali richieste non comprese saranno quotate a parte " +
+          "e concordate prima dell'esecuzione.",
+        predefinito: true,
+        ordine: 0,
+      },
+      {
+        ambito: "PREVENTIVO",
+        campo: "tempiConsegna",
+        titolo: "Tempi indicativi",
+        testo:
+          "I tempi di consegna decorrono dalla data di accettazione e dalla " +
+          "ricezione dei materiali necessari. Ritardi nella fornitura di contenuti " +
+          "o accessi da parte del committente prolungano i termini di pari durata.",
+        predefinito: true,
+        ordine: 0,
+      },
+      {
+        ambito: "CONTRATTO",
+        campo: "oggetto",
+        titolo: "Oggetto assistenza sistemistica",
+        testo:
+          "Il prestatore si impegna a fornire assistenza tecnica e manutenzione " +
+          "correttiva sui sistemi del committente, entro il monte ore concordato. " +
+          "Le ore eccedenti sono fatturate a consuntivo alla tariffa indicata.",
+        predefinito: true,
+        ordine: 0,
+      },
+      {
+        ambito: "CONTRATTO",
+        campo: "condizioniServizio",
+        titolo: "Orari e tempi di risposta",
+        testo:
+          "Il servizio è erogato nei giorni lavorativi dalle 9:00 alle 18:00. " +
+          "Presa in carico entro 8 ore lavorative dalla segnalazione. Gli interventi " +
+          "fuori orario sono concordati di volta in volta.",
+        predefinito: true,
+        ordine: 0,
+      },
+      {
+        ambito: "CONTRATTO",
+        campo: "premessa",
+        titolo: "Premessa standard contratti",
+        testo:
+          "Le parti, come sopra individuate, convengono e stipulano quanto segue, " +
+          "riconoscendo le premesse parte integrante del presente accordo.",
+        predefinito: true,
+        ordine: 0,
+      },
+    ],
+  });
+
   console.log("Seed completato.");
   console.log("  accesso: marco@studioferrero.it / " + (process.env.SEED_PASSWORD ?? "Telaio2026!"));
 }

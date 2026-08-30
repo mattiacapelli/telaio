@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { eurCent } from "@/lib/format";
 import { SyncTwenty } from "@/components/sync-twenty";
 import { SchedulerPannello } from "@/components/scheduler-pannello";
+import { TestiStandard } from "@/components/testi-standard";
+import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +33,12 @@ async function ultimaEsecuzione() {
 }
 
 export default async function ImpostazioniPage() {
-  const [{ imp, clienti, referenti }, ultima] = await Promise.all([
+  const [{ imp, clienti, referenti }, ultima, testi] = await Promise.all([
     getImpostazioni(),
     ultimaEsecuzione(),
+    prisma.testoStandard.findMany({
+      orderBy: [{ ambito: "asc" }, { ordine: "asc" }, { titolo: "asc" }],
+    }),
   ]);
   const configurato = Boolean(process.env.TWENTY_API_KEY);
 
@@ -97,6 +102,11 @@ export default async function ImpostazioniPage() {
             ultimaSync={imp?.twentySyncedAt ? String(imp.twentySyncedAt) : null}
           />
         </div>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHead titolo="Testi standard dei documenti" />
+        <TestiStandard testi={testi} />
       </Card>
 
       <Card>

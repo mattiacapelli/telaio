@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { invalidate } from "@/lib/redis";
 import { leggiSessione } from "@/lib/auth";
 import { prossimoNumeroPreventivo } from "@/lib/numerazione";
+import { testiPredefiniti } from "@/lib/testi";
 import { calcolaPreventivo } from "@/lib/calcoli";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,8 @@ export async function POST(req: Request) {
   // non può divergere dalle voci salvate.
   const riepilogo = calcolaPreventivo(d.voci, d.scontoPercento, d.aliquotaIva);
 
+  const predefiniti = await testiPredefiniti("PREVENTIVO");
+
   const preventivo = await prisma.preventivo.create({
     data: {
       numero: await prossimoNumeroPreventivo(),
@@ -85,11 +88,11 @@ export async function POST(req: Request) {
       scontoPercento: d.scontoPercento,
       aliquotaIva: d.aliquotaIva,
       probabilita: d.probabilita ?? null,
-      premessa: d.premessa || null,
-      tempiConsegna: d.tempiConsegna || null,
-      modalitaPagamento: d.modalitaPagamento || null,
+      premessa: d.premessa || predefiniti.premessa || null,
+      tempiConsegna: d.tempiConsegna || predefiniti.tempiConsegna || null,
+      modalitaPagamento: d.modalitaPagamento || predefiniti.modalitaPagamento || null,
       validitaGiorni: d.validitaGiorni ?? null,
-      note: d.note || null,
+      note: d.note || predefiniti.note || null,
       scadeIl: d.scadeIl ? new Date(d.scadeIl) : null,
       voci: {
         create: d.voci.map((v, i) => ({

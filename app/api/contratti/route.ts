@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { invalidate } from "@/lib/redis";
 import { prossimoNumeroContratto } from "@/lib/contratti";
+import { testiPredefiniti } from "@/lib/testi";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,10 @@ const Nuovo = z.object({
   monteOre: z.coerce.number().nonnegative().optional().nullable(),
   tariffaExtra: z.coerce.number().nonnegative().optional().nullable(),
   inizioIl: z.string().min(1, "data di inizio obbligatoria"),
+  premessa: z.string().optional().nullable(),
+  oggetto: z.string().optional().nullable(),
+  condizioniPagamento: z.string().optional().nullable(),
+  condizioniServizio: z.string().optional().nullable(),
   scadeIl: z.string().optional().nullable(),
   rinnovoAutomatico: z.boolean().default(false),
   preavvisoGiorni: z.coerce.number().int().nonnegative().default(30),
@@ -53,9 +58,17 @@ export async function POST(req: Request) {
     );
   }
 
+  // I testi non indicati vengono presi dai modelli predefiniti, e da lì in poi
+  // appartengono al contratto: modificare il modello non lo riscrive.
+  const predefiniti = await testiPredefiniti("CONTRATTO");
+
   const c = await prisma.contratto.create({
     data: {
       numero: await prossimoNumeroContratto(),
+      premessa: d.premessa ?? predefiniti.premessa ?? null,
+      oggetto: d.oggetto ?? predefiniti.oggetto ?? null,
+      condizioniPagamento: d.condizioniPagamento ?? predefiniti.condizioniPagamento ?? null,
+      condizioniServizio: d.condizioniServizio ?? predefiniti.condizioniServizio ?? null,
       titolo: d.titolo,
       clienteId: d.clienteId,
       progettoId: d.progettoId || null,

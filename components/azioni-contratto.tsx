@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Pause, Receipt } from "lucide-react";
+import { Play, Pause, Receipt, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /** Attivazione, sospensione e fatturazione del canone. */
@@ -34,6 +34,11 @@ export function AzioniContratto({
   return (
     <div className="flex flex-col items-center gap-1.5">
       <div className="flex flex-wrap justify-center gap-1.5">
+        <Button size="sm" variant="outline" asChild>
+          <a href={`/api/contratti/${contratto.id}/pdf`} target="_blank" rel="noopener">
+            <FileDown /> PDF
+          </a>
+        </Button>
         <Button
           size="sm"
           variant="outline"

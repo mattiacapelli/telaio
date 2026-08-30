@@ -17,6 +17,10 @@ const Modifica = z.object({
   rinnovoAutomatico: z.boolean().optional(),
   preavvisoGiorni: z.coerce.number().int().nonnegative().optional(),
   note: z.string().optional().nullable(),
+  premessa: z.string().optional().nullable(),
+  oggetto: z.string().optional().nullable(),
+  condizioniPagamento: z.string().optional().nullable(),
+  condizioniServizio: z.string().optional().nullable(),
 });
 
 export async function PATCH(
@@ -58,6 +62,14 @@ export async function PATCH(
         : {}),
       ...(d.preavvisoGiorni !== undefined ? { preavvisoGiorni: d.preavvisoGiorni } : {}),
       ...(d.note !== undefined ? { note: d.note || null } : {}),
+      ...(d.premessa !== undefined ? { premessa: d.premessa || null } : {}),
+      ...(d.oggetto !== undefined ? { oggetto: d.oggetto || null } : {}),
+      ...(d.condizioniPagamento !== undefined
+        ? { condizioniPagamento: d.condizioniPagamento || null }
+        : {}),
+      ...(d.condizioniServizio !== undefined
+        ? { condizioniServizio: d.condizioniServizio || null }
+        : {}),
     },
   });
 
