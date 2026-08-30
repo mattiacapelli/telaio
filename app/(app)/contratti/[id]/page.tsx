@@ -29,8 +29,8 @@ export default async function ContrattoPage({
   const inScadenza = c.giorniAllaScadenza !== null && c.giorniAllaScadenza <= 60;
 
   return (
-    <div className="tl-in flex h-[calc(100vh-96px)] overflow-hidden rounded border border-border">
-      <aside className="flex w-[300px] flex-none flex-col overflow-y-auto border-r border-border bg-surface">
+    <div className="tl-in flex flex-col overflow-hidden rounded border border-border md:h-[calc(100vh-96px)] md:flex-row">
+      <aside className="flex w-full flex-none flex-col overflow-y-auto border-b border-border bg-surface md:w-[300px] md:border-b-0 md:border-r">
         <div className="flex flex-col items-center gap-2 px-3 py-5">
           <div
             className="grid h-12 w-12 place-items-center rounded-md text-md font-semibold"
@@ -115,7 +115,7 @@ export default async function ContrattoPage({
         )}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col bg-bg">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg">
         <Schede
           schede={[
             {

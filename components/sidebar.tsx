@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TileIcona, type Tinta } from "@/components/tile-icona";
+import { useNavMobile } from "@/components/nav-mobile";
 
 /**
  * Le voci di navigazione.
@@ -60,6 +61,7 @@ const IMPOSTAZIONI = {
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { aperto, chiudi } = useNavMobile();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -80,6 +82,7 @@ export function Sidebar() {
       <Link
         href={href}
         title={label}
+        onClick={chiudi}
         className={cn(
           "flex h-[28px] items-center gap-[8px] rounded-md px-[4px] text-md transition-colors",
           attiva
@@ -94,11 +97,8 @@ export function Sidebar() {
     );
   };
 
-  return (
-    <aside
-      className="sticky top-0 flex h-screen flex-none flex-col overflow-hidden border-r border-border bg-surface transition-[width] duration-200"
-      style={{ width: collapsed ? 56 : 220 }}
-    >
+  const contenuto = (
+    <>
       {/* Intestazione workspace, come la riga "Mattia Capelli" di Twenty. */}
       <div className="flex h-[48px] flex-none items-center gap-2 px-2">
         <div className="grid h-[24px] w-[24px] flex-none place-items-center rounded bg-accent text-xs font-semibold text-accent-fg">
@@ -112,7 +112,7 @@ export function Sidebar() {
         <button
           onClick={() => setCollapsed((c) => !c)}
           title={collapsed ? "Espandi" : "Comprimi"}
-          className="grid h-6 w-6 flex-none place-items-center rounded text-faint transition-colors hover:bg-surface2 hover:text-text"
+          className="hidden h-6 w-6 flex-none place-items-center rounded text-faint transition-colors hover:bg-surface2 hover:text-text md:grid"
         >
           {collapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
         </button>
@@ -149,9 +149,31 @@ export function Sidebar() {
       </nav>
 
       {/* Fuori dal nav scrollabile: resta ancorata, con margine per il badge dev. */}
-      <div className="flex-none border-t border-border px-2 pb-[64px] pt-2">
+      <div className="flex-none border-t border-border px-2 pb-[64px] pt-2 md:pb-2">
         <Voce {...IMPOSTAZIONI} />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop: colonna fissa sempre visibile. */}
+      <aside
+        className="sticky top-0 hidden h-screen flex-none flex-col overflow-hidden border-r border-border bg-surface transition-[width] duration-200 md:flex"
+        style={{ width: collapsed ? 56 : 220 }}
+      >
+        {contenuto}
+      </aside>
+
+      {/* Mobile: drawer sopra il contenuto, chiuso di default. */}
+      {aperto && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={chiudi} />
+          <aside className="absolute left-0 top-0 flex h-full w-[260px] max-w-[80vw] flex-col overflow-hidden border-r border-border bg-surface shadow-[var(--shadow)]">
+            {contenuto}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

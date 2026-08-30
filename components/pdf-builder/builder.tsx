@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GripVertical, Plus, Trash2, Eye, EyeOff, Save, Loader2 } from "lucide-react";
+import { GripVertical, Plus, Trash2, Eye, EyeOff, Save, Loader2, Layers, Settings2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Campo } from "@/components/ui/input";
 import {
@@ -35,6 +35,8 @@ export function PdfBuilder({
   const [sporco, setSporco] = useState(false);
   const [anteprima, setAnteprima] = useState<string | null>(null);
   const [caricandoAnteprima, setCaricandoAnteprima] = useState(false);
+  // Sotto md le tre colonne non stanno affiancate: si vede una alla volta.
+  const [vistaMobile, setVistaMobile] = useState<"blocchi" | "config" | "anteprima">("blocchi");
 
   const disponibili = CATALOGO_BLOCCHI.filter((d) => d.ambiti.includes(modello.ambito));
   const blocco = blocchi.find((b) => b.id === selezionato) ?? null;
@@ -135,10 +137,40 @@ export function PdfBuilder({
 
   useEffect(() => () => { if (anteprima) URL.revokeObjectURL(anteprima); }, [anteprima]);
 
+  const TAB_MOBILE = [
+    { chiave: "blocchi", etichetta: "Blocchi", icona: Layers },
+    { chiave: "config", etichetta: "Configura", icona: Settings2 },
+    { chiave: "anteprima", etichetta: "Anteprima", icona: FileText },
+  ] as const;
+
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col md:flex-row">
+      {/* Sotto md le colonne si vedono una alla volta, scelte da qui. */}
+      <div className="flex flex-none items-center border-b border-border bg-surface md:hidden">
+        {TAB_MOBILE.map((t) => (
+          <button
+            key={t.chiave}
+            onClick={() => setVistaMobile(t.chiave)}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 border-b-2 px-2 py-2.5 text-xs transition-colors",
+              vistaMobile === t.chiave
+                ? "border-text text-text"
+                : "border-transparent text-muted hover:text-text",
+            )}
+          >
+            <t.icona size={13} />
+            {t.etichetta}
+          </button>
+        ))}
+      </div>
+
       {/* --------------------------------------------------- elenco blocchi */}
-      <div className="flex w-[300px] flex-none flex-col border-r border-border bg-surface">
+      <div
+        className={cn(
+          "w-full flex-none flex-col border-border bg-surface md:flex md:w-[300px] md:border-r",
+          vistaMobile === "blocchi" ? "flex" : "hidden",
+        )}
+      >
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <span className="text-md font-medium">Blocchi</span>
           <div className="flex-1" />
@@ -198,7 +230,10 @@ export function PdfBuilder({
                     setTrascinato(null);
                     setSopra(null);
                   }}
-                  onClick={() => setSelezionato(b.id)}
+                  onClick={() => {
+                    setSelezionato(b.id);
+                    setVistaMobile("config");
+                  }}
                   className={cn(
                     "mb-1 flex items-center gap-1.5 rounded-md border px-2 py-2 transition-colors",
                     selezionato === b.id ? "border-accent bg-accent-soft" : "border-border bg-surface2",
@@ -242,7 +277,12 @@ export function PdfBuilder({
       </div>
 
       {/* ------------------------------------------------- pannello blocco */}
-      <div className="flex w-[280px] flex-none flex-col overflow-y-auto border-r border-border bg-surface">
+      <div
+        className={cn(
+          "w-full flex-none flex-col overflow-y-auto border-border bg-surface md:flex md:w-[280px] md:border-r",
+          vistaMobile === "config" ? "flex" : "hidden",
+        )}
+      >
         {!blocco || !definizione ? (
           <div className="p-3 text-xs text-faint">
             Seleziona un blocco per configurarlo.
@@ -298,7 +338,12 @@ export function PdfBuilder({
       </div>
 
       {/* ------------------------------------------------------- anteprima */}
-      <div className="flex min-w-0 flex-1 flex-col bg-[#525659]">
+      <div
+        className={cn(
+          "min-h-0 w-full flex-1 flex-col bg-[#525659] md:flex md:min-w-0",
+          vistaMobile === "anteprima" ? "flex" : "hidden",
+        )}
+      >
         <div className="flex h-9 flex-none items-center gap-2 border-b border-border bg-surface px-3">
           <span className="text-xs text-muted">Anteprima con dati di esempio</span>
           {caricandoAnteprima && <Loader2 size={12} className="animate-spin text-faint" />}

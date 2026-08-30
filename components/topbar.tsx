@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Moon, Sun, LogOut } from "lucide-react";
+import { Moon, Sun, LogOut, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavMobile } from "@/components/nav-mobile";
 
 const TITOLI: Record<string, string> = {
   "/": "Dashboard",
@@ -28,6 +29,7 @@ function titolo(pathname: string) {
 export function Topbar({ utente }: { utente: string }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const { apri } = useNavMobile();
 
   useEffect(() => {
     const saved =
@@ -46,7 +48,15 @@ export function Topbar({ utente }: { utente: string }) {
 
   return (
     <header className="sticky top-0 z-10 flex h-[48px] flex-none items-center gap-2 border-b border-border bg-bg px-3">
-      <h1 className="text-md font-medium">{titolo(pathname)}</h1>
+      <button
+        onClick={apri}
+        title="Apri il menu"
+        className="grid h-[28px] w-[28px] flex-none place-items-center rounded-md text-muted transition-colors hover:bg-[var(--alpha-light)] hover:text-text md:hidden"
+      >
+        <Menu size={16} />
+      </button>
+
+      <h1 className="truncate text-md font-medium">{titolo(pathname)}</h1>
 
       <div className="flex-1" />
 
@@ -118,7 +128,7 @@ function TimerPill() {
       <span className="tl-pulse h-1.5 w-1.5 rounded-full bg-accent" />
       <div className="text-md font-semibold tabular-nums">{clock}</div>
       {etichetta && (
-        <span className="max-w-[180px] truncate text-md text-muted">
+        <span className="hidden max-w-[180px] truncate text-md text-muted sm:inline">
           {etichetta}
         </span>
       )}

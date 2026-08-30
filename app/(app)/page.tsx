@@ -225,12 +225,12 @@ export default async function DashboardPage() {
             ))}
           </Card>
 
-          <Card>
+          <Card className="min-w-0">
             <CardHead titolo="Ore per settimana" extra={<span className="text-xs text-faint">ultime 8</span>} />
-            <div className="p-3">
-              <div className="flex h-20 items-end gap-1.5">
+            <div className="overflow-x-auto p-3">
+              <div className="flex h-20 min-w-[320px] items-end gap-1.5">
                 {d.settimane.map((s, i) => (
-                  <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                  <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1">
                     <div className="flex h-16 w-full items-end">
                       <div
                         title={`${s.etichetta}: ${ore(s.ore)}`}

@@ -355,6 +355,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  /* Rete di sicurezza: un elemento largo dimenticato in una pagina non deve
+     far scorrere l'intero body in orizzontale su schermi stretti. */
+  overflow-x: hidden;
   /* FONT_COMMON.family = 'Inter, sans-serif' */
   font-family: var(--font-inter), Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;

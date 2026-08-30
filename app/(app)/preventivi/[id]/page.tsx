@@ -146,41 +146,45 @@ export default async function PreventivoPage({
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHead titolo={`Voci${etichetta ? ` · ${etichetta}` : ""}`} />
-          <div className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-xs font-medium text-faint">
-            <span>Descrizione</span>
-            <span className="text-right">Q.tà</span>
-            <span className="text-right">Prezzo</span>
-            <span className="text-right">Sc.</span>
-            <span className="text-right">Totale</span>
-          </div>
-          {p.voci.map((v) => {
-            const sconto = n(v.sconto);
-            const lordo = n(v.quantita) * n(v.prezzo);
-            return (
-              <div
-                key={v.id}
-                className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-md last:border-0"
-              >
-                <div className="min-w-0">
-                  <div className="truncate">{v.descrizione}</div>
-                  {v.nota && (
-                    <div className="truncate text-xs text-faint">{v.nota}</div>
-                  )}
-                </div>
-                <span className="text-right text-muted">
-                  {n(v.quantita).toLocaleString("it-IT")}{" "}
-                  {UNITA_BREVE[v.unita] ?? ""}
-                </span>
-                <span className="text-right text-muted">{eurCent(v.prezzo)}</span>
-                <span className="text-right text-muted">
-                  {sconto > 0 ? `${sconto}%` : "—"}
-                </span>
-                <span className="text-right">
-                  {eur(lordo * (1 - sconto / 100))}
-                </span>
+          <div className="overflow-x-auto">
+            <div className="min-w-[480px]">
+              <div className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-xs font-medium text-faint">
+                <span>Descrizione</span>
+                <span className="text-right">Q.tà</span>
+                <span className="text-right">Prezzo</span>
+                <span className="text-right">Sc.</span>
+                <span className="text-right">Totale</span>
               </div>
-            );
-          })}
+              {p.voci.map((v) => {
+                const sconto = n(v.sconto);
+                const lordo = n(v.quantita) * n(v.prezzo);
+                return (
+                  <div
+                    key={v.id}
+                    className="grid grid-cols-[1fr_80px_80px_60px_90px] gap-2 border-b border-border px-3 py-2 text-md last:border-0"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate">{v.descrizione}</div>
+                      {v.nota && (
+                        <div className="truncate text-xs text-faint">{v.nota}</div>
+                      )}
+                    </div>
+                    <span className="text-right text-muted">
+                      {n(v.quantita).toLocaleString("it-IT")}{" "}
+                      {UNITA_BREVE[v.unita] ?? ""}
+                    </span>
+                    <span className="text-right text-muted">{eurCent(v.prezzo)}</span>
+                    <span className="text-right text-muted">
+                      {sconto > 0 ? `${sconto}%` : "—"}
+                    </span>
+                    <span className="text-right">
+                      {eur(lordo * (1 - sconto / 100))}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Riepilogo fiscale in coda alle voci. */}
           <div className="border-t border-border px-3 py-2.5 text-md">

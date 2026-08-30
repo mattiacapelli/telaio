@@ -65,12 +65,12 @@ export default async function IncassiPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <Card>
+        <Card className="min-w-0">
           <CardHead titolo="Fatturato vs incassato" />
-          <div className="p-4">
-            <div className="flex h-44 items-end gap-2">
+          <div className="overflow-x-auto p-4">
+            <div className="flex h-44 min-w-[420px] items-end gap-2">
               {mesi.map((m, i) => (
-                <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1">
                   <div className="flex h-40 w-full items-end justify-center gap-1">
                     <div
                       title={`Fatturato ${eur(m.fatturato)}`}
@@ -100,36 +100,40 @@ export default async function IncassiPage() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHead titolo="Pagamenti ricevuti" />
-          <div className="grid grid-cols-[60px_2fr_1fr_1fr] gap-2 border-b border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-faint">
-            <span>Data</span>
-            <span>Fattura / cliente</span>
-            <span>Metodo</span>
-            <span className="text-right">Importo</span>
-            <span />
-          </div>
-          {d.movimenti.map((m) => (
-            <div
-              key={m.id}
-              className="group grid grid-cols-[60px_2fr_1fr_1fr_24px] items-center gap-2 border-b border-border px-3 py-2 last:border-0"
-            >
-              <span className="text-md text-muted">{data(m.data)}</span>
-              <div className="min-w-0">
-                <div className="truncate text-md">
-                  {m.fattura} · {m.cliente}
-                </div>
-                {m.nota && (
-                  <div className="truncate text-xs text-faint">{m.nota}</div>
-                )}
+          <div className="overflow-x-auto">
+            <div className="min-w-[560px]">
+              <div className="grid grid-cols-[60px_2fr_1fr_1fr_24px] gap-2 border-b border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-faint">
+                <span>Data</span>
+                <span>Fattura / cliente</span>
+                <span>Metodo</span>
+                <span className="text-right">Importo</span>
+                <span />
               </div>
-              <span className="text-md text-muted">{METODI[m.metodo]}</span>
-              <span className="text-right text-md font-medium">
-                {eur(m.importo)}
-              </span>
-              <EliminaIncasso id={m.id} />
+              {d.movimenti.map((m) => (
+                <div
+                  key={m.id}
+                  className="group grid grid-cols-[60px_2fr_1fr_1fr_24px] items-center gap-2 border-b border-border px-3 py-2 last:border-0"
+                >
+                  <span className="text-md text-muted">{data(m.data)}</span>
+                  <div className="min-w-0">
+                    <div className="truncate text-md">
+                      {m.fattura} · {m.cliente}
+                    </div>
+                    {m.nota && (
+                      <div className="truncate text-xs text-faint">{m.nota}</div>
+                    )}
+                  </div>
+                  <span className="text-md text-muted">{METODI[m.metodo]}</span>
+                  <span className="text-right text-md font-medium">
+                    {eur(m.importo)}
+                  </span>
+                  <EliminaIncasso id={m.id} />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </Card>
       </div>
     </div>

@@ -30,46 +30,50 @@ export default async function ClientiPage() {
         />
       ) : (
         <Card>
-          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-border px-3 py-2 text-xs font-medium text-faint">
-            <span className="flex items-center gap-1.5"><Building2 size={13} /> Cliente</span>
-            <span className="flex items-center gap-1.5"><User size={13} /> Referente</span>
-            <span className="flex items-center gap-1.5"><FolderKanban size={13} /> Progetti</span>
-            <span className="flex items-center gap-1.5"><Clock size={13} /> Tariffa</span>
-            <span className="flex items-center justify-end gap-1.5"><Receipt size={13} /> Fatturato</span>
-          </div>
-          {clienti.map((c) => (
-            <Link
-              key={c.id}
-              href={`/clienti/${c.id}`}
-              className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center gap-3 border-b border-border px-3 py-2 last:border-0 hover:bg-surface2"
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <Chip testo={c.ragioneSociale} />
-                <div className="min-w-0">
-                  <div className="truncate text-md font-medium">
-                    {c.ragioneSociale}
-                  </div>
-                  <div className="truncate text-xs text-faint">
-                    {[c.settore, c.citta].filter(Boolean).join(" · ") || "—"}
-                  </div>
-                </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-[640px]">
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-border px-3 py-2 text-xs font-medium text-faint">
+                <span className="flex items-center gap-1.5"><Building2 size={13} /> Cliente</span>
+                <span className="flex items-center gap-1.5"><User size={13} /> Referente</span>
+                <span className="flex items-center gap-1.5"><FolderKanban size={13} /> Progetti</span>
+                <span className="flex items-center gap-1.5"><Clock size={13} /> Tariffa</span>
+                <span className="flex items-center justify-end gap-1.5"><Receipt size={13} /> Fatturato</span>
               </div>
-              <span className="text-md text-muted">{c.referente}</span>
-              <span className="text-md text-muted">
-                {c.attivi > 0
-                  ? `${c.attivi} attiv${c.attivi === 1 ? "o" : "i"}`
-                  : c.conclusi > 0
-                    ? `${c.conclusi} conclus${c.conclusi === 1 ? "o" : "i"}`
-                    : "—"}
-              </span>
-              <span className="text-md text-muted">
-                {eurCent(c.tariffaOraria)}
-              </span>
-              <span className="text-right text-md">
-                {c.fatturato > 0 ? eur(c.fatturato) : "—"}
-              </span>
-            </Link>
-          ))}
+              {clienti.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/clienti/${c.id}`}
+                  className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center gap-3 border-b border-border px-3 py-2 last:border-0 hover:bg-surface2"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Chip testo={c.ragioneSociale} />
+                    <div className="min-w-0">
+                      <div className="truncate text-md font-medium">
+                        {c.ragioneSociale}
+                      </div>
+                      <div className="truncate text-xs text-faint">
+                        {[c.settore, c.citta].filter(Boolean).join(" · ") || "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-md text-muted">{c.referente}</span>
+                  <span className="text-md text-muted">
+                    {c.attivi > 0
+                      ? `${c.attivi} attiv${c.attivi === 1 ? "o" : "i"}`
+                      : c.conclusi > 0
+                        ? `${c.conclusi} conclus${c.conclusi === 1 ? "o" : "i"}`
+                        : "—"}
+                  </span>
+                  <span className="text-md text-muted">
+                    {eurCent(c.tariffaOraria)}
+                  </span>
+                  <span className="text-right text-md">
+                    {c.fatturato > 0 ? eur(c.fatturato) : "—"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </Card>
       )}
     </div>
