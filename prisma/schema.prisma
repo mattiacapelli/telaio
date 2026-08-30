@@ -184,6 +184,7 @@ model Progetto {
   attivita    Attivita[]
   ticket      Ticket[]
   registrazioni RegistrazioneOre[]
+  costi       Costo[]
   milestone   Milestone[]
   documenti   Documento[]
   noteProgetto NotaProgetto[]
@@ -345,6 +346,7 @@ model Attivita {
 
   progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   registrazioni RegistrazioneOre[]
+  costi         Costo[]
   note          NotaOperativa[]
 
   @@index([stato])
@@ -386,6 +388,7 @@ model Ticket {
   cliente       Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   registrazioni RegistrazioneOre[]
+  costi         Costo[]
   note          NotaOperativa[]
   documenti     Documento[]
   /// Contratto che copre questo ticket, se ce n'è uno attivo.
@@ -415,6 +418,64 @@ model RegistrazioneOre {
   rigaFattura RigaFattura? @relation(fields: [rigaFatturaId], references: [id], onDelete: SetNull)
 
   @@index([data])
+  @@index([progettoId])
+}
+
+enum TipoCosto {
+  TRASFERTA
+  MATERIALE
+  LICENZA
+  SERVIZIO_TERZI
+  ALTRO
+}
+
+enum ModalitaTrasferta {
+  /// Chilometri per tariffa chilometrica.
+  CHILOMETRICA
+  /// Spese effettive documentate (pedaggi, carburante, parcheggi).
+  PIE_DI_LISTA
+  /// Cifra fissa per uscita.
+  FORFETTARIA
+}
+
+/// Costo sostenuto durante il lavoro: trasferte, materiali, licenze.
+///
+/// Sta accanto alle ore, non dentro: il consuntivo di un ticket ha due
+/// dimensioni indipendenti, il tempo e il denaro speso. Un modello unico
+/// "intervento" che le raggruppasse duplicherebbe ciò che il ticket già è.
+model Costo {
+  id          String    @id @default(cuid())
+  data        DateTime  @db.Date
+  tipo        TipoCosto @default(ALTRO)
+  descrizione String
+  /// Importo totale del costo. Per le trasferte chilometriche è calcolato
+  /// da quantita x tariffa, ma resta salvato: la tariffa può cambiare nel
+  /// tempo e il costo già registrato non deve seguirla.
+  importo     Decimal   @db.Decimal(10, 2)
+  /// Chilometri o unità, quando il costo è calcolato.
+  quantita    Decimal?  @db.Decimal(10, 2)
+  tariffa     Decimal?  @db.Decimal(10, 2)
+  modalita    ModalitaTrasferta?
+  /// Se rifatturabile al cliente. Deciso caso per caso: il canone di un
+  /// contratto copre il tempo, non sempre le spese vive.
+  rimborsabile Boolean  @default(true)
+  /// Ricevuta o giustificativo allegato.
+  documentoId String?
+
+  progettoId  String?
+  attivitaId  String?
+  ticketId    String?
+  rigaFatturaId String?
+  registratoDa String?
+  createdAt   DateTime  @default(now())
+
+  progetto    Progetto?    @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  attivita    Attivita?    @relation(fields: [attivitaId], references: [id], onDelete: SetNull)
+  ticket      Ticket?      @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  rigaFattura RigaFattura? @relation(fields: [rigaFatturaId], references: [id], onDelete: SetNull)
+
+  @@index([data])
+  @@index([ticketId])
   @@index([progettoId])
 }
 
@@ -456,6 +517,7 @@ model RigaFattura {
 
   fattura       Fattura            @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
   registrazioni RegistrazioneOre[]
+  costi         Costo[]
 
   @@index([fatturaId])
 }
@@ -678,6 +740,12 @@ model Impostazioni {
   twentyWorkspace  String?
   twentySyncedAt   DateTime?
   twentyFrequenza  Int      @default(15) // minuti
+  /// Come si calcolano le trasferte per impostazione predefinita.
+  modalitaTrasferta ModalitaTrasferta @default(CHILOMETRICA)
+  /// Tariffa al chilometro, usata dalla modalità chilometrica.
+  tariffaChilometrica Decimal @default(0.50) @db.Decimal(10, 2)
+  /// Importo fisso per uscita, usato dalla modalità forfettaria.
+  forfaitTrasferta    Decimal @default(30) @db.Decimal(10, 2)
   updatedAt        DateTime @updatedAt
 }
 

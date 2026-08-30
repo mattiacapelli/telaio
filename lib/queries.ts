@@ -527,6 +527,16 @@ export async function getClientiPerSelezione() {
   return c.map((x) => ({ ...x, tariffaOraria: n(x.tariffaOraria) }));
 }
 
+/** Predefiniti per il calcolo delle trasferte. */
+export async function getPredefinitiTrasferta() {
+  const imp = await prisma.impostazioni.findUnique({ where: { id: 1 } });
+  return {
+    modalita: imp?.modalitaTrasferta ?? "CHILOMETRICA",
+    tariffaChilometrica: n(imp?.tariffaChilometrica ?? 0.5),
+    forfait: n(imp?.forfaitTrasferta ?? 30),
+  };
+}
+
 export async function getTariffaListino() {
   const imp = await prisma.impostazioni.findUnique({ where: { id: 1 } });
   return n(imp?.tariffaListino ?? 65);
@@ -750,6 +760,7 @@ export async function getTicketCompleto(id: string) {
       cliente: { include: { referenti: { where: { principale: true }, take: 1 } } },
       progetto: true,
       registrazioni: { orderBy: { data: "desc" } },
+      costi: { orderBy: { data: "desc" } },
       note: { orderBy: { createdAt: "desc" } },
       documenti: { orderBy: { createdAt: "desc" } },
       contratto: true,
@@ -762,6 +773,14 @@ export async function getTicketCompleto(id: string) {
   const daFatturare = t.registrazioni
     .filter((r) => r.fatturabile && !r.rigaFatturaId)
     .reduce((s, r) => s + n(r.ore), 0);
+  // Ripartizione utile a capire quanto del tempo è recuperabile.
+  const oreFatturabili = t.registrazioni
+    .filter((r) => r.fatturabile)
+    .reduce((s, r) => s + n(r.ore), 0);
+  const costiRimborsabili = t.costi
+    .filter((c) => c.rimborsabile && !c.rigaFatturaId)
+    .reduce((s, c) => s + n(c.importo), 0);
+  const costiTotali = t.costi.reduce((s, c) => s + n(c.importo), 0);
 
   return {
     id: t.id,
@@ -792,6 +811,22 @@ export async function getTicketCompleto(id: string) {
       ore: n(r.ore),
       descrizione: r.descrizione,
       fatturata: Boolean(r.rigaFatturaId),
+    })),
+    oreFatturabili,
+    oreNonFatturabili: oreFatte - oreFatturabili,
+    costiTotali,
+    costiRimborsabili,
+    costi: t.costi.map((c) => ({
+      id: c.id,
+      data: c.data,
+      tipo: c.tipo,
+      descrizione: c.descrizione,
+      importo: n(c.importo),
+      quantita: c.quantita === null ? null : n(c.quantita),
+      tariffa: c.tariffa === null ? null : n(c.tariffa),
+      modalita: c.modalita,
+      rimborsabile: c.rimborsabile,
+      fatturato: Boolean(c.rigaFatturaId),
     })),
     note: t.note,
     documenti: t.documenti,

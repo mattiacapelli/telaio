@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTicketCompleto } from "@/lib/queries";
+import { getTicketCompleto, getPredefinitiTrasferta } from "@/lib/queries";
 import { Badge } from "@/components/ui/badge";
 import { Chip, coloreDa } from "@/components/chip";
 import { eur, eurCent, ore, data, dataEstesa, daGiorni } from "@/lib/format";
@@ -8,6 +8,7 @@ import { AvviaTimer } from "@/components/avvia-timer";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { NoteOperative } from "@/components/record/note-operative";
 import { DocumentiProgetto } from "@/components/documenti-progetto";
+import { RegistraCosto, EliminaCosto, TIPI_COSTO } from "@/components/registra-costo";
 import { ModificaTicket, CambiaStatoRapido, STATI_TICKET } from "@/components/record/azioni-operative";
 import {
   Clock, Calendar, Tag, FolderKanban, Building2, MessageSquare,
@@ -37,7 +38,10 @@ export default async function TicketDettaglioPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const t = await getTicketCompleto(id);
+  const [t, predefinitiTrasferta] = await Promise.all([
+    getTicketCompleto(id),
+    getPredefinitiTrasferta(),
+  ]);
   if (!t) notFound();
 
   const chiuso = t.stato === "RISOLTO" || t.stato === "CHIUSO";
@@ -120,8 +124,24 @@ export default async function TicketDettaglioPage({
           <CampoRecord icona={<Clock size={12} />} etichetta="Ore">
             {ore(t.oreFatte)}
           </CampoRecord>
+          <CampoRecord icona={<Clock size={12} />} etichetta="Ore fatturabili">
+            {ore(t.oreFatturabili)}
+            {t.oreNonFatturabili > 0 && (
+              <span className="text-faint"> · {ore(t.oreNonFatturabili)} non fatt.</span>
+            )}
+          </CampoRecord>
           <CampoRecord icona={<Clock size={12} />} etichetta="Da fatturare">
             {ore(t.oreDaFatturare)}
+          </CampoRecord>
+          <CampoRecord icona={<Euro size={12} />} etichetta="Costi" vuoto="Nessuno">
+            {t.costiTotali > 0 && (
+              <>
+                {eur(t.costiTotali)}
+                {t.costiRimborsabili > 0 && (
+                  <span className="text-faint"> · {eur(t.costiRimborsabili)} rimb.</span>
+                )}
+              </>
+            )}
           </CampoRecord>
           <CampoRecord icona={<Euro size={12} />} etichetta="Valore lavoro">
             {eur(t.valoreLavorato)}
@@ -224,6 +244,65 @@ export default async function TicketDettaglioPage({
                           </span>
                         </div>
                       ))
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+            {
+              chiave: "costi",
+              etichetta: "Costi",
+              icona: <Euro size={13} />,
+              conteggio: t.costi.length,
+              contenuto: (
+                <div className="p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-xs text-muted">
+                      {eur(t.costiTotali)} totali
+                      {t.costiRimborsabili > 0 && ` · ${eur(t.costiRimborsabili)} da rimborsare`}
+                    </span>
+                    <div className="flex-1" />
+                    <RegistraCosto ticketId={t.id} predefiniti={predefinitiTrasferta} />
+                  </div>
+                  <div className="rounded border border-border">
+                    {t.costi.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-xs text-faint">
+                        Nessun costo registrato. Trasferte, materiali e spese
+                        sostenute per questo ticket compaiono qui.
+                      </div>
+                    ) : (
+                      t.costi.map((c) => {
+                        const Icona = TIPI_COSTO[c.tipo]?.icona ?? Euro;
+                        return (
+                          <div
+                            key={c.id}
+                            className="group flex items-center gap-2 border-b border-border px-2 py-1.5 text-xs last:border-0"
+                          >
+                            <Icona size={12} className="flex-none text-faint" />
+                            <span className="w-12 flex-none text-faint">{data(c.data)}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate">{c.descrizione}</div>
+                              {c.quantita !== null && c.tariffa !== null && (
+                                <div className="text-xxs text-faint">
+                                  {c.quantita.toLocaleString("it-IT")} km ×{" "}
+                                  {eurCent(c.tariffa)}
+                                </div>
+                              )}
+                            </div>
+                            {c.fatturato ? (
+                              <Badge>fatturato</Badge>
+                            ) : c.rimborsabile ? (
+                              <Badge tono="accento">da rimborsare</Badge>
+                            ) : (
+                              <Badge>a carico studio</Badge>
+                            )}
+                            <span className="w-16 flex-none text-right font-medium">
+                              {eur(c.importo)}
+                            </span>
+                            {!c.fatturato && <EliminaCosto id={c.id} />}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>

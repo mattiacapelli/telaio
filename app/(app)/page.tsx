@@ -88,7 +88,7 @@ export default async function DashboardPage() {
             <Link
               key={a.testo}
               href={a.link}
-              className="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-opacity hover:opacity-80"
+              className="flex items-center gap-1.5 rounded border px-2 py-1 text-md transition-opacity hover:opacity-80"
               style={{
                 borderColor: "var(--neg)",
                 background: "var(--neg-soft)",
@@ -154,10 +154,10 @@ export default async function DashboardPage() {
           <Card>
             <CardHead
               titolo="In scadenza nei prossimi 7 giorni"
-              extra={<span className="text-xxs text-faint">{d.inScadenza.length}</span>}
+              extra={<span className="text-xs text-faint">{d.inScadenza.length}</span>}
             />
             {d.inScadenza.length === 0 ? (
-              <div className="px-3 py-5 text-center text-xs text-faint">
+              <div className="px-3 py-5 text-center text-md text-faint">
                 Niente in scadenza questa settimana
               </div>
             ) : (
@@ -179,8 +179,8 @@ export default async function DashboardPage() {
                       : s.tipo === "milestone" ? <Flag size={13} className="flex-none text-faint" />
                       : <FileText size={13} className="flex-none text-faint" />}
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs">{s.titolo}</div>
-                      <div className="truncate text-xxs text-faint">{s.contesto}</div>
+                      <div className="truncate text-md">{s.titolo}</div>
+                      <div className="truncate text-xs text-faint">{s.contesto}</div>
                     </div>
                     {s.bloccata && <Badge tono="attenzione">bloccata</Badge>}
                     <Badge tono={giorni <= 1 ? "attenzione" : "neutro"}>
@@ -195,7 +195,7 @@ export default async function DashboardPage() {
           <Card>
             <CardHead
               titolo="Progetti attivi"
-              extra={<Link href="/progetti" className="text-xxs text-muted hover:text-text">Tutti</Link>}
+              extra={<Link href="/progetti" className="text-xs text-muted hover:text-text">Tutti</Link>}
             />
             {d.progetti.slice(0, 5).map((p) => (
               <Link
@@ -204,17 +204,17 @@ export default async function DashboardPage() {
                 className="flex flex-col gap-1.5 border-b border-border px-3 py-2 last:border-0 hover:bg-[var(--alpha-lighter)]"
               >
                 <div className="flex items-baseline gap-2">
-                  <span className="truncate text-xs font-medium">{p.nome}</span>
-                  <span className="flex min-w-0 flex-1 items-center gap-1 text-xxs text-muted">
+                  <span className="truncate text-md font-medium">{p.nome}</span>
+                  <span className="flex min-w-0 flex-1 items-center gap-1 text-xs text-muted">
                     <Chip testo={p.cliente} />
                     <span className="truncate">{p.cliente}</span>
                   </span>
-                  <span className={`text-xxs ${p.margine < 0 ? "text-neg" : "text-muted"}`}>
+                  <span className={`text-xs ${p.margine < 0 ? "text-neg" : "text-muted"}`}>
                     margine {eur(p.margine)}
                   </span>
                 </div>
                 <Barra valore={p.oreFatte} max={p.budgetOre} />
-                <div className="flex items-center gap-2 text-xxs text-faint">
+                <div className="flex items-center gap-2 text-xs text-faint">
                   <span className={p.oltreBudget ? "text-neg" : undefined}>
                     {ore(p.oreFatte)} / {ore(p.budgetOre)}
                   </span>
@@ -226,7 +226,7 @@ export default async function DashboardPage() {
           </Card>
 
           <Card>
-            <CardHead titolo="Ore per settimana" extra={<span className="text-xxs text-faint">ultime 8</span>} />
+            <CardHead titolo="Ore per settimana" extra={<span className="text-xs text-faint">ultime 8</span>} />
             <div className="p-3">
               <div className="flex h-20 items-end gap-1.5">
                 {d.settimane.map((s, i) => (
@@ -242,7 +242,7 @@ export default async function DashboardPage() {
                         }}
                       />
                     </div>
-                    <span className="text-xxs text-faint">{s.etichetta}</span>
+                    <span className="text-xs text-faint">{s.etichetta}</span>
                   </div>
                 ))}
               </div>
@@ -255,18 +255,18 @@ export default async function DashboardPage() {
           <Card>
             <CardHead
               titolo="Prossime attività"
-              extra={<Link href="/attivita" className="text-xxs text-muted hover:text-text">Tutte</Link>}
+              extra={<Link href="/attivita" className="text-xs text-muted hover:text-text">Tutte</Link>}
             />
             {d.attivita.length === 0 ? (
-              <div className="px-3 py-5 text-center text-xs text-faint">Nessuna attività aperta</div>
+              <div className="px-3 py-5 text-center text-md text-faint">Nessuna attività aperta</div>
             ) : (
               d.attivita.map((a) => (
                 <div key={a.id} className="flex items-center gap-2 border-b border-border px-3 py-2 last:border-0">
                   <div className="min-w-0 flex-1">
-                    <Link href={`/attivita/${a.id}`} className="block truncate text-xs hover:underline">
+                    <Link href={`/attivita/${a.id}`} className="block truncate text-md hover:underline">
                       {a.titolo}
                     </Link>
-                    <div className="truncate text-xxs text-faint">
+                    <div className="truncate text-xs text-faint">
                       {a.progetto}
                       {a.scadenzaIl && ` · ${data(a.scadenzaIl)}`}
                     </div>
@@ -287,14 +287,14 @@ export default async function DashboardPage() {
             <Card>
               <CardHead
                 titolo="Fatture scadute"
-                extra={<Link href="/fatture" className="text-xxs text-muted hover:text-text">Tutte</Link>}
+                extra={<Link href="/fatture" className="text-xs text-muted hover:text-text">Tutte</Link>}
               />
               {d.fattureScadute.map((f) => (
-                <div key={f.id} className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs last:border-0">
+                <div key={f.id} className="flex items-center gap-2 border-b border-border px-3 py-2 text-md last:border-0">
                   <Receipt size={13} className="flex-none text-neg" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate">{f.numero}</div>
-                    <div className="truncate text-xxs text-faint">{f.cliente}</div>
+                    <div className="truncate text-xs text-faint">{f.cliente}</div>
                   </div>
                   <Badge tono="attenzione">+{daGiorni(f.scadeIl)} gg</Badge>
                   <span className="font-medium">{eur(f.imponibile)}</span>
@@ -307,19 +307,19 @@ export default async function DashboardPage() {
             <Card>
               <CardHead
                 titolo="Ticket aperti"
-                extra={<Link href="/ticket" className="text-xxs text-muted hover:text-text">Tutti</Link>}
+                extra={<Link href="/ticket" className="text-xs text-muted hover:text-text">Tutti</Link>}
               />
               {d.ticket.map((t) => (
                 <Link
                   key={t.id}
                   href={`/ticket/${t.id}`}
-                  className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs last:border-0 hover:bg-[var(--alpha-lighter)]"
+                  className="flex items-center gap-2 border-b border-border px-3 py-2 text-md last:border-0 hover:bg-[var(--alpha-lighter)]"
                 >
                   <LifeBuoy size={13} className="flex-none text-faint" />
                   <span className="flex-none text-faint">#{t.numero}</span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate">{t.titolo}</div>
-                    <div className="truncate text-xxs text-faint">{t.cliente}</div>
+                    <div className="truncate text-xs text-faint">{t.cliente}</div>
                   </div>
                   <Badge tono={t.priorita === "ALTA" || t.priorita === "URGENTE" ? "attenzione" : "neutro"}>
                     {PRIORITA[t.priorita]}
@@ -333,18 +333,18 @@ export default async function DashboardPage() {
             <Card>
               <CardHead
                 titolo="Preventivi in attesa"
-                extra={<Link href="/preventivi" className="text-xxs text-muted hover:text-text">Tutti</Link>}
+                extra={<Link href="/preventivi" className="text-xs text-muted hover:text-text">Tutti</Link>}
               />
               {d.preventiviAperti.map((p) => (
                 <Link
                   key={p.id}
                   href={`/preventivi/${p.id}`}
-                  className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs last:border-0 hover:bg-[var(--alpha-lighter)]"
+                  className="flex items-center gap-2 border-b border-border px-3 py-2 text-md last:border-0 hover:bg-[var(--alpha-lighter)]"
                 >
                   <FileText size={13} className="flex-none text-faint" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate">{p.titolo}</div>
-                    <div className="truncate text-xxs text-faint">
+                    <div className="truncate text-xs text-faint">
                       {p.numero} · {p.cliente}
                     </div>
                   </div>
@@ -362,7 +362,7 @@ export default async function DashboardPage() {
                 <Link
                   key={`${x.id}-${i}`}
                   href={`/progetti/${x.id}`}
-                  className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs last:border-0 hover:bg-[var(--alpha-lighter)]"
+                  className="flex items-center gap-2 border-b border-border px-3 py-2 text-md last:border-0 hover:bg-[var(--alpha-lighter)]"
                 >
                   <AlertTriangle
                     size={13}
@@ -370,7 +370,7 @@ export default async function DashboardPage() {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="truncate">{x.titolo}</div>
-                    <div className="truncate text-xxs text-faint">{x.progetto}</div>
+                    <div className="truncate text-xs text-faint">{x.progetto}</div>
                   </div>
                   <Badge tono={x.gravita === "CRITICA" ? "attenzione" : "neutro"}>
                     {GRAVITA[x.gravita]}
