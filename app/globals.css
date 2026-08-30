@@ -1,0 +1,399 @@
+@import "tailwindcss";
+
+/*
+ * Palette ispirata a Twenty: superfici molto scure e piatte, bordi sottili a
+ * basso contrasto, azione primaria blu. I nomi dei token restano quelli del
+ * design Telaio, così le schermate non cambiano struttura.
+ */
+/*
+ * Palette portata dal design system di Twenty
+ * (twentyhq/twenty · packages/twenty-ui/src/theme/constants).
+ *
+ * I valori originali sono in display-p3: li dichiariamo così sui monitor che
+ * lo supportano, con fallback esadecimale in sRGB per gli altri. L'ordine
+ * conta — la seconda dichiarazione vince solo dove il browser la capisce.
+ *
+ * Riferimenti: GRAY_SCALE_DARK/LIGHT, BACKGROUND_*, BORDER_*, FONT_*,
+ * ACCENT_* e MAIN_COLORS_* (blue = Radix indigo9).
+ */
+:root {
+  /* Scala di grigi — GRAY_SCALE_LIGHT */
+  --gray1: #ffffff;
+  --gray2: #fcfcfc;
+  --gray3: #f9f9f9;
+  --gray4: #f1f1f1;
+  --gray5: #ebebeb;
+  --gray6: #d6d6d6;
+  --gray7: #cccccc;
+  --gray8: #b3b3b3;
+  --gray9: #999999;
+  --gray10: #838383;
+  --gray11: #666666;
+  --gray12: #333333;
+
+  /* BACKGROUND_LIGHT: primary=gray1, secondary=gray2, tertiary=gray4, quaternary=gray5 */
+  --bg: var(--gray1);
+  --surface: var(--gray1);
+  --surface2: var(--gray3);
+  --surface3: var(--gray4);
+
+  /* BORDER_LIGHT: light=gray4, medium=gray5, strong=gray6 */
+  --border: var(--gray4);
+  --border2: var(--gray6);
+
+  /* FONT_LIGHT: primary=gray12, secondary=gray11, tertiary=gray9, light=gray8 */
+  --text: var(--gray12);
+  --muted: var(--gray11);
+  --faint: var(--gray9);
+
+  /* MAIN_COLORS.blue = Radix indigo9 — è il colore del bottone primario */
+  --accent: #4671d6;
+  --accent-fg: #ffffff;
+  --accent-hover: #3a62c4;
+  --accent-soft: #eef1fd;
+  --accent-line: #c6d0fb;
+  --accent-text: #4159c0;
+
+  --pos: #479f76;
+  --pos-soft: #e9f5ee;
+  --neg: #c9372c;
+  --neg-soft: #fbeceb;
+  --info: var(--gray9);
+  --info-soft: var(--gray3);
+
+  /* BOX_SHADOW_LIGHT */
+  /* GRAY_SCALE_LIGHT_ALPHA: sfondi trasparenti di hover e stato attivo */
+  --alpha-lighter: rgba(0, 0, 0, 0.02);
+  --alpha-light: rgba(0, 0, 0, 0.039);
+  --alpha-medium: rgba(0, 0, 0, 0.078);
+  --alpha-strong: rgba(0, 0, 0, 0.161);
+
+  --shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.04),
+    0px 0px 4px 0px rgba(0, 0, 0, 0.08);
+  --shadow-strong: 2px 4px 16px 0px rgba(0, 0, 0, 0.12),
+    0px 2px 4px 0px rgba(0, 0, 0, 0.04);
+
+  /* BORDER_COMMON.radius */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius: var(--radius-sm);
+
+  /*
+   * Tinte dei TintedIconTile (TINTED_ICON_TILE_COLOR_SHADES):
+   * sfondo = tinta 5, bordo = tinta 6, icona = tinta 11.
+   */
+  --tile-blue-bg: #d4deff;
+  --tile-blue-bd: #c4d0fe;
+  --tile-blue-ic: #415ac1;
+  --tile-purple-bg: #e7d5f6;
+  --tile-purple-bd: #dbc5f0;
+  --tile-purple-ic: #7948af;
+  --tile-orange-bg: #ffd195;
+  --tile-orange-bd: #f9c48b;
+  --tile-orange-ic: #c25700;
+  --tile-green-bg: #cbe7d3;
+  --tile-green-bd: #b7dcc2;
+  --tile-green-ic: #308052;
+  --tile-pink-bg: #efd0e5;
+  --tile-pink-bd: #e7c1db;
+  --tile-pink-ic: #b23887;
+  --tile-turquoise-bg: #c2e9e0;
+  --tile-turquoise-bd: #aedcd2;
+  --tile-turquoise-ic: #14806e;
+  --tile-red-bg: #fbcfcf;
+  --tile-red-bd: #f4c0bf;
+  --tile-red-ic: #be3c39;
+  --tile-yellow-bg: #fbe882;
+  --tile-yellow-bd: #eed879;
+  --tile-yellow-ic: #997000;
+  --tile-sky-bg: #c6e6f3;
+  --tile-sky-bd: #b3d9eb;
+  --tile-sky-ic: #31729a;
+  --tile-gray-bg: #ebebeb;
+  --tile-gray-bd: #d6d6d6;
+  --tile-gray-ic: #666666;
+}
+
+@supports (color: color(display-p3 1 1 1)) {
+  :root {
+    --gray1: color(display-p3 1 1 1);
+    --gray2: color(display-p3 0.988 0.988 0.988);
+    --gray3: color(display-p3 0.976 0.976 0.976);
+    --gray4: color(display-p3 0.945 0.945 0.945);
+    --gray5: color(display-p3 0.922 0.922 0.922);
+    --gray6: color(display-p3 0.839 0.839 0.839);
+    --gray7: color(display-p3 0.8 0.8 0.8);
+    --gray8: color(display-p3 0.702 0.702 0.702);
+    --gray9: color(display-p3 0.6 0.6 0.6);
+    --gray10: color(display-p3 0.514 0.514 0.514);
+    --gray11: color(display-p3 0.4 0.4 0.4);
+    --gray12: color(display-p3 0.2 0.2 0.2);
+    --accent: color(display-p3 0.276 0.384 0.837);
+    --accent-hover: color(display-p3 0.234 0.326 0.752);
+    --accent-soft: color(display-p3 0.933 0.948 0.992);
+    --accent-line: color(display-p3 0.831 0.87 1);
+    --accent-text: color(display-p3 0.256 0.354 0.755);
+    --tile-blue-bg: color(display-p3 0.831 0.87 1);
+    --tile-blue-bd: color(display-p3 0.767 0.814 0.995);
+    --tile-blue-ic: color(display-p3 0.256 0.354 0.755);
+    --tile-purple-bg: color(display-p3 0.904 0.837 0.966);
+    --tile-purple-bd: color(display-p3 0.86 0.774 0.942);
+    --tile-purple-ic: color(display-p3 0.473 0.281 0.687);
+    --tile-orange-bg: color(display-p3 1 0.821 0.583);
+    --tile-orange-bd: color(display-p3 0.975 0.767 0.545);
+    --tile-orange-ic: color(display-p3 0.76 0.34 0);
+    --tile-green-bg: color(display-p3 0.796 0.907 0.826);
+    --tile-green-bd: color(display-p3 0.718 0.863 0.761);
+    --tile-green-ic: color(display-p3 0.19 0.5 0.32);
+    --tile-pink-bg: color(display-p3 0.939 0.815 0.899);
+    --tile-pink-bd: color(display-p3 0.907 0.756 0.859);
+    --tile-pink-ic: color(display-p3 0.698 0.219 0.528);
+    --tile-turquoise-bg: color(display-p3 0.761 0.914 0.878);
+    --tile-turquoise-bd: color(display-p3 0.682 0.864 0.825);
+    --tile-turquoise-ic: color(display-p3 0.08 0.5 0.43);
+    --tile-red-bg: color(display-p3 0.984 0.812 0.811);
+    --tile-red-bd: color(display-p3 0.955 0.751 0.749);
+    --tile-red-ic: color(display-p3 0.744 0.234 0.222);
+    --tile-yellow-bg: color(display-p3 0.984 0.91 0.51);
+    --tile-yellow-bd: color(display-p3 0.934 0.847 0.474);
+    --tile-yellow-ic: color(display-p3 0.6 0.44 0);
+    --tile-sky-bg: color(display-p3 0.777 0.9 0.954);
+    --tile-sky-bd: color(display-p3 0.701 0.851 0.921);
+    --tile-sky-ic: color(display-p3 0.193 0.448 0.605);
+    --tile-gray-bg: color(display-p3 0.922 0.922 0.922);
+    --tile-gray-bd: color(display-p3 0.839 0.839 0.839);
+    --tile-gray-ic: color(display-p3 0.4 0.4 0.4);
+  }
+}
+
+[data-theme="dark"] {
+  /* GRAY_SCALE_DARK */
+  --gray1: #171717;
+  --gray2: #1b1b1b;
+  --gray3: #191919;
+  --gray4: #1d1d1d;
+  --gray5: #222222;
+  --gray6: #484848;
+  --gray7: #4c4c4c;
+  --gray8: #666666;
+  --gray9: #818181;
+  --gray10: #7b7b7b;
+  --gray11: #b3b3b3;
+  --gray12: #ebebeb;
+
+  --bg: var(--gray1);
+  --surface: var(--gray2);
+  --surface2: var(--gray4);
+  --surface3: var(--gray5);
+
+  --border: var(--gray4);
+  --border2: var(--gray6);
+
+  --text: var(--gray12);
+  --muted: var(--gray11);
+  --faint: var(--gray9);
+
+  --accent: #4671d6;
+  --accent-fg: #ffffff;
+  --accent-hover: #5b82e0;
+  /* ACCENT_DARK.tertiary = indigo3, usato per gli sfondi tenui */
+  --accent-soft: #1b2447;
+  --accent-line: #21305e;
+  --accent-text: #a1b0ff;
+
+  --pos: #55b685;
+  --pos-soft: #14261d;
+  --neg: #e5484d;
+  --neg-soft: #2a1618;
+  --info: var(--gray9);
+  --info-soft: var(--gray4);
+
+  /* GRAY_SCALE_DARK_ALPHA */
+  --alpha-lighter: rgba(255, 255, 255, 0.031);
+  --alpha-light: rgba(255, 255, 255, 0.059);
+  --alpha-medium: rgba(255, 255, 255, 0.102);
+  --alpha-strong: rgba(255, 255, 255, 0.141);
+
+  --shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.04),
+    0px 0px 4px 0px rgba(0, 0, 0, 0.08);
+  --shadow-strong: 2px 4px 16px 0px rgba(0, 0, 0, 0.16),
+    0px 2px 4px 0px rgba(0, 0, 0, 0.08);
+
+  --tile-blue-bg: #2a3870;
+  --tile-blue-bd: #344380;
+  --tile-blue-ic: #a1b0ff;
+  --tile-purple-bg: #432b59;
+  --tile-purple-bd: #4f3568;
+  --tile-purple-ic: #cc9eff;
+  --tile-orange-bg: #502b04;
+  --tile-orange-bd: #603816;
+  --tile-orange-ic: #ffa161;
+  --tile-green-bg: #254835;
+  --tile-green-bd: #2f5640;
+  --tile-green-ic: #6fd392;
+  --tile-pink-bg: #522046;
+  --tile-pink-bd: #612d53;
+  --tile-pink-ic: #ff88c7;
+  --tile-turquoise-bg: #1f4743;
+  --tile-turquoise-bd: #295550;
+  --tile-turquoise-ic: #63d5b7;
+  --tile-red-bg: #591c24;
+  --tile-red-bd: #6a292f;
+  --tile-red-ic: #ff918c;
+  --tile-yellow-bg: #413500;
+  --tile-yellow-bd: #4f4312;
+  --tile-yellow-ic: #f2e264;
+  --tile-sky-bg: #224364;
+  --tile-sky-bd: #2b5278;
+  --tile-sky-ic: #89c5ec;
+  --tile-gray-bg: #222222;
+  --tile-gray-bd: #484848;
+  --tile-gray-ic: #b3b3b3;
+}
+
+@supports (color: color(display-p3 1 1 1)) {
+  [data-theme="dark"] {
+    --gray1: color(display-p3 0.09 0.09 0.09);
+    --gray2: color(display-p3 0.106 0.106 0.106);
+    --gray3: color(display-p3 0.098 0.098 0.098);
+    --gray4: color(display-p3 0.114 0.114 0.114);
+    --gray5: color(display-p3 0.133 0.133 0.133);
+    --gray6: color(display-p3 0.282 0.282 0.282);
+    --gray7: color(display-p3 0.298 0.298 0.298);
+    --gray8: color(display-p3 0.4 0.4 0.4);
+    --gray9: color(display-p3 0.506 0.506 0.506);
+    --gray10: color(display-p3 0.482 0.482 0.482);
+    --gray11: color(display-p3 0.702 0.702 0.702);
+    --gray12: color(display-p3 0.922 0.922 0.922);
+    --accent: color(display-p3 0.276 0.384 0.837);
+    --accent-hover: color(display-p3 0.354 0.463 0.898);
+    --accent-soft: color(display-p3 0.105 0.141 0.275);
+    --accent-line: color(display-p3 0.129 0.18 0.369);
+    --accent-text: color(display-p3 0.63 0.69 1);
+    --tile-blue-bg: color(display-p3 0.163 0.22 0.439);
+    --tile-blue-bd: color(display-p3 0.203 0.262 0.5);
+    --tile-blue-ic: color(display-p3 0.63 0.69 1);
+    --tile-purple-bg: color(display-p3 0.264 0.167 0.349);
+    --tile-purple-bd: color(display-p3 0.311 0.208 0.406);
+    --tile-purple-ic: color(display-p3 0.8 0.62 1);
+    --tile-orange-bg: color(display-p3 0.315 0.168 0.016);
+    --tile-orange-bd: color(display-p3 0.376 0.219 0.088);
+    --tile-orange-ic: color(display-p3 1 0.63 0.38);
+    --tile-green-bg: color(display-p3 0.147 0.282 0.206);
+    --tile-green-bd: color(display-p3 0.185 0.338 0.25);
+    --tile-green-ic: color(display-p3 0.434 0.828 0.573);
+    --tile-pink-bg: color(display-p3 0.32 0.127 0.273);
+    --tile-pink-bd: color(display-p3 0.382 0.177 0.326);
+    --tile-pink-ic: color(display-p3 1 0.535 0.78);
+    --tile-turquoise-bg: color(display-p3 0.12 0.277 0.261);
+    --tile-turquoise-bd: color(display-p3 0.162 0.335 0.314);
+    --tile-turquoise-ic: color(display-p3 0.388 0.835 0.719);
+    --tile-red-bg: color(display-p3 0.348 0.11 0.142);
+    --tile-red-bd: color(display-p3 0.414 0.16 0.183);
+    --tile-red-ic: color(display-p3 1 0.57 0.55);
+    --tile-yellow-bg: color(display-p3 0.255 0.209 0);
+    --tile-yellow-bd: color(display-p3 0.31 0.261 0.07);
+    --tile-yellow-ic: color(display-p3 0.948 0.885 0.392);
+    --tile-sky-bg: color(display-p3 0.135 0.261 0.394);
+    --tile-sky-bd: color(display-p3 0.17 0.322 0.469);
+    --tile-sky-ic: color(display-p3 0.536 0.772 0.924);
+    --tile-gray-bg: color(display-p3 0.133 0.133 0.133);
+    --tile-gray-bd: color(display-p3 0.282 0.282 0.282);
+    --tile-gray-ic: color(display-p3 0.702 0.702 0.702);
+  }
+}
+
+@theme inline {
+  /* FONT_COMMON.size */
+  --text-xxs: 0.625rem;
+  --text-xs: 0.85rem;
+  --text-sm: 0.92rem;
+  --text-md: 1rem;
+  --text-lg: 1.23rem;
+  --text-xl: 1.54rem;
+  --text-xxl: 1.85rem;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-surface3: var(--surface3);
+  --color-border: var(--border);
+  --color-border2: var(--border2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-text: var(--accent-text);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-info: var(--info);
+  --radius-DEFAULT: var(--radius);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+/*
+ * Twenty fissa la radice a 13px (twenty-front/src/index.css), non ai 16px
+ * predefiniti del browser: tutti i loro token in rem sono tarati su questa
+ * base. Senza questa riga ogni misura risulta circa il 23% più grande.
+ */
+html {
+  font-size: 13px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  /* FONT_COMMON.family = 'Inter, sans-serif' */
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+  /* FONT_COMMON.size.md = 1rem → 13px con la radice impostata sopra. */
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+@keyframes tlPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes tlIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.tl-in { animation: tlIn 0.24s ease both; }
+.tl-pulse { animation: tlPulse 1.6s ease-in-out infinite; }
+
+/* Card in trascinamento: leggermente sollevata e semitrasparente. */
+.tl-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+.tl-dropzone {
+  background: var(--accent-soft);
+  outline: 1px dashed var(--accent-line);
+  outline-offset: -2px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 6px;
+  border: 3px solid var(--bg);
+}
