@@ -1,0 +1,124 @@
+import { getIncassi } from "@/lib/queries";
+import { Card, CardHead } from "@/components/ui/card";
+import { Stat, Vuoto } from "@/components/ui-legacy";
+import { eur, data } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
+
+const MESI = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+
+const METODI: Record<string, string> = {
+  BONIFICO: "Bonifico",
+  CARTA: "Carta",
+  CONTANTI: "Contanti",
+  ALTRO: "Altro",
+};
+
+export default async function IncassiPage() {
+  const d = await getIncassi();
+
+  if (d.movimenti.length === 0) {
+    return <Vuoto titolo="Nessun incasso" nota="I pagamenti ricevuti compariranno qui." />;
+  }
+
+  // Mostra i mesi fino a quello corrente: il grafico non anticipa il futuro.
+  const finoA = new Date().getMonth();
+  const mesi = d.mesi.slice(0, finoA + 1);
+  const max = Math.max(...mesi.flatMap((m) => [m.fatturato, m.incassato]), 1);
+
+  const anno = new Date().getFullYear();
+
+  return (
+    <div className="tl-in flex flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          etichetta={`Incassato ${anno}`}
+          valore={eur(d.incassato)}
+          nota={`su ${eur(d.emesso)} fatturati`}
+        />
+        <Stat
+          etichetta="Da incassare"
+          valore={eur(d.daIncassare)}
+          nota={d.scaduto > 0 ? `di cui ${eur(d.scaduto)} scaduti` : "nessuno scaduto"}
+        />
+        <Stat
+          etichetta="Pagamenti ricevuti"
+          valore={String(d.movimenti.length)}
+          nota={`nel ${anno}`}
+        />
+        <Stat
+          etichetta="Incasso medio"
+          valore={eur(d.incassato / d.movimenti.length)}
+          nota="per pagamento"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <Card>
+          <CardHead titolo="Fatturato vs incassato" />
+          <div className="p-4">
+            <div className="flex h-44 items-end gap-2">
+              {mesi.map((m, i) => (
+                <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                  <div className="flex h-40 w-full items-end justify-center gap-1">
+                    <div
+                      title={`Fatturato ${eur(m.fatturato)}`}
+                      className="w-1/2 rounded-t bg-accent-line"
+                      style={{ height: `${(m.fatturato / max) * 100}%` }}
+                    />
+                    <div
+                      title={`Incassato ${eur(m.incassato)}`}
+                      className="w-1/2 rounded-t bg-accent"
+                      style={{ height: `${(m.incassato / max) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xxs text-faint">{MESI[i]}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center gap-4 text-xxs text-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-sm bg-accent-line" />
+                Fatturato
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-sm bg-accent" />
+                Incassato
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHead titolo="Pagamenti ricevuti" />
+          <div className="grid grid-cols-[60px_2fr_1fr_1fr] gap-2 border-b border-border px-4 py-2 text-xxs font-semibold uppercase tracking-wide text-faint">
+            <span>Data</span>
+            <span>Fattura / cliente</span>
+            <span>Metodo</span>
+            <span className="text-right">Importo</span>
+          </div>
+          {d.movimenti.map((m) => (
+            <div
+              key={m.id}
+              className="grid grid-cols-[60px_2fr_1fr_1fr] items-center gap-2 border-b border-border px-3 py-2 last:border-0"
+            >
+              <span className="text-xs text-muted">{data(m.data)}</span>
+              <div className="min-w-0">
+                <div className="truncate text-xs">
+                  {m.fattura} · {m.cliente}
+                </div>
+                {m.nota && (
+                  <div className="truncate text-xxs text-faint">{m.nota}</div>
+                )}
+              </div>
+              <span className="text-xs text-muted">{METODI[m.metodo]}</span>
+              <span className="text-right text-xs font-medium">
+                {eur(m.importo)}
+              </span>
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  );
+}
