@@ -1,0 +1,671 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- anagrafica
+
+/// Cliente. L'anagrafica è di sola lettura in Telaio: la fonte di verità è
+/// Twenty (vedi twentyId / syncedAt), come indicato nella schermata Clienti.
+model Cliente {
+  id            String   @id @default(cuid())
+  twentyId      String?  @unique
+  ragioneSociale String
+  sigla         String   // iniziali mostrate nell'avatar, es. "VB"
+  settore       String?  // Manifattura, Trasporti, Servizi, Software, Retail, Sanità
+  citta         String?
+  partitaIva    String?
+  codiceFiscale String?
+  pec           String?
+  codiceSdi     String?
+  tariffaOraria Decimal  @db.Decimal(10, 2)
+  terminiPagamento Int   @default(30) // giorni data fattura
+  statoRelazione String  @default("CUSTOMER")
+  syncedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  referenti  Referente[]
+  preventivi Preventivo[]
+  progetti   Progetto[]
+  ticket     Ticket[]
+  fatture    Fattura[]
+  contratti  Contratto[]
+
+  @@index([ragioneSociale])
+}
+
+model Referente {
+  id        String  @id @default(cuid())
+  twentyId  String? @unique
+  clienteId String
+  nome      String
+  cognome   String
+  ruolo     String?
+  email     String?
+  telefono  String?
+  principale Boolean @default(false)
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  preventivi Preventivo[]
+
+  @@index([clienteId])
+}
+
+// ---------------------------------------------------------------- commerciale
+
+enum StatoPreventivo {
+  BOZZA
+  INVIATO
+  ACCETTATO
+  RIFIUTATO
+}
+
+/// Il preventivo è il "contenitore": porta numero, cliente e stato, mentre il
+/// contenuto economico vive nelle revisioni. `revisioneCorrente` indica quella
+/// da mostrare; le precedenti restano leggibili e non si modificano più.
+model Preventivo {
+  id         String          @id @default(cuid())
+  numero     String          @unique // PRE-2026/021
+  titolo     String
+  clienteId  String
+  stato      StatoPreventivo @default(BOZZA)
+  imponibile Decimal         @db.Decimal(12, 2)
+  inviatoIl  DateTime?
+  scadeIl    DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  /// Referente a cui è indirizzata l'offerta.
+  referenteId    String?
+  /// Sconto percentuale sul totale, applicato dopo gli sconti di riga.
+  scontoPercento Decimal  @default(0) @db.Decimal(5, 2)
+  /// Aliquota IVA del documento.
+  aliquotaIva    Decimal  @default(22) @db.Decimal(5, 2)
+  /// Probabilità di chiusura, per pesare il valore in trattativa.
+  probabilita    Int?
+  /// Testi del documento.
+  premessa          String?
+  tempiConsegna     String?
+  modalitaPagamento String?
+  validitaGiorni    Int?
+  note              String?
+
+  cliente            Cliente              @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  referente          Referente?           @relation(fields: [referenteId], references: [id], onDelete: SetNull)
+  voci               VocePreventivo[]
+  progetto           Progetto?
+  revisioni          RevisionePreventivo[]
+  revisioneCorrente  Int                  @default(1)
+  /// Motivo dell'ultima modifica: viene trasferito alla revisione quando
+  /// questa versione verrà a sua volta congelata.
+  motivoCorrente     String?
+
+  @@index([stato])
+}
+
+/// Copia congelata del preventivo a un dato momento.
+///
+/// Le voci sono duplicate qui, non referenziate: una revisione deve poter
+/// essere riletta esattamente com'era, anche se il preventivo cambia dopo.
+model RevisionePreventivo {
+  id           String   @id @default(cuid())
+  preventivoId String
+  numero       Int      // 1, 2, 3… → mostrato come "r2", "r3"
+  titolo       String
+  imponibile   Decimal  @db.Decimal(12, 2)
+  scadeIl      DateTime?
+  /// Perché è stata creata questa revisione (es. "sconto concordato").
+  motivo       String?
+  /// Copia delle voci al momento del congelamento.
+  voci         Json
+  /// Chi l'ha creata: l'email basta, e sopravvive alla cancellazione dell'utente.
+  autore       String?
+  creataIl     DateTime @default(now())
+
+  preventivo Preventivo @relation(fields: [preventivoId], references: [id], onDelete: Cascade)
+
+  @@unique([preventivoId, numero])
+  @@index([preventivoId])
+}
+
+enum UnitaMisura {
+  ORE
+  GIORNI
+  CORPO
+  PEZZI
+}
+
+model VocePreventivo {
+  id           String      @id @default(cuid())
+  preventivoId String
+  descrizione  String
+  /// Dettaglio facoltativo mostrato sotto la descrizione.
+  nota         String?
+  quantita     Decimal     @db.Decimal(10, 2)
+  unita        UnitaMisura @default(ORE)
+  prezzo       Decimal     @db.Decimal(10, 2)
+  /// Sconto percentuale sulla singola riga.
+  sconto       Decimal     @default(0) @db.Decimal(5, 2)
+  ordine       Int         @default(0)
+  preventivo   Preventivo @relation(fields: [preventivoId], references: [id], onDelete: Cascade)
+
+  @@index([preventivoId])
+}
+
+// ---------------------------------------------------------------- delivery
+
+enum StatoProgetto {
+  DA_AVVIARE
+  IN_CORSO
+  IN_PAUSA
+  CONCLUSO
+}
+
+model Progetto {
+  id           String        @id @default(cuid())
+  nome         String
+  clienteId    String
+  preventivoId String?       @unique
+  stato        StatoProgetto @default(DA_AVVIARE)
+  valore       Decimal       @db.Decimal(12, 2)
+  budgetOre    Decimal       @db.Decimal(10, 2)
+  inizioIl     DateTime?
+  consegnaIl   DateTime?
+  note         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  cliente     Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  preventivo  Preventivo? @relation(fields: [preventivoId], references: [id])
+  attivita    Attivita[]
+  ticket      Ticket[]
+  registrazioni RegistrazioneOre[]
+  milestone   Milestone[]
+  documenti   Documento[]
+  noteProgetto NotaProgetto[]
+  contratti   Contratto[]
+  problemi    Problema[]
+  eventi      EventoProgetto[]
+
+  /// Repository GitHub collegata, nel formato `owner/repo`. Facoltativa.
+  repoGithub  String?
+  /// Branch da seguire per l'avanzamento; se vuoto si usa quello predefinito.
+  branchGithub String?
+
+  @@index([stato])
+}
+
+enum GravitaProblema {
+  BASSA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum StatoProblema {
+  APERTO
+  IN_GESTIONE
+  RISOLTO
+  ACCETTATO
+}
+
+/// Criticità, rischio o errore emerso durante il progetto.
+///
+/// Separato dai ticket: quelli arrivano dal cliente ad assistenza avviata,
+/// questi riguardano l'andamento del lavoro (ritardi, blocchi, scelte
+/// tecniche sbagliate) e vanno visti dal team, non dal cliente.
+model Problema {
+  id          String          @id @default(cuid())
+  progettoId  String
+  titolo      String
+  descrizione String?
+  gravita     GravitaProblema @default(MEDIA)
+  stato       StatoProblema   @default(APERTO)
+  /// Che cosa si è deciso di fare: compilato alla chiusura.
+  risoluzione String?
+  /// Impatto stimato in ore, per capire quanto costa davvero.
+  impattoOre  Decimal?        @db.Decimal(10, 2)
+  segnalatoDa String?
+  apertoIl    DateTime        @default(now())
+  risoltoIl   DateTime?
+
+  progetto Progetto @relation(fields: [progettoId], references: [id], onDelete: Cascade)
+
+  @@index([progettoId])
+  @@index([stato])
+}
+
+/// Nota su un'attività o un ticket.
+model NotaOperativa {
+  id         String   @id @default(cuid())
+  attivitaId String?
+  ticketId   String?
+  testo      String
+  autore     String?
+  createdAt  DateTime @default(now())
+
+  attivita Attivita? @relation(fields: [attivitaId], references: [id], onDelete: Cascade)
+  ticket   Ticket?   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([attivitaId])
+  @@index([ticketId])
+}
+
+/// Voce del diario di progetto: tutto ciò che è successo, in ordine di tempo.
+///
+/// Gli eventi vengono registrati dal codice quando accade qualcosa di
+/// rilevante (cambio stato, milestone completata, fattura emessa…), così la
+/// cronologia resta leggibile anche a distanza di mesi.
+model EventoProgetto {
+  id         String   @id @default(cuid())
+  progettoId String
+  /// Categoria dell'evento: guida icona e colore nella timeline.
+  tipo       String
+  testo      String
+  /// Dettaglio facoltativo (valore precedente, importo, numero fattura…).
+  dettaglio  String?
+  autore     String?
+  createdAt  DateTime @default(now())
+
+  progetto Progetto @relation(fields: [progettoId], references: [id], onDelete: Cascade)
+
+  @@index([progettoId, createdAt])
+}
+
+/// File allegato a un progetto (contratti, capitolati, verbali…).
+/// Il binario sta su S3/MinIO: qui restano solo i metadati e la chiave.
+model Documento {
+  id         String   @id @default(cuid())
+  progettoId String?
+  ticketId   String?
+  contrattoId String?
+  nome       String
+  chiave     String   @unique // percorso dell'oggetto su S3
+  tipo       String // MIME
+  dimensione Int // byte
+  caricatoDa String?
+  createdAt  DateTime @default(now())
+
+  progetto  Progetto?  @relation(fields: [progettoId], references: [id], onDelete: Cascade)
+  ticket    Ticket?    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  contratto Contratto? @relation(fields: [contrattoId], references: [id], onDelete: Cascade)
+
+  @@index([progettoId])
+  @@index([ticketId])
+  @@index([contrattoId])
+}
+
+/// Annotazione libera sul progetto: decisioni prese, promesse fatte al
+/// cliente, cose che non stanno in un'attività.
+model NotaProgetto {
+  id         String   @id @default(cuid())
+  progettoId String
+  testo      String
+  autore     String?
+  createdAt  DateTime @default(now())
+
+  progetto Progetto @relation(fields: [progettoId], references: [id], onDelete: Cascade)
+
+  @@index([progettoId])
+}
+
+model Milestone {
+  id         String    @id @default(cuid())
+  progettoId String
+  titolo     String
+  scadenzaIl DateTime?
+  completata Boolean   @default(false)
+  progetto   Progetto  @relation(fields: [progettoId], references: [id], onDelete: Cascade)
+
+  @@index([progettoId])
+}
+
+enum StatoAttivita {
+  DA_FARE
+  IN_CORSO
+  BLOCCATA
+  FATTA
+}
+
+model Attivita {
+  id         String        @id @default(cuid())
+  titolo     String
+  progettoId String?
+  stato      StatoAttivita @default(DA_FARE)
+  stimaOre   Decimal?      @db.Decimal(10, 2)
+  scadenzaIl DateTime?
+  bloccoNota String?
+  completataIl DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  registrazioni RegistrazioneOre[]
+  note          NotaOperativa[]
+
+  @@index([stato])
+  @@index([progettoId])
+}
+
+// ---------------------------------------------------------------- assistenza
+
+enum StatoTicket {
+  APERTO
+  IN_LAVORAZIONE
+  ATTESA_CLIENTE
+  RISOLTO
+  CHIUSO
+}
+
+enum PrioritaTicket {
+  BASSA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+model Ticket {
+  id          String         @id @default(cuid())
+  numero      Int            @unique // #128
+  titolo      String
+  descrizione String?
+  clienteId   String
+  progettoId  String?
+  stato       StatoTicket    @default(APERTO)
+  priorita    PrioritaTicket @default(MEDIA)
+  conContratto Boolean       @default(false)
+  apertoIl    DateTime       @default(now())
+  risoltoIl   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  cliente       Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  registrazioni RegistrazioneOre[]
+  note          NotaOperativa[]
+  documenti     Documento[]
+  /// Contratto che copre questo ticket, se ce n'è uno attivo.
+  contrattoId   String?
+  contratto     Contratto?         @relation(fields: [contrattoId], references: [id], onDelete: SetNull)
+
+  @@index([stato])
+}
+
+// ---------------------------------------------------------------- timesheet
+
+model RegistrazioneOre {
+  id           String   @id @default(cuid())
+  data         DateTime @db.Date
+  ore          Decimal  @db.Decimal(6, 2)
+  descrizione  String?
+  fatturabile  Boolean  @default(true)
+  progettoId   String?
+  attivitaId   String?
+  ticketId     String?
+  rigaFatturaId String?
+  createdAt    DateTime @default(now())
+
+  progetto   Progetto?   @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  attivita   Attivita?   @relation(fields: [attivitaId], references: [id], onDelete: SetNull)
+  ticket     Ticket?     @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  rigaFattura RigaFattura? @relation(fields: [rigaFatturaId], references: [id], onDelete: SetNull)
+
+  @@index([data])
+  @@index([progettoId])
+}
+
+// ---------------------------------------------------------------- denaro
+
+enum StatoFattura {
+  DA_EMETTERE
+  EMESSA
+  PAGATA
+  SCADUTA
+}
+
+model Fattura {
+  id         String       @id @default(cuid())
+  numero     String       @unique // 2026/044
+  clienteId  String
+  stato      StatoFattura @default(DA_EMETTERE)
+  imponibile Decimal      @db.Decimal(12, 2)
+  aliquotaIva Decimal     @default(22) @db.Decimal(5, 2)
+  emessaIl   DateTime?
+  scadeIl    DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  cliente Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  righe   RigaFattura[]
+  incassi Incasso[]
+
+  @@index([stato])
+}
+
+model RigaFattura {
+  id          String  @id @default(cuid())
+  fatturaId   String
+  descrizione String
+  quantita    Decimal @db.Decimal(10, 2)
+  prezzo      Decimal @db.Decimal(10, 2)
+  ordine      Int     @default(0)
+
+  fattura       Fattura            @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
+  registrazioni RegistrazioneOre[]
+
+  @@index([fatturaId])
+}
+
+enum MetodoPagamento {
+  BONIFICO
+  CARTA
+  CONTANTI
+  ALTRO
+}
+
+model Incasso {
+  id        String          @id @default(cuid())
+  fatturaId String
+  data      DateTime        @db.Date
+  importo   Decimal         @db.Decimal(12, 2)
+  metodo    MetodoPagamento @default(BONIFICO)
+  conto     String?
+  nota      String?
+  createdAt DateTime        @default(now())
+
+  fattura Fattura @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
+
+  @@index([data])
+}
+
+// ---------------------------------------------------------------- impostazioni
+
+// --------------------------------------------------------------- contratti
+
+enum TipoContratto {
+  /// Monte ore periodico: i ticket del cliente lo consumano.
+  ASSISTENZA_ORE
+  /// Importo ricorrente senza monte ore (hosting, manutenzione).
+  CANONE_FISSO
+  /// Contratto che formalizza un progetto.
+  PROGETTO
+}
+
+enum PeriodicitaContratto {
+  MENSILE
+  TRIMESTRALE
+  SEMESTRALE
+  ANNUALE
+}
+
+enum StatoContratto {
+  BOZZA
+  ATTIVO
+  SOSPESO
+  SCADUTO
+  DISDETTO
+}
+
+/// Contratto con un cliente.
+///
+/// I tre tipi condividono la stessa tabella perché condividono il ciclo di
+/// vita (date, rinnovo, canone) e differiscono solo per come si consumano:
+/// `monteOre` vale per l'assistenza, `progettoId` per i contratti di progetto.
+model Contratto {
+  id          String               @id @default(cuid())
+  numero      String               @unique
+  titolo      String
+  clienteId   String
+  progettoId  String?
+  tipo        TipoContratto        @default(ASSISTENZA_ORE)
+  stato       StatoContratto       @default(BOZZA)
+  /// Importo del canone per periodo.
+  canone      Decimal              @db.Decimal(12, 2)
+  periodicita PeriodicitaContratto @default(MENSILE)
+  /// Ore incluse nel periodo (solo ASSISTENZA_ORE).
+  monteOre    Decimal?             @db.Decimal(10, 2)
+  /// Le ore eccedenti il monte si fatturano a questa tariffa; se nulla si usa
+  /// quella del cliente.
+  tariffaExtra Decimal?            @db.Decimal(10, 2)
+  inizioIl    DateTime
+  scadeIl     DateTime?
+  /// Rinnovo tacito alla scadenza.
+  rinnovoAutomatico Boolean        @default(false)
+  /// Preavviso di disdetta, in giorni.
+  preavvisoGiorni   Int            @default(30)
+  note        String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  cliente   Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  progetto  Progetto?        @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  periodi   PeriodoContratto[]
+  documenti Documento[]
+  ticket    Ticket[]
+
+  @@index([clienteId])
+  @@index([stato])
+}
+
+/// Periodo di competenza di un contratto: è qui che si misura il consumo del
+/// monte ore e si tiene traccia della fattura del canone.
+model PeriodoContratto {
+  id          String    @id @default(cuid())
+  contrattoId String
+  inizioIl    DateTime  @db.Date
+  fineIl      DateTime  @db.Date
+  /// Ore incluse in questo periodo, copiate dal contratto alla creazione:
+  /// se il contratto cambia, i periodi già chiusi restano quelli concordati.
+  monteOre    Decimal?  @db.Decimal(10, 2)
+  fatturaId   String?
+  createdAt   DateTime  @default(now())
+
+  contratto Contratto @relation(fields: [contrattoId], references: [id], onDelete: Cascade)
+
+  @@unique([contrattoId, inizioIl])
+  @@index([contrattoId])
+}
+
+// ---------------------------------------------------------------- workflow
+
+enum TipoInnesco {
+  EVENTO
+  PIANIFICATO
+  MANUALE
+}
+
+/// Automazione configurabile a blocchi.
+///
+/// I blocchi (condizioni e azioni) sono salvati come JSON: la loro forma
+/// cambia col tipo di blocco, e un modello relazionale per ogni variante
+/// renderebbe rigido qualcosa che deve restare estendibile.
+model Workflow {
+  id          String      @id @default(cuid())
+  nome        String
+  descrizione String?
+  attivo      Boolean     @default(true)
+  innesco     TipoInnesco @default(EVENTO)
+  /// Per EVENTO: nome dell'evento (es. "preventivo.accettato").
+  /// Per PIANIFICATO: espressione di frequenza (es. "giornaliero").
+  eventoChiave String?
+  /// Blocchi condizione: tutte devono essere vere perché il workflow proceda.
+  condizioni  Json        @default("[]")
+  /// Blocchi azione, eseguiti in ordine.
+  azioni      Json        @default("[]")
+  /// Statistiche d'uso, utili per capire se un workflow serve davvero.
+  esecuzioni  Int         @default(0)
+  ultimaEsecuzione DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  registri RegistroWorkflow[]
+
+  @@index([innesco, attivo])
+}
+
+/// Esito di una singola esecuzione: serve a capire perché un workflow non ha
+/// fatto quello che ci si aspettava.
+model RegistroWorkflow {
+  id         String   @id @default(cuid())
+  workflowId String
+  /// true se tutte le azioni sono andate a buon fine.
+  successo   Boolean
+  /// Perché si è fermato, o cosa ha fatto.
+  esito      String
+  /// Contesto dell'esecuzione (entità coinvolta, valori valutati).
+  dettaglio  Json?
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId, createdAt])
+}
+
+/// Notifica interna generata da un workflow o dal sistema.
+model Notifica {
+  id        String    @id @default(cuid())
+  titolo    String
+  testo     String?
+  /// Collegamento facoltativo alla pagina pertinente.
+  link      String?
+  livello   String    @default("info")
+  lettaIl   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([lettaIl, createdAt])
+}
+
+/// Riga singola di configurazione dello studio + stato integrazione Twenty.
+model Impostazioni {
+  id               Int      @id @default(1)
+  ragioneSociale   String   @default("Marco Ferrero")
+  partitaIva       String?
+  iban             String?
+  tariffaListino   Decimal  @default(65) @db.Decimal(10, 2)
+  terminiPagamento Int      @default(30)
+  twentyWorkspace  String?
+  twentySyncedAt   DateTime?
+  twentyFrequenza  Int      @default(15) // minuti
+  updatedAt        DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------- accessi
+
+/// Utente dello studio. Non c'è registrazione aperta: gli account si creano
+/// con `npm run utenti:crea` (vedi scripts/utente.mjs).
+model Utente {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  nome         String
+  passwordHash String
+  attivo       Boolean   @default(true)
+  ultimoAccesso DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+}
