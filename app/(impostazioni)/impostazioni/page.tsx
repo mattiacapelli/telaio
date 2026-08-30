@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { eurCent, n } from "@/lib/format";
 import {
   Building2, FileText, RefreshCw, Plug, Clock, Users,
-  Database, KeyRound, Mail, GitCommit, LayoutTemplate,
+  Database, KeyRound, Mail, GitCommit, LayoutTemplate, Bot,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +46,7 @@ export default async function ImpostazioniPage() {
   const githubAttivo = Boolean(process.env.GITHUB_TOKEN);
   const smtpAttivo = Boolean(process.env.SMTP_HOST);
   const schedulerAttivo = Boolean(process.env.SCHEDULER_TOKEN);
+  const mcpAttivo = Boolean(process.env.MCP_TOKEN);
 
   return (
     <NavigazioneImpostazioni
@@ -277,6 +278,61 @@ export default async function ImpostazioniPage() {
                 </Riquadro>
               </Sezione>
             </>
+          ),
+        },
+
+        {
+          chiave: "mcp",
+          etichetta: "Accesso AI (MCP)",
+          icona: <Bot size={14} />,
+          gruppo: "Integrazioni",
+          contenuto: (
+            <Sezione
+              titolo="Server MCP"
+              descrizione="Espone i dati di Telaio a un assistente AI (Claude e simili) tramite il protocollo MCP: può consultare clienti, progetti, ticket, ore, fatture e contratti, oltre a creare ticket, registrare ore e costi, aprire attività."
+            >
+              <Riquadro>
+                <Riga
+                  icona={<Plug size={14} />}
+                  titolo="Stato"
+                  dettaglio="POST /api/mcp"
+                  stato={
+                    <Stato
+                      testo={mcpAttivo ? "Attivo" : "Non configurato"}
+                      tono={mcpAttivo ? "attivo" : "neutro"}
+                    />
+                  }
+                />
+              </Riquadro>
+
+              {!mcpAttivo ? (
+                <div className="rounded-md border border-border bg-surface2 px-3 py-2 text-xs text-muted">
+                  Imposta <code className="text-text">MCP_TOKEN</code> nel file{" "}
+                  <code className="text-text">.env</code> (genera un valore con{" "}
+                  <code className="text-text">openssl rand -hex 32</code>) per attivare
+                  l&apos;endpoint.
+                </div>
+              ) : (
+                <div className="space-y-2 rounded-md border border-border bg-surface2 px-3 py-2 text-xs text-muted">
+                  <p>
+                    Configura il client MCP con l&apos;URL del tuo endpoint e l&apos;header{" "}
+                    <code className="text-text">Authorization: Bearer &lt;MCP_TOKEN&gt;</code>.
+                    Il token è quello in <code className="text-text">.env</code>: chi lo conosce
+                    può leggere e modificare i dati dello studio, trattalo come una password.
+                  </p>
+                  <pre className="overflow-x-auto rounded bg-surface3 p-2 text-[11px] text-text">
+{`{
+  "mcpServers": {
+    "telaio": {
+      "url": "https://<il-tuo-dominio>/api/mcp",
+      "headers": { "Authorization": "Bearer <MCP_TOKEN>" }
+    }
+  }
+}`}
+                  </pre>
+                </div>
+              )}
+            </Sezione>
           ),
         },
 

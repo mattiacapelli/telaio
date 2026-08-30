@@ -69,6 +69,7 @@ services:
       S3_SECRET_KEY: ${MINIO_PASSWORD:-telaio-secret}
       SCHEDULER_TOKEN: ${SCHEDULER_TOKEN:-}
       SCHEDULER_INTERVALLO: ${SCHEDULER_INTERVALLO:-3600}
+      MCP_TOKEN: ${MCP_TOKEN:-}
       NODE_ENV: production
     ports:
       - "${APP_PORT:-3000}:3000"

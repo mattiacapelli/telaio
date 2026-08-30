@@ -8,7 +8,11 @@ import { COOKIE } from "@/lib/auth-cookie";
  * edge, dove Redis e Prisma non sono disponibili. La validità della sessione
  * viene verificata dal layout, che gira su Node.
  */
-const PUBBLICHE = ["/login", "/api/auth/login"];
+// Lo scheduler e il server MCP si autenticano con un token dedicato (header
+// Authorization), non con il cookie di sessione: un processo interno o un
+// agente esterno non deve dipendere da un login da browser. Il controllo
+// vero resta nella route.
+const PUBBLICHE = ["/login", "/api/auth/login", "/api/scheduler", "/api/mcp"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
