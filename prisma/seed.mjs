@@ -2,15 +2,46 @@
 // Idempotente: se ci sono già clienti non fa nulla, così l'entrypoint Docker
 // può eseguirlo a ogni avvio senza duplicare.
 import { PrismaClient } from "@prisma/client";
+import { randomBytes, scrypt } from "node:crypto";
+import { promisify } from "node:util";
 
 const prisma = new PrismaClient();
+const scryptAsync = promisify(scrypt);
 const d = (s) => new Date(`${s}T00:00:00.000Z`);
 
+/** Stesso formato usato da lib/auth.ts: scrypt:<sale>:<hash>. */
+async function hashPassword(password) {
+  const sale = randomBytes(16).toString("hex");
+  const hash = await scryptAsync(password, sale, 64);
+  return `scrypt:${sale}:${hash.toString("hex")}`;
+}
+
+/** Data relativa a oggi, per avere sempre dati freschi alla riesecuzione. */
+function fraGiorni(n) {
+  const x = new Date();
+  x.setUTCDate(x.getUTCDate() + n);
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+
 async function main() {
-  if ((await prisma.cliente.count()) > 0) {
+  // L'idempotenza guarda gli utenti, non i clienti: l'anagrafica può
+  // arrivare dal sync con Twenty su un database senza account, e in quel caso
+  // il seed deve comunque creare l'utente di accesso.
+  if ((await prisma.utente.count()) > 0) {
     console.log("Database già popolato: seed saltato.");
     return;
   }
+
+  // Utente di accesso: senza, l'applicazione non è utilizzabile.
+  // La password va cambiata al primo accesso con scripts/utente.mjs.
+  await prisma.utente.create({
+    data: {
+      email: "marco@studioferrero.it",
+      nome: "Marco Ferrero",
+      passwordHash: await hashPassword(process.env.SEED_PASSWORD ?? "Telaio2026!"),
+    },
+  });
 
   await prisma.impostazioni.upsert({
     where: { id: 1 },
@@ -239,7 +270,188 @@ async function main() {
     ],
   });
 
+  // ------------------------------------------------------------- contratti
+  const contratti = [
+    {
+      numero: "CON-2026/001",
+      titolo: "Assistenza sistemistica",
+      cliente: "bonaldi",
+      tipo: "ASSISTENZA_ORE",
+      stato: "ATTIVO",
+      canone: 900,
+      periodicita: "MENSILE",
+      monteOre: 20,
+      inizioIl: d("2026-01-01"),
+      scadeIl: d("2026-12-31"),
+      rinnovoAutomatico: true,
+    },
+    {
+      numero: "CON-2026/002",
+      titolo: "Hosting e manutenzione",
+      cliente: "nuvolab",
+      tipo: "CANONE_FISSO",
+      stato: "ATTIVO",
+      canone: 250,
+      periodicita: "TRIMESTRALE",
+      inizioIl: d("2026-03-01"),
+      // Scadenza vicina, per vedere l'avviso di preavviso in azione.
+      scadeIl: fraGiorni(25),
+      rinnovoAutomatico: false,
+      preavvisoGiorni: 30,
+    },
+    {
+      numero: "CON-2026/003",
+      titolo: "Assistenza farmacie",
+      cliente: "riva",
+      tipo: "ASSISTENZA_ORE",
+      stato: "BOZZA",
+      canone: 400,
+      periodicita: "MENSILE",
+      monteOre: 8,
+      inizioIl: fraGiorni(10),
+      rinnovoAutomatico: true,
+    },
+  ];
+
+  const K = {};
+  for (const c of contratti) {
+    const { cliente, ...dati } = c;
+    K[c.numero] = await prisma.contratto.create({
+      data: { ...dati, clienteId: C[cliente].id },
+    });
+  }
+
+  // I ticket del cliente con contratto attivo ne sono coperti.
+  await prisma.ticket.updateMany({
+    where: { clienteId: C.bonaldi.id, stato: { notIn: ["RISOLTO", "CHIUSO"] } },
+    data: { contrattoId: K["CON-2026/001"].id, conContratto: true },
+  });
+
+  // -------------------------------------------------------------- criticità
+  await prisma.problema.createMany({
+    data: [
+      {
+        progettoId: PR.portale.id,
+        titolo: "Ambiente di test non disponibile",
+        descrizione: "Il cliente non ha ancora predisposto il server di collaudo.",
+        gravita: "ALTA",
+        stato: "APERTO",
+        impattoOre: 8,
+        segnalatoDa: "marco@studioferrero.it",
+        apertoIl: fraGiorni(-6),
+      },
+      {
+        progettoId: PR.cicd.id,
+        titolo: "Budget ore superato",
+        descrizione: "La migrazione ha richiesto più lavoro del previsto.",
+        gravita: "MEDIA",
+        stato: "IN_GESTIONE",
+        impattoOre: 4,
+        segnalatoDa: "marco@studioferrero.it",
+        apertoIl: fraGiorni(-12),
+      },
+    ],
+  });
+
+  // ------------------------------------------------------------------ note
+  await prisma.notaProgetto.createMany({
+    data: [
+      {
+        progettoId: PR.portale.id,
+        testo: "Concordata con il cliente la formazione per il 20 settembre.",
+        autore: "marco@studioferrero.it",
+      },
+      {
+        progettoId: PR.areaclienti.id,
+        testo: "Il referente ha chiesto di anticipare la consegna di una settimana.",
+        autore: "marco@studioferrero.it",
+      },
+    ],
+  });
+
+  await prisma.notaOperativa.create({
+    data: {
+      ticketId: T[128].id,
+      testo: "Riprodotto in staging: succede solo con listini oltre 200 righe.",
+      autore: "marco@studioferrero.it",
+    },
+  });
+
+  // ---------------------------------------------------------------- eventi
+  // Diario del progetto principale, per popolare la timeline.
+  await prisma.eventoProgetto.createMany({
+    data: [
+      {
+        progettoId: PR.portale.id,
+        tipo: "stato",
+        testo: "Stato → in corso",
+        autore: "marco@studioferrero.it",
+        createdAt: fraGiorni(-40),
+      },
+      {
+        progettoId: PR.portale.id,
+        tipo: "milestone",
+        testo: "Milestone raggiunta: analisi conclusa",
+        autore: "marco@studioferrero.it",
+        createdAt: fraGiorni(-25),
+      },
+      {
+        progettoId: PR.portale.id,
+        tipo: "problema",
+        testo: "Criticità aperta: Ambiente di test non disponibile",
+        dettaglio: "gravità alta",
+        autore: "marco@studioferrero.it",
+        createdAt: fraGiorni(-6),
+      },
+    ],
+  });
+
+  // -------------------------------------------------------------- workflow
+  await prisma.workflow.create({
+    data: {
+      nome: "Apri progetto da preventivo accettato",
+      descrizione:
+        "Quando un preventivo sopra i 5.000 euro viene accettato, crea il progetto e avvisa.",
+      attivo: true,
+      innesco: "EVENTO",
+      eventoChiave: "preventivo.accettato",
+      condizioni: [],
+      azioni: {
+        blocchi: [
+          { id: "b1", tipo: "innesco.evento", config: { evento: "preventivo.accettato" }, pos: { x: 40, y: 40 } },
+          { id: "b2", tipo: "condizione.valore", config: { campo: "imponibile", operatore: "maggiore", soglia: 5000 }, pos: { x: 260, y: 40 } },
+          { id: "b3", tipo: "azione.creaProgetto", config: { budgetOre: 0 }, pos: { x: 480, y: 40 } },
+          { id: "b4", tipo: "azione.notifica", config: { titolo: "Progetto aperto da {numero}", testo: "Cliente {cliente} · {imponibile} EUR", livello: "info" }, pos: { x: 480, y: 150 } },
+        ],
+        collegamenti: [
+          { da: "b1", a: "b2" },
+          { da: "b2", a: "b3" },
+          { da: "b2", a: "b4" },
+        ],
+      },
+    },
+  });
+
+  await prisma.workflow.create({
+    data: {
+      nome: "Promemoria fatture scadute",
+      descrizione: "Ogni giorno segnala le fatture non ancora incassate oltre la scadenza.",
+      attivo: true,
+      innesco: "PIANIFICATO",
+      eventoChiave: "giornaliero",
+      condizioni: [],
+      azioni: {
+        blocchi: [
+          { id: "b1", tipo: "innesco.pianificato", config: { frequenza: "giornaliero" }, pos: { x: 40, y: 40 } },
+          { id: "b2", tipo: "azione.notifica", config: { titolo: "Controlla le fatture scadute", testo: "Verifica i solleciti da inviare.", livello: "attenzione" }, pos: { x: 260, y: 40 } },
+        ],
+        collegamenti: [{ da: "b1", a: "b2" }],
+      },
+    },
+  });
+
   console.log("Seed completato.");
+  console.log("  accesso: marco@studioferrero.it / " + (process.env.SEED_PASSWORD ?? "Telaio2026!"));
 }
 
 main()
