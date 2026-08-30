@@ -899,3 +899,58 @@ export async function getContrattoCompleto(id: string) {
     })),
   };
 }
+
+/** Opzioni per il selettore di inserimento ore. */
+export async function getRiferimentiOre() {
+  const [progetti, attivita, ticket] = await Promise.all([
+    prisma.progetto.findMany({
+      where: { stato: { in: ["IN_CORSO", "DA_AVVIARE", "IN_PAUSA"] } },
+      include: { cliente: true },
+      orderBy: { nome: "asc" },
+    }),
+    prisma.attivita.findMany({
+      where: { stato: { not: "FATTA" } },
+      include: { progetto: true },
+      orderBy: { titolo: "asc" },
+    }),
+    prisma.ticket.findMany({
+      where: { stato: { notIn: ["RISOLTO", "CHIUSO"] } },
+      include: { cliente: true },
+      orderBy: { numero: "desc" },
+    }),
+  ]);
+
+  return {
+    progetti: progetti.map((p) => ({
+      id: p.id,
+      etichetta: `${p.nome} · ${p.cliente.ragioneSociale}`,
+    })),
+    attivita: attivita.map((a) => ({
+      id: a.id,
+      etichetta: a.progetto ? `${a.titolo} · ${a.progetto.nome}` : a.titolo,
+    })),
+    ticket: ticket.map((t) => ({
+      id: t.id,
+      etichetta: `#${t.numero} ${t.titolo} · ${t.cliente.ragioneSociale}`,
+    })),
+  };
+}
+
+/** Fatture emesse con un residuo da incassare. */
+export async function getFattureDaIncassare() {
+  const fatture = await prisma.fattura.findMany({
+    where: { stato: { in: ["EMESSA", "SCADUTA"] } },
+    include: { cliente: true, incassi: true },
+    orderBy: { scadeIl: "asc" },
+  });
+
+  return fatture
+    .map((f) => ({
+      id: f.id,
+      numero: f.numero,
+      cliente: f.cliente.ragioneSociale,
+      residuo: n(f.imponibile) - f.incassi.reduce((s, i) => s + n(i.importo), 0),
+    }))
+    // Una fattura già coperta non deve comparire tra quelle da incassare.
+    .filter((f) => f.residuo > 0.01);
+}

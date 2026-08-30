@@ -1,4 +1,5 @@
-import { getSettimana } from "@/lib/queries";
+import { getSettimana, getRiferimentiOre } from "@/lib/queries";
+import { InserisciOre } from "@/components/inserisci-ore";
 import { Card } from "@/components/ui/card";
 import { Vuoto } from "@/components/ui-legacy";
 import { ore } from "@/lib/format";
@@ -14,7 +15,10 @@ export default async function OrePage({
 }) {
   const { s } = await searchParams;
   const offset = Number(s ?? 0) || 0;
-  const settimana = await getSettimana(offset);
+  const [settimana, riferimenti] = await Promise.all([
+    getSettimana(offset),
+    getRiferimentiOre(),
+  ]);
 
   // Le date della settimana sono in UTC (vedi inizioSettimana): le leggiamo
   // con i getter UTC, altrimenti il numero del giorno slitta secondo il fuso.
@@ -60,6 +64,11 @@ export default async function OrePage({
           )}
         </div>
         <div className="flex-1" />
+        <InserisciOre
+          progetti={riferimenti.progetti}
+          attivita={riferimenti.attivita}
+          ticket={riferimenti.ticket}
+        />
         <span className="text-xs text-muted">
           Totale settimana <strong className="text-text">{ore(settimana.totale)}</strong> · da
           fatturare <strong className="text-text">{ore(settimana.daFatturare)}</strong>
@@ -95,18 +104,28 @@ export default async function OrePage({
                     {r.contesto}
                   </div>
                 </div>
-                {r.giorni.map((h, i) => (
-                  <span
-                    key={i}
-                    className={`text-center text-xs tabular-nums ${
-                      h > 0 ? "text-text" : "text-faint"
-                    }`}
-                  >
-                    {h > 0
-                      ? h.toLocaleString("it-IT", { minimumFractionDigits: 2 })
-                      : "+"}
-                  </span>
-                ))}
+                {r.giorni.map((h, i) => {
+                  const giorno = new Date(settimana.inizio);
+                  giorno.setUTCDate(giorno.getUTCDate() + i);
+                  const iso = giorno.toISOString().slice(0, 10);
+                  return (
+                    <div key={i} className="flex h-6 items-center justify-center">
+                      {h > 0 ? (
+                        <span className="text-center text-xs tabular-nums text-text">
+                          {h.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                        </span>
+                      ) : (
+                        <InserisciOre
+                          progetti={riferimenti.progetti}
+                          attivita={riferimenti.attivita}
+                          ticket={riferimenti.ticket}
+                          dataIniziale={iso}
+                          compatto
+                        />
+                      )}
+                    </div>
+                  );
+                })}
                 <span className="text-right text-xs font-semibold tabular-nums">
                   {r.totale.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                 </span>

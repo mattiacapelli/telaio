@@ -1,4 +1,5 @@
-import { getIncassi } from "@/lib/queries";
+import { getIncassi, getFattureDaIncassare } from "@/lib/queries";
+import { RegistraIncasso, EliminaIncasso } from "@/components/registra-incasso";
 import { Card, CardHead } from "@/components/ui/card";
 import { Stat, Vuoto } from "@/components/ui-legacy";
 import { eur, data } from "@/lib/format";
@@ -15,7 +16,10 @@ const METODI: Record<string, string> = {
 };
 
 export default async function IncassiPage() {
-  const d = await getIncassi();
+  const [d, daIncassare] = await Promise.all([
+    getIncassi(),
+    getFattureDaIncassare(),
+  ]);
 
   if (d.movimenti.length === 0) {
     return <Vuoto titolo="Nessun incasso" nota="I pagamenti ricevuti compariranno qui." />;
@@ -30,6 +34,13 @@ export default async function IncassiPage() {
 
   return (
     <div className="tl-in flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted">
+          {daIncassare.length} fatture da incassare
+        </span>
+        <div className="flex-1" />
+        <RegistraIncasso fatture={daIncassare} />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           etichetta={`Incassato ${anno}`}
@@ -96,11 +107,12 @@ export default async function IncassiPage() {
             <span>Fattura / cliente</span>
             <span>Metodo</span>
             <span className="text-right">Importo</span>
+            <span />
           </div>
           {d.movimenti.map((m) => (
             <div
               key={m.id}
-              className="grid grid-cols-[60px_2fr_1fr_1fr] items-center gap-2 border-b border-border px-3 py-2 last:border-0"
+              className="group grid grid-cols-[60px_2fr_1fr_1fr_24px] items-center gap-2 border-b border-border px-3 py-2 last:border-0"
             >
               <span className="text-xs text-muted">{data(m.data)}</span>
               <div className="min-w-0">
@@ -115,6 +127,7 @@ export default async function IncassiPage() {
               <span className="text-right text-xs font-medium">
                 {eur(m.importo)}
               </span>
+              <EliminaIncasso id={m.id} />
             </div>
           ))}
         </Card>
