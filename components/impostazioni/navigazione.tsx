@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type VoceImpostazioni = {
@@ -31,8 +33,21 @@ export function NavigazioneImpostazioni({ voci }: { voci: VoceImpostazioni[] }) 
   }
 
   return (
-    <div className="tl-in flex h-[calc(100vh-96px)] overflow-hidden rounded border border-border">
-      <aside className="flex w-[230px] flex-none flex-col overflow-y-auto border-r border-border bg-surface p-2">
+    <div className="tl-in flex h-screen overflow-hidden">
+      <aside className="flex w-[260px] flex-none flex-col overflow-y-auto border-r border-border bg-surface">
+        {/* La X riporta al lavoro: le impostazioni sono un contesto a parte. */}
+        <div className="flex h-12 flex-none items-center gap-2 px-3">
+          <Link
+            href="/"
+            title="Chiudi le impostazioni"
+            className="grid h-6 w-6 place-items-center rounded text-faint transition-colors hover:bg-[var(--alpha-light)] hover:text-text"
+          >
+            <X size={15} />
+          </Link>
+          <span className="text-md font-medium">Impostazioni</span>
+        </div>
+
+        <div className="flex flex-1 flex-col px-2 pb-2">
         {gruppi.map((g) => (
           <div key={g.nome} className="mb-2">
             <div className="px-1 pb-1 pt-2 text-xs font-medium text-faint">
@@ -55,11 +70,20 @@ export function NavigazioneImpostazioni({ voci }: { voci: VoceImpostazioni[] }) 
             ))}
           </div>
         ))}
+        </div>
       </aside>
 
-      <div className="min-w-0 flex-1 overflow-y-auto bg-bg">
-        <div className="mx-auto flex max-w-[720px] flex-col gap-6 px-6 py-6">
-          {corrente?.contenuto}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-bg">
+        {/* Percorso di navigazione, come nel riferimento. */}
+        <div className="flex h-12 flex-none items-center gap-1.5 border-b border-border px-4 text-md">
+          <span className="text-faint">{corrente?.gruppo}</span>
+          <span className="text-faint">/</span>
+          <span>{corrente?.etichetta}</span>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto flex max-w-[720px] flex-col gap-6 px-6 py-6">
+            {corrente?.contenuto}
+          </div>
         </div>
       </div>
     </div>
