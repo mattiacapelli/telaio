@@ -465,11 +465,21 @@ export async function getIncassi() {
   return cached("incassi", TTL, async () => {
     const [incassi, fatture] = await Promise.all([
       prisma.incasso.findMany({
-        include: { fattura: { include: { cliente: true } } },
+        include: { fattura: { include: { cliente: true } }, conto: true },
         orderBy: { data: "desc" },
       }),
       prisma.fattura.findMany({ where: { eliminataIl: null }, include: { incassi: true } }),
     ]);
+
+    // Quanto è arrivato su ciascun conto: un incasso senza conto assegnato
+    // finisce nel gruppo "Non specificato", visibile invece di sparire.
+    const perContoMappa = new Map<string, number>();
+    for (const i of incassi) {
+      const chiave = i.conto?.nome ?? "Non specificato";
+      perContoMappa.set(chiave, (perContoMappa.get(chiave) ?? 0) + n(i.importo));
+    }
+    const perConto = Array.from(perContoMappa, ([nome, importo]) => ({ nome, importo }))
+      .sort((a, b) => b.importo - a.importo);
 
     const emesso = fatture
       .filter((f) => f.stato !== "DA_EMETTERE")
@@ -493,13 +503,14 @@ export async function getIncassi() {
         .filter((f) => f.stato === "SCADUTA")
         .reduce((s, f) => s + n(f.imponibile), 0),
       mesi,
+      perConto,
       movimenti: incassi.map((i) => ({
         id: i.id,
         data: i.data,
         fattura: i.fattura.numero,
         cliente: i.fattura.cliente.ragioneSociale,
         metodo: i.metodo,
-        conto: i.conto,
+        conto: i.conto?.nome ?? null,
         importo: n(i.importo),
         nota: i.nota,
       })),

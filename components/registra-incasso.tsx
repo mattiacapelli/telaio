@@ -15,8 +15,16 @@ type FatturaAperta = {
   residuo: number;
 };
 
+type ContoOpzione = { id: string; nome: string; predefinito: boolean };
+
 /** Registra un pagamento ricevuto su una fattura emessa. */
-export function RegistraIncasso({ fatture }: { fatture: FatturaAperta[] }) {
+export function RegistraIncasso({
+  fatture,
+  conti = [],
+}: {
+  fatture: FatturaAperta[];
+  conti?: ContoOpzione[];
+}) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
   const [inCorso, setInCorso] = useState(false);
@@ -28,7 +36,7 @@ export function RegistraIncasso({ fatture }: { fatture: FatturaAperta[] }) {
     data: oggi,
     importo: "",
     metodo: "BONIFICO",
-    conto: "",
+    contoId: conti.find((c) => c.predefinito)?.id ?? "",
     nota: "",
   });
 
@@ -42,7 +50,7 @@ export function RegistraIncasso({ fatture }: { fatture: FatturaAperta[] }) {
     const r = await fetch("/api/incassi", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...d, conto: d.conto || null, nota: d.nota || null }),
+      body: JSON.stringify({ ...d, contoId: d.contoId || null, nota: d.nota || null }),
     }).catch(() => null);
     setInCorso(false);
 
@@ -126,12 +134,13 @@ export function RegistraIncasso({ fatture }: { fatture: FatturaAperta[] }) {
                   <option value="ALTRO">Altro</option>
                 </Select>
               </Campo>
-              <Campo etichetta="Conto" nota="Facoltativo">
-                <Input
-                  value={d.conto}
-                  onChange={(e) => set("conto", e.target.value)}
-                  placeholder="Banca Sella · principale"
-                />
+              <Campo etichetta="Conto" nota={conti.length === 0 ? "Configurabile in Impostazioni" : "Facoltativo"}>
+                <Select value={d.contoId} onChange={(e) => set("contoId", e.target.value)} disabled={conti.length === 0}>
+                  <option value="">Non specificato</option>
+                  {conti.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </Select>
               </Campo>
             </div>
 

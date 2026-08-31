@@ -559,19 +559,42 @@ enum MetodoPagamento {
   ALTRO
 }
 
+/// Un conto su cui arrivano gli incassi (banca, PayPal, cassa contanti...).
+///
+/// Prima era un campo di testo libero su ogni incasso: bastava una
+/// battitura diversa per spaccare in due lo stesso conto nei riepiloghi.
+/// Qui è un'anagrafica scelta da un menu, come Azienda per le ragioni
+/// sociali.
+model ContoIncasso {
+  id          String    @id @default(cuid())
+  nome        String
+  note        String?
+  predefinito Boolean   @default(false)
+  ordine      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  eliminataIl DateTime?
+
+  incassi Incasso[]
+
+  @@index([eliminataIl])
+}
+
 model Incasso {
   id        String          @id @default(cuid())
   fatturaId String
   data      DateTime        @db.Date
   importo   Decimal         @db.Decimal(12, 2)
   metodo    MetodoPagamento @default(BONIFICO)
-  conto     String?
   nota      String?
   createdAt DateTime        @default(now())
 
-  fattura Fattura @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
+  fattura Fattura       @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
+  conto   ContoIncasso? @relation(fields: [contoId], references: [id], onDelete: SetNull)
+  contoId String?
 
   @@index([data])
+  @@index([contoId])
 }
 
 // ---------------------------------------------------------------- impostazioni

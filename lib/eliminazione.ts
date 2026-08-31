@@ -32,7 +32,8 @@ export type Entita =
   | "workflow"
   | "modelloPdf"
   | "testoStandard"
-  | "webhook";
+  | "webhook"
+  | "contoIncasso";
 
 export class ErroreEliminazione extends Error {}
 
@@ -214,6 +215,28 @@ const CONFIG: Record<Entita, ConfigEntita> = {
     campoNome: "nome",
     nome: async (id) => (await prisma.webhook.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null,
   },
+
+  contoIncasso: {
+    modello: "contoIncasso",
+    campoNome: "nome",
+    nome: async (id) => (await prisma.contoIncasso.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null,
+    figli: [
+      { etichetta: "incassi registrati", conta: (id) => prisma.incasso.count({ where: { contoId: id } }) },
+    ],
+    vincoloHard: async (id) => {
+      const c = await prisma.contoIncasso.findUnique({ where: { id }, select: { predefinito: true } });
+      if (!c?.predefinito) return null;
+      const altri = await prisma.contoIncasso.count({ where: { eliminataIl: null, NOT: { id } } });
+      if (altri === 0) return "è l'unico conto configurato: designa prima un altro come predefinito, oppure lascialo nel cestino";
+      return null;
+    },
+    gestisciPredefinito: async (id) => {
+      const c = await prisma.contoIncasso.findUnique({ where: { id }, select: { predefinito: true } });
+      if (!c?.predefinito) return;
+      const altro = await prisma.contoIncasso.findFirst({ where: { eliminataIl: null, NOT: { id } } });
+      if (altro) await prisma.contoIncasso.update({ where: { id: altro.id }, data: { predefinito: true } });
+    },
+  },
 };
 
 async function figliBloccanti(config: ConfigEntita, id: string) {
@@ -332,6 +355,7 @@ function nomeCestino(entita: Entita, r: any): string {
     case "testoStandard": return r.titolo;
     case "documento": return r.nome;
     case "webhook": return r.nome;
+    case "contoIncasso": return r.nome;
   }
 }
 

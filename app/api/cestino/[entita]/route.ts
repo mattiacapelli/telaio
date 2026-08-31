@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const ENTITA_VALIDE: Entita[] = [
   "cliente", "preventivo", "progetto", "attivita", "ticket", "fattura",
   "contratto", "costo", "registrazioneOre", "documento", "workflow",
-  "modelloPdf", "testoStandard", "webhook",
+  "modelloPdf", "testoStandard", "webhook", "contoIncasso",
 ];
 
 /** Elenco del cestino per un'entità: cosa c'è dentro, in attesa di ripristino o eliminazione definitiva. */

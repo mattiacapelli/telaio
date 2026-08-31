@@ -7,6 +7,7 @@ import { SchedulerPannello } from "@/components/scheduler-pannello";
 import { TestiStandard } from "@/components/testi-standard";
 import { ElencoModelli } from "@/components/pdf-builder/elenco-modelli";
 import { ElencoAziende } from "@/components/impostazioni/aziende";
+import { ElencoContiIncasso } from "@/components/impostazioni/conti-incasso";
 import { CestinoPannello } from "@/components/impostazioni/cestino-pannello";
 import { ElencoApiKey } from "@/components/impostazioni/api-keys";
 import { ElencoWebhook } from "@/components/impostazioni/webhook";
@@ -43,7 +44,7 @@ const MODALITA_TRASFERTA: Record<string, string> = {
 };
 
 export default async function ImpostazioniPage() {
-  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf, aziende, apiKeys, webhook] = await Promise.all([
+  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf, aziende, apiKeys, webhook, conti] = await Promise.all([
     getImpostazioni(),
     ultimaEsecuzione(),
     prisma.testoStandard.findMany({
@@ -58,6 +59,10 @@ export default async function ImpostazioniPage() {
       where: { eliminataIl: null },
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { consegne: true } } },
+    }),
+    prisma.contoIncasso.findMany({
+      where: { eliminataIl: null },
+      orderBy: [{ predefinito: "desc" }, { ordine: "asc" }, { nome: "asc" }],
     }),
   ]);
 
@@ -141,6 +146,13 @@ export default async function ImpostazioniPage() {
                     ]}
                   />
                 </div>
+              </Sezione>
+
+              <Sezione
+                titolo="Conti incasso"
+                descrizione="Dove arrivano i pagamenti ricevuti. Su ogni incasso puoi scegliere quale usare; senza scelta resta «non specificato»."
+              >
+                <ElencoContiIncasso conti={conti} />
               </Sezione>
 
               <Sezione

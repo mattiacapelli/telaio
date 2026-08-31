@@ -13,7 +13,7 @@ const Nuovo = z.object({
   data: z.string().min(1, "la data è obbligatoria"),
   importo: z.coerce.number().positive("l'importo deve essere maggiore di zero"),
   metodo: z.enum(["BONIFICO", "CARTA", "CONTANTI", "ALTRO"]).default("BONIFICO"),
-  conto: z.string().optional().nullable(),
+  contoId: z.string().optional().nullable(),
   nota: z.string().optional().nullable(),
 });
 
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
         data: new Date(`${d.data}T00:00:00.000Z`),
         importo: d.importo,
         metodo: d.metodo,
-        conto: d.conto || null,
+        contoId: d.contoId || null,
         nota: d.nota || null,
       },
       select: { id: true, importo: true },
