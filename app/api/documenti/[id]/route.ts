@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
-import { urlDownload, eliminaFile } from "@/lib/storage";
+import { urlDownload } from "@/lib/storage";
 import { invalidate } from "@/lib/redis";
+import { spostaNelCestino, ErroreEliminazione } from "@/lib/eliminazione";
 
 export const dynamic = "force-dynamic";
 
@@ -42,14 +43,16 @@ export async function DELETE(
     return NextResponse.json({ errore: "documento inesistente" }, { status: 404 });
   }
 
-  // Prima il file, poi la riga: se lo storage fallisce non restiamo con un
-  // record che punta al nulla.
+  // Il file resta su S3 finché non si elimina per sempre dal cestino: un
+  // soft delete recuperabile non deve poter perdere il binario nel frattempo.
   try {
-    await eliminaFile(doc.chiave);
-  } catch {
-    /* il file potrebbe già non esserci: procediamo comunque */
+    await spostaNelCestino("documento", id);
+  } catch (err) {
+    if (err instanceof ErroreEliminazione) {
+      return NextResponse.json({ errore: err.message }, { status: 409 });
+    }
+    throw err;
   }
-  await prisma.documento.delete({ where: { id } });
 
   await invalidate();
   return NextResponse.json({ ok: true });

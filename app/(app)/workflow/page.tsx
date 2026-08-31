@@ -24,6 +24,7 @@ function etichettaInnesco(innesco: string, chiave: string | null) {
 
 export default async function WorkflowPage() {
   const workflow = await prisma.workflow.findMany({
+    where: { eliminataIl: null },
     orderBy: { updatedAt: "desc" },
     include: { registri: { orderBy: { createdAt: "desc" }, take: 1 } },
   });

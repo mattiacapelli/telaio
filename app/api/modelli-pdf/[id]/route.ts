@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { invalidate } from "@/lib/redis";
+import { spostaNelCestino, ErroreEliminazione } from "@/lib/eliminazione";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,11 @@ export async function PATCH(
   return NextResponse.json({ ok: true });
 }
 
+/**
+ * Sposta il modello nel cestino. Se era il predefinito del suo ambito, ne
+ * sceglie subito un altro: essendo reversibile non ha senso bloccare qui
+ * come invece si fa per l'eliminazione definitiva.
+ */
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -56,25 +62,15 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const m = await prisma.modelloPdf.findUnique({ where: { id } });
-  if (!m) {
-    return NextResponse.json({ errore: "modello inesistente" }, { status: 404 });
-  }
-  // Senza predefinito i documenti resterebbero senza modello: va prima
-  // designato un altro.
-  if (m.predefinito) {
-    const altri = await prisma.modelloPdf.count({
-      where: { ambito: m.ambito, NOT: { id } },
-    });
-    if (altri > 0) {
-      return NextResponse.json(
-        { errore: "designa prima un altro modello come predefinito" },
-        { status: 409 },
-      );
+  try {
+    await spostaNelCestino("modelloPdf", id);
+  } catch (err) {
+    if (err instanceof ErroreEliminazione) {
+      return NextResponse.json({ errore: err.message }, { status: 409 });
     }
+    throw err;
   }
 
-  await prisma.modelloPdf.delete({ where: { id } });
   await invalidate();
   return NextResponse.json({ ok: true });
 }

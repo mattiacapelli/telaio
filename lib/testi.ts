@@ -49,7 +49,7 @@ export const AMBITI: Record<string, string> = {
  */
 export async function testiPredefiniti(ambito: "PREVENTIVO" | "CONTRATTO") {
   const testi = await prisma.testoStandard.findMany({
-    where: { predefinito: true, ambito: { in: [ambito, "ENTRAMBI"] } },
+    where: { predefinito: true, ambito: { in: [ambito, "ENTRAMBI"] }, eliminataIl: null },
     orderBy: [{ ordine: "asc" }],
   });
 

@@ -240,7 +240,7 @@ async function registra(
 export async function scatena(evento: string, ctx: Omit<Contesto, "evento">) {
   try {
     const attivi = await prisma.workflow.findMany({
-      where: { attivo: true, innesco: "EVENTO", eventoChiave: evento },
+      where: { attivo: true, innesco: "EVENTO", eventoChiave: evento, eliminataIl: null },
     });
     for (const w of attivi) {
       await esegui(w.id, w.azioni as unknown as SchemaWorkflow ?? { blocchi: [], collegamenti: [] }, {

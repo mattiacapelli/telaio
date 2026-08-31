@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   }
   const d = parsed.data;
 
-  const esistenti = await prisma.modelloPdf.count({ where: { ambito: d.ambito } });
+  const esistenti = await prisma.modelloPdf.count({ where: { ambito: d.ambito, eliminataIl: null } });
 
   const m = await prisma.modelloPdf.create({
     data: {

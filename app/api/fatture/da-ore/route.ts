@@ -21,7 +21,7 @@ export async function GET() {
   }
 
   const righe = await prisma.registrazioneOre.findMany({
-    where: { fatturabile: true, rigaFatturaId: null },
+    where: { fatturabile: true, rigaFatturaId: null, eliminataIl: null },
     include: {
       progetto: { include: { cliente: true } },
       ticket: { include: { cliente: true } },
@@ -78,6 +78,7 @@ export async function POST(req: Request) {
         { progetto: { clienteId: cliente.id } },
         { ticket: { clienteId: cliente.id } },
       ],
+      eliminataIl: null,
     },
     include: { progetto: true, ticket: true },
   });

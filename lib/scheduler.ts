@@ -71,7 +71,7 @@ async function giaEseguitoOggi() {
 async function gestisciContratti() {
   const oggi = new Date();
   const attivi = await prisma.contratto.findMany({
-    where: { stato: "ATTIVO", scadeIl: { not: null, lt: oggi } },
+    where: { stato: "ATTIVO", scadeIl: { not: null, lt: oggi }, eliminataIl: null },
   });
 
   let scaduti = 0;
@@ -124,7 +124,7 @@ async function creaAvvisi() {
   let creati = 0;
 
   const attivi = await prisma.contratto.findMany({
-    where: { stato: "ATTIVO" },
+    where: { stato: "ATTIVO", eliminataIl: null },
     include: { cliente: true },
   });
 
@@ -151,7 +151,7 @@ async function creaAvvisi() {
     if (c.tipo === "ASSISTENZA_ORE" && c.monteOre) {
       const { inizio, fine } = periodoDi(c.inizioIl, c.periodicita);
       const registrazioni = await prisma.registrazioneOre.findMany({
-        where: { data: { gte: inizio, lt: fine }, ticket: { contrattoId: c.id } },
+        where: { data: { gte: inizio, lt: fine }, ticket: { contrattoId: c.id }, eliminataIl: null },
         select: { ore: true },
       });
       const consumate = registrazioni.reduce((s, r) => s + n(r.ore), 0);
@@ -206,7 +206,7 @@ async function nuovoAvviso(chiave: string) {
 async function eseguiWorkflowPianificati() {
   const oggi = new Date();
   const workflow = await prisma.workflow.findMany({
-    where: { attivo: true, innesco: "PIANIFICATO" },
+    where: { attivo: true, innesco: "PIANIFICATO", eliminataIl: null },
   });
 
   let eseguiti = 0;

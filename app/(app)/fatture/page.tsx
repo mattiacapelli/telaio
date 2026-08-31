@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { GeneraDaOre, NuovaFattura } from "@/components/nuova-fattura";
 import { Vuoto } from "@/components/ui-legacy";
 import { Chip } from "@/components/chip";
+import { EliminaRecord } from "@/components/elimina-record";
 import { Receipt, Building2, Euro, Calendar, Tag } from "lucide-react";
 import { eur, data, daGiorni } from "@/lib/format";
 import { getClientiPerSelezione } from "@/lib/queries";
@@ -61,6 +62,11 @@ export default async function FatturePage() {
               <span>incassato {eur(f.incassato)}</span>
             )}
           </div>
+          {f.stato === "DA_EMETTERE" && (
+            <div className="mt-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
+              <EliminaRecord entita="fattura" id={f.id} nome={f.numero} />
+            </div>
+          )}
         </>
       ),
     };

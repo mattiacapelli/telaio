@@ -28,6 +28,9 @@ model Cliente {
   syncedAt         DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  /// Cestino: un cliente eliminato non compare più nelle liste, ma resta
+  /// recuperabile finché non lo si elimina definitivamente dal cestino.
+  eliminataIl      DateTime?
 
   referenti  Referente[]
   preventivi Preventivo[]
@@ -37,6 +40,7 @@ model Cliente {
   contratti  Contratto[]
 
   @@index([ragioneSociale])
+  @@index([eliminataIl])
 }
 
 model Referente {
@@ -82,9 +86,9 @@ model Preventivo {
   /// Referente a cui è indirizzata l'offerta.
   referenteId       String?
   /// Sconto percentuale sul totale, applicato dopo gli sconti di riga.
-  scontoPercento    Decimal @default(0) @db.Decimal(5, 2)
+  scontoPercento    Decimal   @default(0) @db.Decimal(5, 2)
   /// Aliquota IVA del documento.
-  aliquotaIva       Decimal @default(22) @db.Decimal(5, 2)
+  aliquotaIva       Decimal   @default(22) @db.Decimal(5, 2)
   /// Probabilità di chiusura, per pesare il valore in trattativa.
   probabilita       Int?
   /// Testi del documento.
@@ -93,6 +97,7 @@ model Preventivo {
   modalitaPagamento String?
   validitaGiorni    Int?
   note              String?
+  eliminataIl       DateTime?
 
   cliente           Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   referente         Referente?            @relation(fields: [referenteId], references: [id], onDelete: SetNull)
@@ -110,6 +115,7 @@ model Preventivo {
   motivoCorrente    String?
 
   @@index([stato])
+  @@index([eliminataIl])
 }
 
 /// Copia congelata del preventivo a un dato momento.
@@ -201,8 +207,10 @@ model Progetto {
   repoGithub   String?
   /// Branch da seguire per l'avanzamento; se vuoto si usa quello predefinito.
   branchGithub String?
+  eliminataIl  DateTime?
 
   @@index([stato])
+  @@index([eliminataIl])
 }
 
 enum GravitaProblema {
@@ -285,16 +293,17 @@ model EventoProgetto {
 /// File allegato a un progetto (contratti, capitolati, verbali…).
 /// Il binario sta su S3/MinIO: qui restano solo i metadati e la chiave.
 model Documento {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   progettoId  String?
   ticketId    String?
   contrattoId String?
   nome        String
-  chiave      String   @unique // percorso dell'oggetto su S3
+  chiave      String    @unique // percorso dell'oggetto su S3
   tipo        String // MIME
   dimensione  Int // byte
   caricatoDa  String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  eliminataIl DateTime?
 
   progetto  Progetto?  @relation(fields: [progettoId], references: [id], onDelete: Cascade)
   ticket    Ticket?    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -303,6 +312,7 @@ model Documento {
   @@index([progettoId])
   @@index([ticketId])
   @@index([contrattoId])
+  @@index([eliminataIl])
 }
 
 /// Annotazione libera sul progetto: decisioni prese, promesse fatte al
@@ -348,6 +358,7 @@ model Attivita {
   completataIl DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  eliminataIl  DateTime?
 
   progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   registrazioni RegistrazioneOre[]
@@ -356,6 +367,7 @@ model Attivita {
 
   @@index([stato])
   @@index([progettoId])
+  @@index([eliminataIl])
 }
 
 // ---------------------------------------------------------------- assistenza
@@ -389,6 +401,7 @@ model Ticket {
   risoltoIl    DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  eliminataIl  DateTime?
 
   cliente       Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
@@ -401,21 +414,23 @@ model Ticket {
   contratto     Contratto?         @relation(fields: [contrattoId], references: [id], onDelete: SetNull)
 
   @@index([stato])
+  @@index([eliminataIl])
 }
 
 // ---------------------------------------------------------------- timesheet
 
 model RegistrazioneOre {
-  id            String   @id @default(cuid())
-  data          DateTime @db.Date
-  ore           Decimal  @db.Decimal(6, 2)
+  id            String    @id @default(cuid())
+  data          DateTime  @db.Date
+  ore           Decimal   @db.Decimal(6, 2)
   descrizione   String?
-  fatturabile   Boolean  @default(true)
+  fatturabile   Boolean   @default(true)
   progettoId    String?
   attivitaId    String?
   ticketId      String?
   rigaFatturaId String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
+  eliminataIl   DateTime?
 
   progetto    Progetto?    @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   attivita    Attivita?    @relation(fields: [attivitaId], references: [id], onDelete: SetNull)
@@ -424,6 +439,7 @@ model RegistrazioneOre {
 
   @@index([data])
   @@index([progettoId])
+  @@index([eliminataIl])
 }
 
 enum TipoCosto {
@@ -472,7 +488,8 @@ model Costo {
   ticketId      String?
   rigaFatturaId String?
   registratoDa  String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
+  eliminataIl   DateTime?
 
   progetto    Progetto?    @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   attivita    Attivita?    @relation(fields: [attivitaId], references: [id], onDelete: SetNull)
@@ -482,6 +499,7 @@ model Costo {
   @@index([data])
   @@index([ticketId])
   @@index([progettoId])
+  @@index([eliminataIl])
 }
 
 // ---------------------------------------------------------------- denaro
@@ -504,6 +522,9 @@ model Fattura {
   scadeIl     DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  /// Cestino: consentito solo per fatture DA_EMETTERE, mai per quelle già
+  /// uscite dallo studio (obbligo fiscale di sequenzialità dei numeri).
+  eliminataIl DateTime?
 
   cliente   Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   /// Ragione sociale emittente; senza scelta esplicita si usa la predefinita.
@@ -513,6 +534,7 @@ model Fattura {
   incassi   Incasso[]
 
   @@index([stato])
+  @@index([eliminataIl])
 }
 
 model RigaFattura {
@@ -615,6 +637,7 @@ model Contratto {
   note                String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  eliminataIl         DateTime?
 
   cliente      Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   progetto     Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
@@ -629,6 +652,7 @@ model Contratto {
 
   @@index([clienteId])
   @@index([stato])
+  @@index([eliminataIl])
 }
 
 /// Periodo di competenza di un contratto: è qui che si misura il consumo del
@@ -681,10 +705,12 @@ model Workflow {
   ultimaEsecuzione DateTime?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+  eliminataIl      DateTime?
 
   registri RegistroWorkflow[]
 
   @@index([innesco, attivo])
+  @@index([eliminataIl])
 }
 
 /// Esito di una singola esecuzione: serve a capire perché un workflow non ha
@@ -726,24 +752,26 @@ model Notifica {
 /// modello relazionale per ogni variante renderebbe rigido qualcosa che deve
 /// poter crescere.
 model ModelloPdf {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   nome        String
   /// PREVENTIVO o CONTRATTO: determina quali blocchi sono disponibili.
   ambito      String
   descrizione String?
   /// Usato quando il documento non ne indica uno proprio.
-  predefinito Boolean  @default(false)
+  predefinito Boolean   @default(false)
   /// Blocchi in ordine di stampa, con la loro configurazione.
-  blocchi     Json     @default("[]")
+  blocchi     Json      @default("[]")
   /// Margini, colore d'accento e dimensioni del testo.
-  stile       Json     @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  stile       Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  eliminataIl DateTime?
 
   preventivi Preventivo[]
   contratti  Contratto[]
 
   @@index([ambito, predefinito])
+  @@index([eliminataIl])
 }
 
 /// Testo standard riutilizzabile nei documenti (clausole di pagamento,
@@ -753,20 +781,22 @@ model ModelloPdf {
 /// nel documento, che resta poi indipendente. Modificare un modello non
 /// riscrive i documenti già emessi.
 model TestoStandard {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   /// Dove si applica: PREVENTIVO, CONTRATTO o ENTRAMBI.
-  ambito      String   @default("ENTRAMBI")
+  ambito      String    @default("ENTRAMBI")
   /// Quale campo del documento riempie: premessa, pagamento, consegna...
   campo       String
   titolo      String
   testo       String
   /// Usato automaticamente per i nuovi documenti di questo ambito e campo.
-  predefinito Boolean  @default(false)
-  ordine      Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  predefinito Boolean   @default(false)
+  ordine      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  eliminataIl DateTime?
 
   @@index([ambito, campo])
+  @@index([eliminataIl])
 }
 
 /// Riga singola di configurazione dello studio + stato integrazione Twenty.

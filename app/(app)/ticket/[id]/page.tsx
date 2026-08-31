@@ -10,6 +10,7 @@ import { NoteOperative } from "@/components/record/note-operative";
 import { DocumentiProgetto } from "@/components/documenti-progetto";
 import { RegistraCosto, EliminaCosto, TIPI_COSTO } from "@/components/registra-costo";
 import { ModificaTicket, CambiaStatoRapido, STATI_TICKET } from "@/components/record/azioni-operative";
+import { EliminaRecord } from "@/components/elimina-record";
 import {
   Clock, Calendar, Tag, FolderKanban, Building2, MessageSquare,
   AlertCircle, User, Euro, ShieldCheck, FileText,
@@ -83,6 +84,13 @@ export default async function TicketDettaglioPage({
             {!chiuso && (
               <AvviaTimer ticketId={t.id} etichetta={`#${t.numero} ${t.titolo}`} />
             )}
+            <EliminaRecord
+              entita="ticket"
+              id={t.id}
+              nome={`#${t.numero} ${t.titolo}`}
+              dopoRedirect="/ticket"
+              size="sm"
+            />
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { invalidate } from "@/lib/redis";
+import { spostaNelCestino, ErroreEliminazione } from "@/lib/eliminazione";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,14 @@ export async function DELETE(
     return NextResponse.json({ errore: "non autenticato" }, { status: 401 });
   }
   const { id } = await params;
-  await prisma.testoStandard.delete({ where: { id } }).catch(() => null);
+  try {
+    await spostaNelCestino("testoStandard", id);
+  } catch (err) {
+    if (err instanceof ErroreEliminazione) {
+      return NextResponse.json({ errore: err.message }, { status: 409 });
+    }
+    throw err;
+  }
   await invalidate();
   return NextResponse.json({ ok: true });
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getCliente } from "@/lib/queries";
 import { Card, CardHead } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EliminaRecord } from "@/components/elimina-record";
 import { eur, eurCent, ore, data, n } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,13 @@ export default async function ClientePage({
         <span className="text-md text-faint">
           {c.ragioneSociale} · scheda cliente
         </span>
+        <div className="flex-1" />
+        <EliminaRecord
+          entita="cliente"
+          id={c.id}
+          nome={c.ragioneSociale}
+          dopoRedirect="/clienti"
+        />
       </div>
 
       <Card className="p-4">

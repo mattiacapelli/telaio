@@ -9,6 +9,7 @@ import { AvviaTimer } from "@/components/avvia-timer";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { NoteOperative } from "@/components/record/note-operative";
 import { ModificaAttivita, CambiaStatoRapido, STATI_ATTIVITA } from "@/components/record/azioni-operative";
+import { EliminaRecord } from "@/components/elimina-record";
 import {
   Clock, Calendar, Tag, FolderKanban, Building2, MessageSquare,
   TrendingUp, AlertTriangle, CircleCheck, Euro,
@@ -69,6 +70,13 @@ export default async function AttivitaDettaglioPage({
               }}
             />
             {a.stato !== "FATTA" && <AvviaTimer attivitaId={a.id} etichetta={a.titolo} />}
+            <EliminaRecord
+              entita="attivita"
+              id={a.id}
+              nome={a.titolo}
+              dopoRedirect="/attivita"
+              size="sm"
+            />
           </div>
         </div>
 

@@ -16,7 +16,7 @@ export async function modelloPerDocumento(
   const modello = modelloId
     ? await prisma.modelloPdf.findUnique({ where: { id: modelloId } })
     : await prisma.modelloPdf.findFirst({
-        where: { ambito, predefinito: true },
+        where: { ambito, predefinito: true, eliminataIl: null },
       });
 
   if (!modello) {

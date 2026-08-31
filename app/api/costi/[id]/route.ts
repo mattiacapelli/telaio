@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { invalidate } from "@/lib/redis";
+import { spostaNelCestino, ErroreEliminazione } from "@/lib/eliminazione";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,7 @@ export async function PATCH(
   return NextResponse.json({ ok: true });
 }
 
+/** Sposta il costo nel cestino. L'eliminazione definitiva si fa da lì. */
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -75,7 +77,15 @@ export async function DELETE(
     );
   }
 
-  await prisma.costo.delete({ where: { id } });
+  try {
+    await spostaNelCestino("costo", id);
+  } catch (err) {
+    if (err instanceof ErroreEliminazione) {
+      return NextResponse.json({ errore: err.message }, { status: 409 });
+    }
+    throw err;
+  }
+
   await invalidate();
   return NextResponse.json({ ok: true });
 }

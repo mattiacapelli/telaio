@@ -6,6 +6,7 @@ import { SchedulerPannello } from "@/components/scheduler-pannello";
 import { TestiStandard } from "@/components/testi-standard";
 import { ElencoModelli } from "@/components/pdf-builder/elenco-modelli";
 import { ElencoAziende } from "@/components/impostazioni/aziende";
+import { CestinoPannello } from "@/components/impostazioni/cestino-pannello";
 import { NavigazioneImpostazioni } from "@/components/impostazioni/navigazione";
 import { Sezione, Riquadro, Riga, Stato, Dato, ZonaPericolosa } from "@/components/impostazioni/blocchi";
 import { ModificaDatiStudio } from "@/components/impostazioni/dati-studio";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { eurCent, n } from "@/lib/format";
 import {
   Building2, FileText, RefreshCw, Plug, Clock, Users,
-  Database, KeyRound, Mail, GitCommit, LayoutTemplate, Bot, Stamp,
+  Database, KeyRound, Mail, GitCommit, LayoutTemplate, Bot, Stamp, Trash2,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -37,10 +38,11 @@ export default async function ImpostazioniPage() {
     getImpostazioni(),
     ultimaEsecuzione(),
     prisma.testoStandard.findMany({
+      where: { eliminataIl: null },
       orderBy: [{ ambito: "asc" }, { ordine: "asc" }, { titolo: "asc" }],
     }),
     prisma.utente.findMany({ orderBy: { email: "asc" } }),
-    prisma.modelloPdf.findMany({ orderBy: [{ ambito: "asc" }, { nome: "asc" }] }),
+    prisma.modelloPdf.findMany({ where: { eliminataIl: null }, orderBy: [{ ambito: "asc" }, { nome: "asc" }] }),
     prisma.azienda.findMany({ orderBy: [{ predefinita: "desc" }, { ragioneSociale: "asc" }] }),
   ]);
 
@@ -360,6 +362,20 @@ export default async function ImpostazioniPage() {
                   ultima={ultima}
                 />
               </Riquadro>
+            </Sezione>
+          ),
+        },
+        {
+          chiave: "cestino",
+          etichetta: "Cestino",
+          icona: <Trash2 size={14} />,
+          gruppo: "Sistema",
+          contenuto: (
+            <Sezione
+              titolo="Cestino"
+              descrizione="I record eliminati restano qui, recuperabili in ogni momento. Eliminarli per sempre richiede di riscrivere il loro nome per conferma."
+            >
+              <CestinoPannello />
             </Sezione>
           ),
         },

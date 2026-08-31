@@ -24,25 +24,25 @@ export async function getDashboard() {
       preventivi, problemi, milestone, incassiMese, clienti,
     ] = await Promise.all([
       prisma.progetto.findMany({
-        where: { stato: { in: ["IN_CORSO", "DA_AVVIARE"] } },
+        where: { stato: { in: ["IN_CORSO", "DA_AVVIARE"] }, eliminataIl: null },
         include: { cliente: true, registrazioni: true },
         orderBy: { updatedAt: "desc" },
       }),
       prisma.attivita.findMany({
-        where: { stato: { in: ["DA_FARE", "IN_CORSO", "BLOCCATA"] } },
+        where: { stato: { in: ["DA_FARE", "IN_CORSO", "BLOCCATA"] }, eliminataIl: null },
         include: { progetto: { include: { cliente: true } }, registrazioni: true },
         orderBy: [{ scadenzaIl: "asc" }],
       }),
       prisma.ticket.findMany({
-        where: { stato: { notIn: ["RISOLTO", "CHIUSO"] } },
+        where: { stato: { notIn: ["RISOLTO", "CHIUSO"] }, eliminataIl: null },
         include: { cliente: true, registrazioni: true },
         orderBy: { apertoIl: "asc" },
       }),
-      prisma.fattura.findMany({ include: { cliente: true, incassi: true } }),
-      prisma.registrazioneOre.findMany({ where: { data: { gte: inizioSettimana() } } }),
-      prisma.registrazioneOre.findMany({ where: { data: { gte: inizioMese } } }),
+      prisma.fattura.findMany({ where: { eliminataIl: null }, include: { cliente: true, incassi: true } }),
+      prisma.registrazioneOre.findMany({ where: { data: { gte: inizioSettimana() }, eliminataIl: null } }),
+      prisma.registrazioneOre.findMany({ where: { data: { gte: inizioMese }, eliminataIl: null } }),
       prisma.preventivo.findMany({
-        where: { stato: { in: ["BOZZA", "INVIATO"] } },
+        where: { stato: { in: ["BOZZA", "INVIATO"] }, eliminataIl: null },
         include: { cliente: true },
         orderBy: { scadeIl: "asc" },
       }),
@@ -58,7 +58,7 @@ export async function getDashboard() {
         take: 6,
       }),
       prisma.incasso.findMany({ where: { data: { gte: inizioMese } } }),
-      prisma.cliente.count(),
+      prisma.cliente.count({ where: { eliminataIl: null } }),
     ]);
 
     const emesso = fatture
@@ -72,7 +72,7 @@ export async function getDashboard() {
 
     // Ore non ancora legate a una riga di fattura: è denaro non richiesto.
     const daFatturareTutte = await prisma.registrazioneOre.findMany({
-      where: { fatturabile: true, rigaFatturaId: null },
+      where: { fatturabile: true, rigaFatturaId: null, eliminataIl: null },
       include: {
         progetto: { include: { cliente: true } },
         ticket: { include: { cliente: true } },
@@ -210,6 +210,7 @@ async function andamentoSettimane() {
         { descrizione: null },
         { descrizione: { not: "Consuntivo periodo precedente" } },
       ],
+      eliminataIl: null,
     },
     select: { data: true, ore: true },
   });
@@ -241,6 +242,7 @@ export function inizioSettimana(base = new Date()) {
 export async function getClienti() {
   return cached("clienti", TTL, async () => {
     const clienti = await prisma.cliente.findMany({
+      where: { eliminataIl: null },
       include: {
         referenti: { where: { principale: true }, take: 1 },
         progetti: { select: { stato: true } },
@@ -286,6 +288,7 @@ export async function getCliente(id: string) {
 export async function getPreventivi() {
   return cached("preventivi", TTL, async () => {
     const p = await prisma.preventivo.findMany({
+      where: { eliminataIl: null },
       include: { cliente: true, voci: true },
       orderBy: { numero: "desc" },
     });
@@ -307,6 +310,7 @@ export async function getPreventivi() {
 export async function getProgetti() {
   return cached("progetti", TTL, async () => {
     const p = await prisma.progetto.findMany({
+      where: { eliminataIl: null },
       include: {
         cliente: true,
         registrazioni: true,
@@ -335,6 +339,7 @@ export async function getProgetti() {
 export async function getAttivita() {
   return cached("attivita", TTL, async () => {
     const a = await prisma.attivita.findMany({
+      where: { eliminataIl: null },
       include: { progetto: true, registrazioni: true },
       orderBy: [{ scadenzaIl: "asc" }, { createdAt: "asc" }],
     });
@@ -355,6 +360,7 @@ export async function getAttivita() {
 export async function getTicket() {
   return cached("ticket", TTL, async () => {
     const t = await prisma.ticket.findMany({
+      where: { eliminataIl: null },
       include: { cliente: true, progetto: true, registrazioni: true },
       orderBy: { numero: "desc" },
     });
@@ -383,7 +389,7 @@ export async function getSettimana(offset = 0) {
   fine.setUTCDate(fine.getUTCDate() + 7);
 
   const righe = await prisma.registrazioneOre.findMany({
-    where: { data: { gte: inizio, lt: fine } },
+    where: { data: { gte: inizio, lt: fine }, eliminataIl: null },
     include: {
       progetto: true,
       attivita: true,
@@ -437,6 +443,7 @@ export async function getSettimana(offset = 0) {
 export async function getFatture() {
   return cached("fatture", TTL, async () => {
     const f = await prisma.fattura.findMany({
+      where: { eliminataIl: null },
       include: { cliente: true, incassi: true, righe: true },
       orderBy: { numero: "desc" },
     });
@@ -460,7 +467,7 @@ export async function getIncassi() {
         include: { fattura: { include: { cliente: true } } },
         orderBy: { data: "desc" },
       }),
-      prisma.fattura.findMany({ include: { incassi: true } }),
+      prisma.fattura.findMany({ where: { eliminataIl: null }, include: { incassi: true } }),
     ]);
 
     const emesso = fatture
@@ -502,7 +509,7 @@ export async function getIncassi() {
 export async function getImpostazioni() {
   const [imp, clienti, referenti] = await Promise.all([
     prisma.impostazioni.findUnique({ where: { id: 1 } }),
-    prisma.cliente.count(),
+    prisma.cliente.count({ where: { eliminataIl: null } }),
     prisma.referente.count(),
   ]);
   return { imp, clienti, referenti };
@@ -511,6 +518,7 @@ export async function getImpostazioni() {
 /** Elenco minimo per i menu a tendina dei form. */
 export async function getClientiPerSelezione() {
   const c = await prisma.cliente.findMany({
+    where: { eliminataIl: null },
     select: {
       id: true,
       ragioneSociale: true,
@@ -839,6 +847,7 @@ export async function getTicketCompleto(id: string) {
 /** Elenco contratti con il consumo del periodo corrente. */
 export async function getContratti() {
   const contratti = await prisma.contratto.findMany({
+    where: { eliminataIl: null },
     include: { cliente: true, progetto: true },
     orderBy: [{ stato: "asc" }, { inizioIl: "desc" }],
   });
@@ -939,17 +948,17 @@ export async function getContrattoCompleto(id: string) {
 export async function getRiferimentiOre() {
   const [progetti, attivita, ticket] = await Promise.all([
     prisma.progetto.findMany({
-      where: { stato: { in: ["IN_CORSO", "DA_AVVIARE", "IN_PAUSA"] } },
+      where: { stato: { in: ["IN_CORSO", "DA_AVVIARE", "IN_PAUSA"] }, eliminataIl: null },
       include: { cliente: true },
       orderBy: { nome: "asc" },
     }),
     prisma.attivita.findMany({
-      where: { stato: { not: "FATTA" } },
+      where: { stato: { not: "FATTA" }, eliminataIl: null },
       include: { progetto: true },
       orderBy: { titolo: "asc" },
     }),
     prisma.ticket.findMany({
-      where: { stato: { notIn: ["RISOLTO", "CHIUSO"] } },
+      where: { stato: { notIn: ["RISOLTO", "CHIUSO"] }, eliminataIl: null },
       include: { cliente: true },
       orderBy: { numero: "desc" },
     }),
@@ -974,7 +983,7 @@ export async function getRiferimentiOre() {
 /** Fatture emesse con un residuo da incassare. */
 export async function getFattureDaIncassare() {
   const fatture = await prisma.fattura.findMany({
-    where: { stato: { in: ["EMESSA", "SCADUTA"] } },
+    where: { stato: { in: ["EMESSA", "SCADUTA"] }, eliminataIl: null },
     include: { cliente: true, incassi: true },
     orderBy: { scadeIl: "asc" },
   });

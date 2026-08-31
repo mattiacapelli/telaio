@@ -16,7 +16,7 @@ export default async function ContrattiPage() {
   const [contratti, clienti, progetti, aziende] = await Promise.all([
     getContratti(),
     getClientiPerSelezione(),
-    prisma.progetto.findMany({ select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
+    prisma.progetto.findMany({ where: { eliminataIl: null }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
     prisma.azienda.findMany({ select: { id: true, ragioneSociale: true }, orderBy: { ragioneSociale: "asc" } }),
   ]);
 

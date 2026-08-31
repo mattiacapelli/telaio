@@ -89,8 +89,9 @@ const TOOLS_LETTURA: Record<string, Tool> = {
                 { citta: { contains: query, mode: "insensitive" } },
                 { settore: { contains: query, mode: "insensitive" } },
               ],
+              eliminataIl: null,
             }
-          : undefined,
+          : { eliminataIl: null },
         select: clienteSel,
         orderBy: { ragioneSociale: "asc" },
         take: limite,
@@ -123,7 +124,7 @@ const TOOLS_LETTURA: Record<string, Tool> = {
     }),
     esegui: async ({ stato, clienteId, limite }) =>
       prisma.progetto.findMany({
-        where: { stato, clienteId },
+        where: { stato, clienteId, eliminataIl: null },
         include: { cliente: { select: { ragioneSociale: true } } },
         orderBy: { updatedAt: "desc" },
         take: limite,
@@ -161,7 +162,7 @@ const TOOLS_LETTURA: Record<string, Tool> = {
     }),
     esegui: async ({ stato, priorita, clienteId, limite }) =>
       prisma.ticket.findMany({
-        where: { stato, priorita, clienteId },
+        where: { stato, priorita, clienteId, eliminataIl: null },
         include: { cliente: { select: { ragioneSociale: true } } },
         orderBy: { apertoIl: "desc" },
         take: limite,
@@ -197,7 +198,7 @@ const TOOLS_LETTURA: Record<string, Tool> = {
     }),
     esegui: async ({ stato, progettoId, limite }) =>
       prisma.attivita.findMany({
-        where: { stato, progettoId },
+        where: { stato, progettoId, eliminataIl: null },
         include: { progetto: { select: { nome: true } } },
         orderBy: [{ scadenzaIl: "asc" }],
         take: limite,
@@ -218,6 +219,7 @@ const TOOLS_LETTURA: Record<string, Tool> = {
           data: { gte: new Date(`${da}T00:00:00.000Z`), lte: new Date(`${a}T23:59:59.999Z`) },
           progettoId,
           ticketId,
+          eliminataIl: null,
         },
         include: {
           progetto: { select: { nome: true } },
@@ -238,7 +240,7 @@ const TOOLS_LETTURA: Record<string, Tool> = {
     }),
     esegui: async ({ stato, clienteId, limite }) =>
       prisma.preventivo.findMany({
-        where: { stato, clienteId },
+        where: { stato, clienteId, eliminataIl: null },
         include: { cliente: { select: { ragioneSociale: true } } },
         orderBy: { createdAt: "desc" },
         take: limite,
@@ -254,7 +256,7 @@ const TOOLS_LETTURA: Record<string, Tool> = {
     }),
     esegui: async ({ stato, clienteId, limite }) => {
       const fatture = await prisma.fattura.findMany({
-        where: { stato, clienteId },
+        where: { stato, clienteId, eliminataIl: null },
         include: { cliente: { select: { ragioneSociale: true } }, incassi: true },
         orderBy: { createdAt: "desc" },
         take: limite,
@@ -275,7 +277,7 @@ const TOOLS_LETTURA: Record<string, Tool> = {
     }),
     esegui: async ({ stato, clienteId, limite }) =>
       prisma.contratto.findMany({
-        where: { stato, clienteId },
+        where: { stato, clienteId, eliminataIl: null },
         include: {
           cliente: { select: { ragioneSociale: true } },
           periodi: { orderBy: { inizioIl: "desc" }, take: 1 },
@@ -296,12 +298,12 @@ const TOOLS_LETTURA: Record<string, Tool> = {
 
       const [progettiAttivi, ticketAperti, oreMese, fatture, scadenzeContratti] =
         await Promise.all([
-          prisma.progetto.count({ where: { stato: { in: ["IN_CORSO", "DA_AVVIARE"] } } }),
-          prisma.ticket.count({ where: { stato: { notIn: ["RISOLTO", "CHIUSO"] } } }),
-          prisma.registrazioneOre.findMany({ where: { data: { gte: inizioMese } } }),
-          prisma.fattura.findMany({ include: { incassi: true } }),
+          prisma.progetto.count({ where: { stato: { in: ["IN_CORSO", "DA_AVVIARE"] }, eliminataIl: null } }),
+          prisma.ticket.count({ where: { stato: { notIn: ["RISOLTO", "CHIUSO"] }, eliminataIl: null } }),
+          prisma.registrazioneOre.findMany({ where: { data: { gte: inizioMese }, eliminataIl: null } }),
+          prisma.fattura.findMany({ where: { eliminataIl: null }, include: { incassi: true } }),
           prisma.contratto.findMany({
-            where: { stato: "ATTIVO", scadeIl: { lte: traSetteGiorni, not: null } },
+            where: { stato: "ATTIVO", scadeIl: { lte: traSetteGiorni, not: null }, eliminataIl: null },
             include: { cliente: { select: { ragioneSociale: true } } },
           }),
         ]);

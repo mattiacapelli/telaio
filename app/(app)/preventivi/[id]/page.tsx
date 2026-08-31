@@ -9,6 +9,7 @@ import { calcolaPreventivo, UNITA_BREVE } from "@/lib/calcoli";
 import { getClientiPerSelezione } from "@/lib/queries";
 import { etichettaRevisione, type VoceCongelata } from "@/lib/revisioni";
 import { ModificaPreventivo } from "@/components/modifica-preventivo";
+import { EliminaRecord } from "@/components/elimina-record";
 import { FileDown } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +107,12 @@ export default async function PreventivoPage({
               aziendaId: p.aziendaId ?? "",
             },
           }}
+        />
+        <EliminaRecord
+          entita="preventivo"
+          id={p.id}
+          nome={p.numero}
+          dopoRedirect="/preventivi"
         />
       </div>
 

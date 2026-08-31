@@ -14,6 +14,7 @@ import {
 import { ProblemiProgetto } from "@/components/problemi-progetto";
 import { TimelineProgetto } from "@/components/timeline-progetto";
 import { GithubProgetto } from "@/components/github-progetto";
+import { EliminaRecord } from "@/components/elimina-record";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { attivitaRepo } from "@/lib/github";
 import {
@@ -97,6 +98,13 @@ export default async function ProgettoPage({
               }}
             />
             <NuovaAttivita progettoId={p.id} />
+            <EliminaRecord
+              entita="progetto"
+              id={p.id}
+              nome={p.nome}
+              dopoRedirect="/progetti"
+              size="sm"
+            />
           </div>
         </div>
 

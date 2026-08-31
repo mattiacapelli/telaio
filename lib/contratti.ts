@@ -69,6 +69,7 @@ export async function consumoPeriodo(contrattoId: string, quando = new Date()) {
     where: {
       data: { gte: inizio, lt: fine },
       ticket: { contrattoId },
+      eliminataIl: null,
     },
     select: { ore: true },
   });
@@ -103,6 +104,7 @@ export async function contrattoAttivoPer(clienteId: string, quando = new Date())
       tipo: "ASSISTENZA_ORE",
       inizioIl: { lte: quando },
       OR: [{ scadeIl: null }, { scadeIl: { gte: quando } }],
+      eliminataIl: null,
     },
     orderBy: { inizioIl: "desc" },
   });

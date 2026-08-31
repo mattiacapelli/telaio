@@ -34,12 +34,12 @@ export async function POST(
 
   const [registrazioni, costi] = await Promise.all([
     prisma.registrazioneOre.findMany({
-      where: { progettoId: id, fatturabile: true, rigaFatturaId: null },
+      where: { progettoId: id, fatturabile: true, rigaFatturaId: null, eliminataIl: null },
     }),
     // I costi rimborsabili vanno in fattura accanto alle ore, come righe
     // separate: il cliente deve distinguere il lavoro dalle spese vive.
     prisma.costo.findMany({
-      where: { progettoId: id, rimborsabile: true, rigaFatturaId: null },
+      where: { progettoId: id, rimborsabile: true, rigaFatturaId: null, eliminataIl: null },
     }),
   ]);
   if (registrazioni.length === 0 && costi.length === 0) {
