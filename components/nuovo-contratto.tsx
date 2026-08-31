@@ -7,6 +7,7 @@ import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Campo } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { TitoloConProdotti } from "@/components/titolo-con-prodotti";
 
 export function NuovoContratto({
   clienti,
@@ -45,12 +46,13 @@ export function NuovoContratto({
 
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => setD({ ...d, [k]: v });
 
-  const toggleProdotto = (id: string) =>
-    setProdottiIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
   async function salva(e: React.FormEvent) {
     e.preventDefault();
     setErrore(null);
+    if (!d.titolo.trim()) {
+      setErrore("il titolo è obbligatorio");
+      return;
+    }
     setSalvando(true);
     const r = await fetch("/api/contratti", {
       method: "POST",
@@ -94,12 +96,16 @@ export function NuovoContratto({
       >
         <form onSubmit={salva} className="flex min-h-0 flex-col">
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-            <Campo etichetta="Titolo">
-              <Input
-                value={d.titolo}
-                onChange={(e) => set("titolo", e.target.value)}
-                placeholder="Es. Assistenza sistemistica 2026"
-                required
+            <Campo
+              etichetta="Titolo"
+              nota={prodotti.length > 0 ? "Digita per cercare un prodotto da collegare" : undefined}
+            >
+              <TitoloConProdotti
+                titolo={d.titolo}
+                onTitoloChange={(v) => set("titolo", v)}
+                prodotti={prodotti}
+                selezionati={prodottiIds}
+                onSelezionatiChange={setProdottiIds}
               />
             </Campo>
 
@@ -207,23 +213,6 @@ export function NuovoContratto({
                     <option key={a.id} value={a.id}>{a.ragioneSociale}</option>
                   ))}
                 </Select>
-              </Campo>
-            )}
-
-            {prodotti.length > 0 && (
-              <Campo etichetta="Prodotti collegati" nota="Facoltativo: crea una licenza per ciascuno">
-                <div className="flex flex-col gap-1 rounded border border-border p-2">
-                  {prodotti.map((p) => (
-                    <label key={p.id} className="flex items-center gap-1.5 text-md text-muted">
-                      <input
-                        type="checkbox"
-                        checked={prodottiIds.includes(p.id)}
-                        onChange={() => toggleProdotto(p.id)}
-                      />
-                      {p.nome}
-                    </label>
-                  ))}
-                </div>
               </Campo>
             )}
 
