@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { generaPdf } from "@/lib/pdf/generatore";
 import { modelloPerDocumento } from "@/lib/pdf/modelli";
+import { emittenteDocumento } from "@/lib/pdf/emittente";
+import { aziendaPerDocumento } from "@/lib/aziende";
 import { calcolaPreventivo } from "@/lib/calcoli";
 import { etichettaRevisione, type VoceCongelata } from "@/lib/revisioni";
 import { n } from "@/lib/format";
@@ -74,18 +76,19 @@ export async function GET(
     numeroRevisione = rev.numero;
   }
 
-  const { blocchi, stile } = await modelloPerDocumento("PREVENTIVO", p.modelloPdfId);
+  const [{ blocchi, stile }, azienda] = await Promise.all([
+    modelloPerDocumento("PREVENTIVO", p.modelloPdfId),
+    aziendaPerDocumento(p.aziendaId),
+  ]);
+  const { emittente, bollo } = await emittenteDocumento(azienda, impostazioni);
   const riepilogo = calcolaPreventivo(voci, n(p.scontoPercento), n(p.aliquotaIva));
 
   const pdf = await generaPdf({
     numero: p.numero,
     revisione: etichettaRevisione(numeroRevisione) || undefined,
     titolo,
-    emittente: {
-      ragioneSociale: impostazioni?.ragioneSociale ?? "Studio",
-      partitaIva: impostazioni?.partitaIva,
-      iban: impostazioni?.iban,
-    },
+    emittente,
+    bollo,
     cliente: {
       ragioneSociale: p.cliente.ragioneSociale,
       partitaIva: p.cliente.partitaIva,

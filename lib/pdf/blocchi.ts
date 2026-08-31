@@ -54,8 +54,13 @@ export const CATALOGO_BLOCCHI: DefinizioneBlocco[] = [
     ambiti: ["PREVENTIVO", "CONTRATTO"],
     unico: true,
     campi: [
+      { chiave: "mostraLogo", etichetta: "Mostra il logo", tipo: "booleano", predefinito: true },
+      { chiave: "mostraIndirizzo", etichetta: "Mostra indirizzo", tipo: "booleano", predefinito: true },
       { chiave: "mostraPartitaIva", etichetta: "Mostra la partita IVA", tipo: "booleano", predefinito: true },
+      { chiave: "mostraCodiceFiscale", etichetta: "Mostra il codice fiscale", tipo: "booleano", predefinito: false },
+      { chiave: "mostraContatti", etichetta: "Mostra telefono/email/PEC", tipo: "booleano", predefinito: false },
       { chiave: "mostraIban", etichetta: "Mostra l'IBAN", tipo: "booleano", predefinito: false },
+      { chiave: "mostraRegimeFiscale", etichetta: "Mostra il regime fiscale", tipo: "booleano", predefinito: false },
     ],
   },
   {
@@ -140,6 +145,22 @@ export const CATALOGO_BLOCCHI: DefinizioneBlocco[] = [
     ],
   },
   {
+    tipo: "bollo",
+    etichetta: "Marca da bollo",
+    descrizione: "Avviso di imposta di bollo oltre una soglia, per i regimi che ne sono esenti IVA",
+    ambiti: ["PREVENTIVO"],
+    unico: true,
+    campi: [
+      {
+        chiave: "soglia",
+        etichetta: "Soglia (0 = usa quella delle impostazioni)",
+        tipo: "numero",
+        predefinito: 0,
+        nota: "Lasciare 0 per usare la soglia configurata nelle impostazioni dello studio",
+      },
+    ],
+  },
+  {
     tipo: "corrispettivo",
     etichetta: "Corrispettivo e durata",
     descrizione: "Canone, periodicità, decorrenza e rinnovo",
@@ -194,7 +215,7 @@ export function configPredefinitaBlocco(tipo: string) {
 export function modelloPredefinito(ambito: "PREVENTIVO" | "CONTRATTO"): BloccoPdf[] {
   const tipi =
     ambito === "PREVENTIVO"
-      ? ["intestazione", "titolo", "destinatario", "testo", "voci", "riepilogo", "testo"]
+      ? ["intestazione", "titolo", "destinatario", "testo", "voci", "riepilogo", "bollo", "testo"]
       : ["intestazione", "titolo", "parti", "testo", "testo", "corrispettivo", "testo", "firme"];
 
   return tipi.map((tipo, i) => {

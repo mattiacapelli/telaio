@@ -5,6 +5,8 @@ import { generaPdf } from "@/lib/pdf/generatore";
 import type { DatiDocumento } from "@/lib/pdf/generatore";
 import { STILE_PREDEFINITO } from "@/lib/pdf/blocchi";
 import type { BloccoPdf, StilePdf } from "@/lib/pdf/blocchi";
+import { emittenteDocumento } from "@/lib/pdf/emittente";
+import { aziendaPerDocumento } from "@/lib/aziende";
 import { n } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -43,16 +45,15 @@ export async function POST(
   };
 
   const preventivo = modello.ambito === "PREVENTIVO";
+  const azienda = await aziendaPerDocumento();
+  const { emittente, bollo } = await emittenteDocumento(azienda, impostazioni);
   const esempio: DatiDocumento = {
     numero: preventivo ? "PRE-2026/000" : "CON-2026/000",
     revisione: preventivo ? "r2" : undefined,
     titolo: preventivo ? "Portale clienti e area riservata" : "Assistenza sistemistica",
     tipo: preventivo ? undefined : "Assistenza a ore",
-    emittente: {
-      ragioneSociale: impostazioni?.ragioneSociale ?? "Studio",
-      partitaIva: impostazioni?.partitaIva,
-      iban: impostazioni?.iban,
-    },
+    emittente,
+    bollo,
     cliente: {
       ragioneSociale: "Cliente di esempio S.r.l.",
       partitaIva: "IT 01234567890",

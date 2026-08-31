@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { generaPdf } from "@/lib/pdf/generatore";
 import { modelloPerDocumento } from "@/lib/pdf/modelli";
+import { emittenteDocumento } from "@/lib/pdf/emittente";
+import { aziendaPerDocumento } from "@/lib/aziende";
 import { n } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -30,18 +32,19 @@ export async function GET(
     return NextResponse.json({ errore: "contratto inesistente" }, { status: 404 });
   }
 
-  const { blocchi, stile } = await modelloPerDocumento("CONTRATTO", c.modelloPdfId);
+  const [{ blocchi, stile }, azienda] = await Promise.all([
+    modelloPerDocumento("CONTRATTO", c.modelloPdfId),
+    aziendaPerDocumento(c.aziendaId),
+  ]);
+  const { emittente, bollo } = await emittenteDocumento(azienda, impostazioni);
 
   const pdf = await generaPdf({
     numero: c.numero,
     titolo: c.titolo,
     tipo: c.tipo,
     dataEmissione: c.inizioIl,
-    emittente: {
-      ragioneSociale: impostazioni?.ragioneSociale ?? "Studio",
-      partitaIva: impostazioni?.partitaIva,
-      iban: impostazioni?.iban,
-    },
+    emittente,
+    bollo,
     cliente: {
       ragioneSociale: c.cliente.ragioneSociale,
       partitaIva: c.cliente.partitaIva,

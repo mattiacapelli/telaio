@@ -11,9 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 export function NuovoContratto({
   clienti,
   progetti,
+  aziende = [],
 }: {
   clienti: { id: string; ragioneSociale: string; tariffaOraria: number }[];
   progetti: { id: string; nome: string }[];
+  aziende?: { id: string; ragioneSociale: string }[];
 }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
@@ -35,6 +37,7 @@ export function NuovoContratto({
     rinnovoAutomatico: true,
     preavvisoGiorni: "30",
     note: "",
+    aziendaId: "",
   });
 
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => setD({ ...d, [k]: v });
@@ -54,6 +57,7 @@ export function NuovoContratto({
         tariffaExtra: d.tariffaExtra === "" ? null : d.tariffaExtra,
         scadeIl: d.scadeIl || null,
         note: d.note || null,
+        aziendaId: d.aziendaId || null,
       }),
     }).catch(() => null);
     setSalvando(false);
@@ -187,6 +191,17 @@ export function NuovoContratto({
                 Rinnovo automatico
               </label>
             </div>
+
+            {aziende.length > 1 && (
+              <Campo etichetta="Ragione sociale emittente" nota="Vuoto = quella predefinita">
+                <Select value={d.aziendaId} onChange={(e) => set("aziendaId", e.target.value)}>
+                  <option value="">Predefinita</option>
+                  {aziende.map((a) => (
+                    <option key={a.id} value={a.id}>{a.ragioneSociale}</option>
+                  ))}
+                </Select>
+              </Campo>
+            )}
 
             <Campo etichetta="Note">
               <Textarea rows={2} value={d.note} onChange={(e) => set("note", e.target.value)} />

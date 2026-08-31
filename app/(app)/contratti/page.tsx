@@ -13,10 +13,11 @@ import { FileSignature, AlertTriangle } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function ContrattiPage() {
-  const [contratti, clienti, progetti] = await Promise.all([
+  const [contratti, clienti, progetti, aziende] = await Promise.all([
     getContratti(),
     getClientiPerSelezione(),
     prisma.progetto.findMany({ select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
+    prisma.azienda.findMany({ select: { id: true, ragioneSociale: true }, orderBy: { ragioneSociale: "asc" } }),
   ]);
 
   const attivi = contratti.filter((c) => c.stato === "ATTIVO");
@@ -42,7 +43,7 @@ export default async function ContrattiPage() {
           {contratti.length} contratti · {attivi.length} attivi
         </span>
         <div className="flex-1" />
-        <NuovoContratto clienti={clienti} progetti={progetti} />
+        <NuovoContratto clienti={clienti} progetti={progetti} aziende={aziende} />
       </div>
 
       {(inScadenza.length > 0 || monteEsaurito.length > 0) && (

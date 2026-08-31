@@ -40,6 +40,7 @@ export type DatiPreventivo = {
   validitaGiorni: string;
   note: string;
   voci: VoceForm[];
+  aziendaId: string;
 };
 
 export function voceVuota(prezzo = ""): VoceForm {
@@ -61,6 +62,7 @@ export function datiVuoti(tariffa: number): DatiPreventivo {
     validitaGiorni: "30",
     note: "",
     voci: [voceVuota(String(tariffa))],
+    aziendaId: "",
   };
 }
 
@@ -98,6 +100,7 @@ export function CorpoPreventivo({
   dati,
   setDati,
   clienti,
+  aziende = [],
   mostraMotivo,
   motivo,
   setMotivo,
@@ -105,6 +108,7 @@ export function CorpoPreventivo({
   dati: DatiPreventivo;
   setDati: (d: DatiPreventivo) => void;
   clienti: ClienteOpzione[];
+  aziende?: { id: string; ragioneSociale: string }[];
   mostraMotivo?: boolean;
   motivo?: string;
   setMotivo?: (m: string) => void;
@@ -226,6 +230,17 @@ export function CorpoPreventivo({
               placeholder="Es. 60"
             />
           </Campo>
+
+          {aziende.length > 1 && (
+            <Campo etichetta="Ragione sociale emittente" nota="Vuoto = quella predefinita">
+              <Select value={dati.aziendaId} onChange={(e) => set("aziendaId", e.target.value)}>
+                <option value="">Predefinita</option>
+                {aziende.map((a) => (
+                  <option key={a.id} value={a.id}>{a.ragioneSociale}</option>
+                ))}
+              </Select>
+            </Campo>
+          )}
         </div>
 
         {mostraMotivo && setMotivo && (
@@ -489,6 +504,7 @@ export function corpoRichiesta(dati: DatiPreventivo, motivo?: string) {
     validitaGiorni: dati.validitaGiorni === "" ? null : dati.validitaGiorni,
     note: dati.note || null,
     motivo: motivo || null,
+    aziendaId: dati.aziendaId || null,
     voci: dati.voci
       .filter((v) => v.descrizione.trim())
       .map((v) => ({

@@ -26,6 +26,7 @@ const Nuovo = z.object({
   rinnovoAutomatico: z.boolean().default(false),
   preavvisoGiorni: z.coerce.number().int().nonnegative().default(30),
   note: z.string().optional().nullable(),
+  aziendaId: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
       rinnovoAutomatico: d.rinnovoAutomatico,
       preavvisoGiorni: d.preavvisoGiorni,
       note: d.note || null,
+      aziendaId: d.aziendaId || null,
     },
     select: { id: true, numero: true },
   });

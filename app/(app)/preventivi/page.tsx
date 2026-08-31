@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPreventivi, getClientiPerSelezione, getTariffaListino } from "@/lib/queries";
+import { prisma } from "@/lib/prisma";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/chip";
@@ -25,10 +26,11 @@ const STATI: Record<string, string> = {
 };
 
 export default async function PreventiviPage() {
-  const [preventivi, clienti, tariffaListino] = await Promise.all([
+  const [preventivi, clienti, tariffaListino, aziende] = await Promise.all([
     getPreventivi(),
     getClientiPerSelezione(),
     getTariffaListino(),
+    prisma.azienda.findMany({ select: { id: true, ragioneSociale: true }, orderBy: { ragioneSociale: "asc" } }),
   ]);
 
   if (preventivi.length === 0) {
@@ -99,7 +101,7 @@ export default async function PreventiviPage() {
           </span>
         }
         azioni={
-          <NuovoPreventivo clienti={clienti} tariffaListino={tariffaListino} />
+          <NuovoPreventivo clienti={clienti} tariffaListino={tariffaListino} aziende={aziende} />
         }
         colonneTabella={[
           { intestazione: "Numero", larghezza: "130px", icona: <FileText key="i1" size={13} /> },

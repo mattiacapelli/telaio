@@ -58,7 +58,7 @@ const IMPOSTAZIONI = {
   tinta: "gray",
 } as const;
 
-export function Sidebar() {
+export function Sidebar({ nomeStudio = "Telaio" }: { nomeStudio?: string }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { aperto, chiudi } = useNavMobile();
@@ -106,7 +106,7 @@ export function Sidebar() {
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <div className="truncate text-md font-medium">Studio Ferrero</div>
+            <div className="truncate text-md font-medium">{nomeStudio}</div>
           </div>
         )}
         <button

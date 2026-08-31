@@ -18,9 +18,11 @@ import {
 export function ModificaPreventivo({
   preventivo,
   clienti,
+  aziende = [],
 }: {
   preventivo: { id: string; stato: string; dati: DatiPreventivo };
   clienti: ClienteOpzione[];
+  aziende?: { id: string; ragioneSociale: string }[];
 }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
@@ -88,6 +90,7 @@ export function ModificaPreventivo({
               dati={dati}
               setDati={setDati}
               clienti={clienti}
+              aziende={aziende}
               mostraMotivo={creaRevisione}
               motivo={motivo}
               setMotivo={setMotivo}

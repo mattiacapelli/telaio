@@ -12,22 +12,22 @@ datasource db {
 /// Cliente. L'anagrafica è di sola lettura in Telaio: la fonte di verità è
 /// Twenty (vedi twentyId / syncedAt), come indicato nella schermata Clienti.
 model Cliente {
-  id            String   @id @default(cuid())
-  twentyId      String?  @unique
-  ragioneSociale String
-  sigla         String   // iniziali mostrate nell'avatar, es. "VB"
-  settore       String?  // Manifattura, Trasporti, Servizi, Software, Retail, Sanità
-  citta         String?
-  partitaIva    String?
-  codiceFiscale String?
-  pec           String?
-  codiceSdi     String?
-  tariffaOraria Decimal  @db.Decimal(10, 2)
-  terminiPagamento Int   @default(30) // giorni data fattura
-  statoRelazione String  @default("CUSTOMER")
-  syncedAt      DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String    @id @default(cuid())
+  twentyId         String?   @unique
+  ragioneSociale   String
+  sigla            String // iniziali mostrate nell'avatar, es. "VB"
+  settore          String? // Manifattura, Trasporti, Servizi, Software, Retail, Sanità
+  citta            String?
+  partitaIva       String?
+  codiceFiscale    String?
+  pec              String?
+  codiceSdi        String?
+  tariffaOraria    Decimal   @db.Decimal(10, 2)
+  terminiPagamento Int       @default(30) // giorni data fattura
+  statoRelazione   String    @default("CUSTOMER")
+  syncedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   referenti  Referente[]
   preventivi Preventivo[]
@@ -40,16 +40,16 @@ model Cliente {
 }
 
 model Referente {
-  id        String  @id @default(cuid())
-  twentyId  String? @unique
-  clienteId String
-  nome      String
-  cognome   String
-  ruolo     String?
-  email     String?
-  telefono  String?
-  principale Boolean @default(false)
-  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  id         String       @id @default(cuid())
+  twentyId   String?      @unique
+  clienteId  String
+  nome       String
+  cognome    String
+  ruolo      String?
+  email      String?
+  telefono   String?
+  principale Boolean      @default(false)
+  cliente    Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   preventivi Preventivo[]
 
   @@index([clienteId])
@@ -80,13 +80,13 @@ model Preventivo {
   updatedAt  DateTime        @updatedAt
 
   /// Referente a cui è indirizzata l'offerta.
-  referenteId    String?
+  referenteId       String?
   /// Sconto percentuale sul totale, applicato dopo gli sconti di riga.
-  scontoPercento Decimal  @default(0) @db.Decimal(5, 2)
+  scontoPercento    Decimal @default(0) @db.Decimal(5, 2)
   /// Aliquota IVA del documento.
-  aliquotaIva    Decimal  @default(22) @db.Decimal(5, 2)
+  aliquotaIva       Decimal @default(22) @db.Decimal(5, 2)
   /// Probabilità di chiusura, per pesare il valore in trattativa.
-  probabilita    Int?
+  probabilita       Int?
   /// Testi del documento.
   premessa          String?
   tempiConsegna     String?
@@ -94,17 +94,20 @@ model Preventivo {
   validitaGiorni    Int?
   note              String?
 
-  cliente            Cliente              @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  referente          Referente?           @relation(fields: [referenteId], references: [id], onDelete: SetNull)
-  modelloPdf         ModelloPdf?          @relation(fields: [modelloPdfId], references: [id], onDelete: SetNull)
-  modelloPdfId       String?
-  voci               VocePreventivo[]
-  progetto           Progetto?
-  revisioni          RevisionePreventivo[]
-  revisioneCorrente  Int                  @default(1)
+  cliente           Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  referente         Referente?            @relation(fields: [referenteId], references: [id], onDelete: SetNull)
+  modelloPdf        ModelloPdf?           @relation(fields: [modelloPdfId], references: [id], onDelete: SetNull)
+  modelloPdfId      String?
+  /// Ragione sociale emittente; senza scelta esplicita si usa la predefinita.
+  azienda           Azienda?              @relation(fields: [aziendaId], references: [id], onDelete: SetNull)
+  aziendaId         String?
+  voci              VocePreventivo[]
+  progetto          Progetto?
+  revisioni         RevisionePreventivo[]
+  revisioneCorrente Int                   @default(1)
   /// Motivo dell'ultima modifica: viene trasferito alla revisione quando
   /// questa versione verrà a sua volta congelata.
-  motivoCorrente     String?
+  motivoCorrente    String?
 
   @@index([stato])
 }
@@ -114,11 +117,11 @@ model Preventivo {
 /// Le voci sono duplicate qui, non referenziate: una revisione deve poter
 /// essere riletta esattamente com'era, anche se il preventivo cambia dopo.
 model RevisionePreventivo {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   preventivoId String
-  numero       Int      // 1, 2, 3… → mostrato come "r2", "r3"
+  numero       Int // 1, 2, 3… → mostrato come "r2", "r3"
   titolo       String
-  imponibile   Decimal  @db.Decimal(12, 2)
+  imponibile   Decimal   @db.Decimal(12, 2)
   scadeIl      DateTime?
   /// Perché è stata creata questa revisione (es. "sconto concordato").
   motivo       String?
@@ -126,7 +129,7 @@ model RevisionePreventivo {
   voci         Json
   /// Chi l'ha creata: l'email basta, e sopravvive alla cancellazione dell'utente.
   autore       String?
-  creataIl     DateTime @default(now())
+  creataIl     DateTime  @default(now())
 
   preventivo Preventivo @relation(fields: [preventivoId], references: [id], onDelete: Cascade)
 
@@ -153,7 +156,7 @@ model VocePreventivo {
   /// Sconto percentuale sulla singola riga.
   sconto       Decimal     @default(0) @db.Decimal(5, 2)
   ordine       Int         @default(0)
-  preventivo   Preventivo @relation(fields: [preventivoId], references: [id], onDelete: Cascade)
+  preventivo   Preventivo  @relation(fields: [preventivoId], references: [id], onDelete: Cascade)
 
   @@index([preventivoId])
 }
@@ -181,21 +184,21 @@ model Progetto {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  cliente     Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  preventivo  Preventivo? @relation(fields: [preventivoId], references: [id])
-  attivita    Attivita[]
-  ticket      Ticket[]
+  cliente       Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  preventivo    Preventivo?        @relation(fields: [preventivoId], references: [id])
+  attivita      Attivita[]
+  ticket        Ticket[]
   registrazioni RegistrazioneOre[]
-  costi       Costo[]
-  milestone   Milestone[]
-  documenti   Documento[]
-  noteProgetto NotaProgetto[]
-  contratti   Contratto[]
-  problemi    Problema[]
-  eventi      EventoProgetto[]
+  costi         Costo[]
+  milestone     Milestone[]
+  documenti     Documento[]
+  noteProgetto  NotaProgetto[]
+  contratti     Contratto[]
+  problemi      Problema[]
+  eventi        EventoProgetto[]
 
   /// Repository GitHub collegata, nel formato `owner/repo`. Facoltativa.
-  repoGithub  String?
+  repoGithub   String?
   /// Branch da seguire per l'avanzamento; se vuoto si usa quello predefinito.
   branchGithub String?
 
@@ -282,16 +285,16 @@ model EventoProgetto {
 /// File allegato a un progetto (contratti, capitolati, verbali…).
 /// Il binario sta su S3/MinIO: qui restano solo i metadati e la chiave.
 model Documento {
-  id         String   @id @default(cuid())
-  progettoId String?
-  ticketId   String?
+  id          String   @id @default(cuid())
+  progettoId  String?
+  ticketId    String?
   contrattoId String?
-  nome       String
-  chiave     String   @unique // percorso dell'oggetto su S3
-  tipo       String // MIME
-  dimensione Int // byte
-  caricatoDa String?
-  createdAt  DateTime @default(now())
+  nome        String
+  chiave      String   @unique // percorso dell'oggetto su S3
+  tipo        String // MIME
+  dimensione  Int // byte
+  caricatoDa  String?
+  createdAt   DateTime @default(now())
 
   progetto  Progetto?  @relation(fields: [progettoId], references: [id], onDelete: Cascade)
   ticket    Ticket?    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -335,16 +338,16 @@ enum StatoAttivita {
 }
 
 model Attivita {
-  id         String        @id @default(cuid())
-  titolo     String
-  progettoId String?
-  stato      StatoAttivita @default(DA_FARE)
-  stimaOre   Decimal?      @db.Decimal(10, 2)
-  scadenzaIl DateTime?
-  bloccoNota String?
+  id           String        @id @default(cuid())
+  titolo       String
+  progettoId   String?
+  stato        StatoAttivita @default(DA_FARE)
+  stimaOre     Decimal?      @db.Decimal(10, 2)
+  scadenzaIl   DateTime?
+  bloccoNota   String?
   completataIl DateTime?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   registrazioni RegistrazioneOre[]
@@ -373,19 +376,19 @@ enum PrioritaTicket {
 }
 
 model Ticket {
-  id          String         @id @default(cuid())
-  numero      Int            @unique // #128
-  titolo      String
-  descrizione String?
-  clienteId   String
-  progettoId  String?
-  stato       StatoTicket    @default(APERTO)
-  priorita    PrioritaTicket @default(MEDIA)
-  conContratto Boolean       @default(false)
-  apertoIl    DateTime       @default(now())
-  risoltoIl   DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  numero       Int            @unique // #128
+  titolo       String
+  descrizione  String?
+  clienteId    String
+  progettoId   String?
+  stato        StatoTicket    @default(APERTO)
+  priorita     PrioritaTicket @default(MEDIA)
+  conContratto Boolean        @default(false)
+  apertoIl     DateTime       @default(now())
+  risoltoIl    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   cliente       Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   progetto      Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
@@ -403,20 +406,20 @@ model Ticket {
 // ---------------------------------------------------------------- timesheet
 
 model RegistrazioneOre {
-  id           String   @id @default(cuid())
-  data         DateTime @db.Date
-  ore          Decimal  @db.Decimal(6, 2)
-  descrizione  String?
-  fatturabile  Boolean  @default(true)
-  progettoId   String?
-  attivitaId   String?
-  ticketId     String?
+  id            String   @id @default(cuid())
+  data          DateTime @db.Date
+  ore           Decimal  @db.Decimal(6, 2)
+  descrizione   String?
+  fatturabile   Boolean  @default(true)
+  progettoId    String?
+  attivitaId    String?
+  ticketId      String?
   rigaFatturaId String?
-  createdAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
 
-  progetto   Progetto?   @relation(fields: [progettoId], references: [id], onDelete: SetNull)
-  attivita   Attivita?   @relation(fields: [attivitaId], references: [id], onDelete: SetNull)
-  ticket     Ticket?     @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  progetto    Progetto?    @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  attivita    Attivita?    @relation(fields: [attivitaId], references: [id], onDelete: SetNull)
+  ticket      Ticket?      @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   rigaFattura RigaFattura? @relation(fields: [rigaFatturaId], references: [id], onDelete: SetNull)
 
   @@index([data])
@@ -446,30 +449,30 @@ enum ModalitaTrasferta {
 /// dimensioni indipendenti, il tempo e il denaro speso. Un modello unico
 /// "intervento" che le raggruppasse duplicherebbe ciò che il ticket già è.
 model Costo {
-  id          String    @id @default(cuid())
-  data        DateTime  @db.Date
-  tipo        TipoCosto @default(ALTRO)
-  descrizione String
+  id           String             @id @default(cuid())
+  data         DateTime           @db.Date
+  tipo         TipoCosto          @default(ALTRO)
+  descrizione  String
   /// Importo totale del costo. Per le trasferte chilometriche è calcolato
   /// da quantita x tariffa, ma resta salvato: la tariffa può cambiare nel
   /// tempo e il costo già registrato non deve seguirla.
-  importo     Decimal   @db.Decimal(10, 2)
+  importo      Decimal            @db.Decimal(10, 2)
   /// Chilometri o unità, quando il costo è calcolato.
-  quantita    Decimal?  @db.Decimal(10, 2)
-  tariffa     Decimal?  @db.Decimal(10, 2)
-  modalita    ModalitaTrasferta?
+  quantita     Decimal?           @db.Decimal(10, 2)
+  tariffa      Decimal?           @db.Decimal(10, 2)
+  modalita     ModalitaTrasferta?
   /// Se rifatturabile al cliente. Deciso caso per caso: il canone di un
   /// contratto copre il tempo, non sempre le spese vive.
-  rimborsabile Boolean  @default(true)
+  rimborsabile Boolean            @default(true)
   /// Ricevuta o giustificativo allegato.
-  documentoId String?
+  documentoId  String?
 
-  progettoId  String?
-  attivitaId  String?
-  ticketId    String?
+  progettoId    String?
+  attivitaId    String?
+  ticketId      String?
   rigaFatturaId String?
-  registratoDa String?
-  createdAt   DateTime  @default(now())
+  registratoDa  String?
+  createdAt     DateTime @default(now())
 
   progetto    Progetto?    @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   attivita    Attivita?    @relation(fields: [attivitaId], references: [id], onDelete: SetNull)
@@ -491,20 +494,23 @@ enum StatoFattura {
 }
 
 model Fattura {
-  id         String       @id @default(cuid())
-  numero     String       @unique // 2026/044
-  clienteId  String
-  stato      StatoFattura @default(DA_EMETTERE)
-  imponibile Decimal      @db.Decimal(12, 2)
-  aliquotaIva Decimal     @default(22) @db.Decimal(5, 2)
-  emessaIl   DateTime?
-  scadeIl    DateTime?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id          String       @id @default(cuid())
+  numero      String       @unique // 2026/044
+  clienteId   String
+  stato       StatoFattura @default(DA_EMETTERE)
+  imponibile  Decimal      @db.Decimal(12, 2)
+  aliquotaIva Decimal      @default(22) @db.Decimal(5, 2)
+  emessaIl    DateTime?
+  scadeIl     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  cliente Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  righe   RigaFattura[]
-  incassi Incasso[]
+  cliente   Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  /// Ragione sociale emittente; senza scelta esplicita si usa la predefinita.
+  azienda   Azienda?      @relation(fields: [aziendaId], references: [id], onDelete: SetNull)
+  aziendaId String?
+  righe     RigaFattura[]
+  incassi   Incasso[]
 
   @@index([stato])
 }
@@ -580,43 +586,46 @@ enum StatoContratto {
 /// vita (date, rinnovo, canone) e differiscono solo per come si consumano:
 /// `monteOre` vale per l'assistenza, `progettoId` per i contratti di progetto.
 model Contratto {
-  id          String               @id @default(cuid())
-  numero      String               @unique
-  titolo      String
-  clienteId   String
-  progettoId  String?
-  tipo        TipoContratto        @default(ASSISTENZA_ORE)
-  stato       StatoContratto       @default(BOZZA)
+  id                  String               @id @default(cuid())
+  numero              String               @unique
+  titolo              String
+  clienteId           String
+  progettoId          String?
+  tipo                TipoContratto        @default(ASSISTENZA_ORE)
+  stato               StatoContratto       @default(BOZZA)
   /// Importo del canone per periodo.
-  canone      Decimal              @db.Decimal(12, 2)
-  periodicita PeriodicitaContratto @default(MENSILE)
+  canone              Decimal              @db.Decimal(12, 2)
+  periodicita         PeriodicitaContratto @default(MENSILE)
   /// Ore incluse nel periodo (solo ASSISTENZA_ORE).
-  monteOre    Decimal?             @db.Decimal(10, 2)
+  monteOre            Decimal?             @db.Decimal(10, 2)
   /// Le ore eccedenti il monte si fatturano a questa tariffa; se nulla si usa
   /// quella del cliente.
-  tariffaExtra Decimal?            @db.Decimal(10, 2)
-  inizioIl    DateTime
-  scadeIl     DateTime?
+  tariffaExtra        Decimal?             @db.Decimal(10, 2)
+  inizioIl            DateTime
+  scadeIl             DateTime?
   /// Rinnovo tacito alla scadenza.
-  rinnovoAutomatico Boolean        @default(false)
+  rinnovoAutomatico   Boolean              @default(false)
   /// Preavviso di disdetta, in giorni.
-  preavvisoGiorni   Int            @default(30)
+  preavvisoGiorni     Int                  @default(30)
   /// Testi del documento, copiati dai modelli alla creazione.
-  premessa    String?
-  oggetto     String?
+  premessa            String?
+  oggetto             String?
   condizioniPagamento String?
   condizioniServizio  String?
-  note        String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  note                String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
-  cliente   Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  progetto  Progetto?        @relation(fields: [progettoId], references: [id], onDelete: SetNull)
-  modelloPdf   ModelloPdf?   @relation(fields: [modelloPdfId], references: [id], onDelete: SetNull)
+  cliente      Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  progetto     Progetto?          @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  modelloPdf   ModelloPdf?        @relation(fields: [modelloPdfId], references: [id], onDelete: SetNull)
   modelloPdfId String?
-  periodi   PeriodoContratto[]
-  documenti Documento[]
-  ticket    Ticket[]
+  /// Ragione sociale emittente; senza scelta esplicita si usa la predefinita.
+  azienda      Azienda?           @relation(fields: [aziendaId], references: [id], onDelete: SetNull)
+  aziendaId    String?
+  periodi      PeriodoContratto[]
+  documenti    Documento[]
+  ticket       Ticket[]
 
   @@index([clienteId])
   @@index([stato])
@@ -625,15 +634,15 @@ model Contratto {
 /// Periodo di competenza di un contratto: è qui che si misura il consumo del
 /// monte ore e si tiene traccia della fattura del canone.
 model PeriodoContratto {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   contrattoId String
-  inizioIl    DateTime  @db.Date
-  fineIl      DateTime  @db.Date
+  inizioIl    DateTime @db.Date
+  fineIl      DateTime @db.Date
   /// Ore incluse in questo periodo, copiate dal contratto alla creazione:
   /// se il contratto cambia, i periodi già chiusi restano quelli concordati.
-  monteOre    Decimal?  @db.Decimal(10, 2)
+  monteOre    Decimal? @db.Decimal(10, 2)
   fatturaId   String?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
   contratto Contratto @relation(fields: [contrattoId], references: [id], onDelete: Cascade)
 
@@ -655,23 +664,23 @@ enum TipoInnesco {
 /// cambia col tipo di blocco, e un modello relazionale per ogni variante
 /// renderebbe rigido qualcosa che deve restare estendibile.
 model Workflow {
-  id          String      @id @default(cuid())
-  nome        String
-  descrizione String?
-  attivo      Boolean     @default(true)
-  innesco     TipoInnesco @default(EVENTO)
+  id               String      @id @default(cuid())
+  nome             String
+  descrizione      String?
+  attivo           Boolean     @default(true)
+  innesco          TipoInnesco @default(EVENTO)
   /// Per EVENTO: nome dell'evento (es. "preventivo.accettato").
   /// Per PIANIFICATO: espressione di frequenza (es. "giornaliero").
-  eventoChiave String?
+  eventoChiave     String?
   /// Blocchi condizione: tutte devono essere vere perché il workflow proceda.
-  condizioni  Json        @default("[]")
+  condizioni       Json        @default("[]")
   /// Blocchi azione, eseguiti in ordine.
-  azioni      Json        @default("[]")
+  azioni           Json        @default("[]")
   /// Statistiche d'uso, utili per capire se un workflow serve davvero.
-  esecuzioni  Int         @default(0)
+  esecuzioni       Int         @default(0)
   ultimaEsecuzione DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   registri RegistroWorkflow[]
 
@@ -717,19 +726,19 @@ model Notifica {
 /// modello relazionale per ogni variante renderebbe rigido qualcosa che deve
 /// poter crescere.
 model ModelloPdf {
-  id        String   @id @default(cuid())
-  nome      String
+  id          String   @id @default(cuid())
+  nome        String
   /// PREVENTIVO o CONTRATTO: determina quali blocchi sono disponibili.
-  ambito    String
+  ambito      String
   descrizione String?
   /// Usato quando il documento non ne indica uno proprio.
-  predefinito Boolean @default(false)
+  predefinito Boolean  @default(false)
   /// Blocchi in ordine di stampa, con la loro configurazione.
-  blocchi   Json     @default("[]")
+  blocchi     Json     @default("[]")
   /// Margini, colore d'accento e dimensioni del testo.
-  stile     Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  stile       Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   preventivi Preventivo[]
   contratti  Contratto[]
@@ -744,40 +753,81 @@ model ModelloPdf {
 /// nel documento, che resta poi indipendente. Modificare un modello non
 /// riscrive i documenti già emessi.
 model TestoStandard {
-  id        String   @id @default(cuid())
+  id          String   @id @default(cuid())
   /// Dove si applica: PREVENTIVO, CONTRATTO o ENTRAMBI.
-  ambito    String   @default("ENTRAMBI")
+  ambito      String   @default("ENTRAMBI")
   /// Quale campo del documento riempie: premessa, pagamento, consegna...
-  campo     String
-  titolo    String
-  testo     String
+  campo       String
+  titolo      String
+  testo       String
   /// Usato automaticamente per i nuovi documenti di questo ambito e campo.
-  predefinito Boolean @default(false)
-  ordine    Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  predefinito Boolean  @default(false)
+  ordine      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([ambito, campo])
 }
 
 /// Riga singola di configurazione dello studio + stato integrazione Twenty.
+///
+/// I dati anagrafici dell'emittente (ragione sociale, P.IVA...) non sono
+/// più qui: sono su Azienda, perché uno studio può fatturare da più
+/// ragioni sociali. Questo modello resta per le preferenze che invece sono
+/// uniche per tutto lo studio.
 model Impostazioni {
-  id               Int      @id @default(1)
-  ragioneSociale   String   @default("Marco Ferrero")
-  partitaIva       String?
-  iban             String?
-  tariffaListino   Decimal  @default(65) @db.Decimal(10, 2)
-  terminiPagamento Int      @default(30)
-  twentyWorkspace  String?
-  twentySyncedAt   DateTime?
-  twentyFrequenza  Int      @default(15) // minuti
+  id                  Int               @id @default(1)
+  tariffaListino      Decimal           @default(65) @db.Decimal(10, 2)
+  terminiPagamento    Int               @default(30)
+  twentyWorkspace     String?
+  twentySyncedAt      DateTime?
+  twentyFrequenza     Int               @default(15) // minuti
   /// Come si calcolano le trasferte per impostazione predefinita.
-  modalitaTrasferta ModalitaTrasferta @default(CHILOMETRICA)
+  modalitaTrasferta   ModalitaTrasferta @default(CHILOMETRICA)
   /// Tariffa al chilometro, usata dalla modalità chilometrica.
-  tariffaChilometrica Decimal @default(0.50) @db.Decimal(10, 2)
+  tariffaChilometrica Decimal           @default(0.50) @db.Decimal(10, 2)
   /// Importo fisso per uscita, usato dalla modalità forfettaria.
-  forfaitTrasferta    Decimal @default(30) @db.Decimal(10, 2)
-  updatedAt        DateTime @updatedAt
+  forfaitTrasferta    Decimal           @default(30) @db.Decimal(10, 2)
+  /// Soglia oltre la quale va applicata la marca da bollo (documenti esenti IVA).
+  sogliaBollo         Decimal           @default(77.47) @db.Decimal(10, 2)
+  /// Importo della marca da bollo.
+  importoBollo        Decimal           @default(2) @db.Decimal(10, 2)
+  updatedAt           DateTime          @updatedAt
+}
+
+/// Una ragione sociale da cui lo studio può emettere documenti.
+///
+/// Più di una riga è normale: chi ha uno studio associato o più partite
+/// IVA vuole scegliere, documento per documento, chi sta fatturando.
+/// Ogni campo anagrafico è facoltativo: uno vuoto non appare nel PDF invece
+/// di stampare un'etichetta senza valore.
+model Azienda {
+  id             String   @id @default(cuid())
+  ragioneSociale String
+  partitaIva     String?
+  codiceFiscale  String?
+  iban           String?
+  /// Es. "Regime forfettario", "Regime ordinario". Libero perché le diciture
+  /// fiscali corrette cambiano da caso a caso e non vanno indovinate.
+  regimeFiscale  String?
+  indirizzo      String?
+  citta          String?
+  cap            String?
+  provincia      String?
+  telefono       String?
+  email          String?
+  pec            String?
+  sitoWeb        String?
+  /// Chiave dell'oggetto su S3/MinIO, come per i documenti allegati.
+  logoChiave     String?
+  /// Predefinita per i nuovi documenti; le altre restano selezionabili a mano.
+  predefinita    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  preventivi Preventivo[]
+  contratti  Contratto[]
+  fatture    Fattura[]
 }
 
 // ---------------------------------------------------------------- accessi
@@ -785,14 +835,14 @@ model Impostazioni {
 /// Utente dello studio. Non c'è registrazione aperta: gli account si creano
 /// con `npm run utenti:crea` (vedi scripts/utente.mjs).
 model Utente {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  nome         String
-  passwordHash String
-  attivo       Boolean   @default(true)
+  id            String    @id @default(cuid())
+  email         String    @unique
+  nome          String
+  passwordHash  String
+  attivo        Boolean   @default(true)
   ultimoAccesso DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([email])
 }

@@ -26,7 +26,7 @@ export default async function PreventivoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [p, clienti] = await Promise.all([
+  const [p, clienti, aziende] = await Promise.all([
     prisma.preventivo.findUnique({
       where: { id },
       include: {
@@ -37,6 +37,7 @@ export default async function PreventivoPage({
       },
     }),
     getClientiPerSelezione(),
+    prisma.azienda.findMany({ select: { id: true, ragioneSociale: true }, orderBy: { ragioneSociale: "asc" } }),
   ]);
   if (!p) notFound();
 
@@ -76,6 +77,7 @@ export default async function PreventivoPage({
         </a>
         <ModificaPreventivo
           clienti={clienti}
+          aziende={aziende}
           preventivo={{
             id: p.id,
             stato: p.stato,
@@ -101,6 +103,7 @@ export default async function PreventivoPage({
                 prezzo: String(n(v.prezzo)),
                 sconto: String(n(v.sconto)),
               })),
+              aziendaId: p.aziendaId ?? "",
             },
           }}
         />

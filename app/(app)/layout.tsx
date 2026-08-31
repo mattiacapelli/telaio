@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { leggiSessione } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/sidebar";
 import { Topbar } from "@/components/topbar";
 import { NavMobileProvider } from "@/components/nav-mobile";
@@ -19,10 +20,15 @@ export default async function AppLayout({
   const sessione = await leggiSessione();
   if (!sessione) redirect("/login");
 
+  const azienda = await prisma.azienda.findFirst({
+    where: { predefinita: true },
+    select: { ragioneSociale: true },
+  });
+
   return (
     <NavMobileProvider>
       <div className="flex min-h-screen bg-bg text-text">
-        <Sidebar />
+        <Sidebar nomeStudio={azienda?.ragioneSociale} />
         <main className="flex min-w-0 flex-1 flex-col">
           <Topbar utente={sessione.nome} />
           <div className="flex-1 p-3 sm:p-5">{children}</div>

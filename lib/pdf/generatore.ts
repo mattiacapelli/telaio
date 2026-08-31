@@ -15,7 +15,25 @@ export type DatiDocumento = {
   revisione?: string;
   titolo: string;
   tipo?: string;
-  emittente: { ragioneSociale: string; partitaIva?: string | null; iban?: string | null };
+  emittente: {
+    ragioneSociale: string;
+    partitaIva?: string | null;
+    codiceFiscale?: string | null;
+    iban?: string | null;
+    regimeFiscale?: string | null;
+    indirizzo?: string | null;
+    citta?: string | null;
+    cap?: string | null;
+    provincia?: string | null;
+    telefono?: string | null;
+    email?: string | null;
+    pec?: string | null;
+    sitoWeb?: string | null;
+    /** Buffer PNG/JPEG del logo, già scaricato dallo storage. */
+    logo?: Buffer | null;
+  };
+  /** Marca da bollo: se l'imponibile supera la soglia, il documento lo segnala. */
+  bollo?: { soglia: number; importo: number } | null;
   cliente: {
     ragioneSociale: string;
     partitaIva?: string | null;
@@ -131,15 +149,59 @@ type Disegnatore = (ctx: Contesto, config: Record<string, string | number | bool
 
 const DISEGNATORI: Record<string, Disegnatore> = {
   intestazione({ doc, d, stile }, c) {
-    doc.fontSize(18).font("grassetto").fillColor("#000");
-    doc.text(d.emittente.ragioneSociale, stile.margine, doc.y);
-    doc.moveDown(0.2);
-    doc.fontSize(9).font("corpo").fillColor("#666");
-    if (c.mostraPartitaIva && d.emittente.partitaIva) {
-      doc.text(`P.IVA ${d.emittente.partitaIva}`);
+    const e = d.emittente;
+    // Il logo occupa una colonna a sinistra solo se c'è davvero: senza,
+    // il testo prende tutta la larghezza invece di lasciare un vuoto.
+    const conLogo = c.mostraLogo && e.logo;
+    const xTesto = conLogo ? stile.margine + 60 : stile.margine;
+    const y0 = doc.y;
+
+    if (conLogo) {
+      try {
+        doc.image(e.logo as Buffer, stile.margine, y0, { fit: [48, 48] });
+      } catch {
+        /* logo illeggibile: si stampa comunque il resto dell'intestazione */
+      }
     }
-    if (c.mostraIban && d.emittente.iban) doc.text(`IBAN ${d.emittente.iban}`);
-    doc.fillColor("#000").moveDown(1.2);
+
+    doc.fontSize(18).font("grassetto").fillColor("#000");
+    doc.text(e.ragioneSociale, xTesto, y0);
+    doc.fontSize(9).font("corpo").fillColor("#666");
+
+    // Ogni riga compare solo se il dato c'è e il blocco è configurato per
+    // mostrarla: un campo lasciato vuoto in Azienda non stampa un'etichetta
+    // senza valore.
+    if (c.mostraIndirizzo && (e.indirizzo || e.citta)) {
+      const luogo = [e.cap, e.citta, e.provincia && `(${e.provincia})`].filter(Boolean).join(" ");
+      doc.text([e.indirizzo, luogo].filter(Boolean).join(" · "), xTesto);
+    }
+    if (c.mostraPartitaIva && e.partitaIva) doc.text(`P.IVA ${e.partitaIva}`, xTesto);
+    if (c.mostraCodiceFiscale && e.codiceFiscale && e.codiceFiscale !== e.partitaIva) {
+      doc.text(`C.F. ${e.codiceFiscale}`, xTesto);
+    }
+    if (c.mostraContatti && (e.telefono || e.email || e.pec)) {
+      doc.text([e.telefono, e.email, e.pec].filter(Boolean).join(" · "), xTesto);
+    }
+    if (c.mostraIban && e.iban) doc.text(`IBAN ${e.iban}`, xTesto);
+    if (c.mostraRegimeFiscale && e.regimeFiscale) doc.text(e.regimeFiscale, xTesto);
+
+    doc.fillColor("#000").x = stile.margine;
+    doc.y = Math.max(doc.y, y0 + (conLogo ? 52 : 0));
+    doc.moveDown(1.2);
+  },
+
+  bollo({ doc, d, stile }, c) {
+    if (!d.bollo || !d.riepilogo) return;
+    const soglia = Number(c.soglia) || d.bollo.soglia;
+    if (d.riepilogo.imponibile < soglia) return;
+    if (doc.y > 700) doc.addPage();
+    doc.fontSize(8).font("corpo").fillColor("#666");
+    doc.text(
+      `Imposta di bollo assolta in modo virtuale, € ${d.bollo.importo.toFixed(2)} (importo oltre € ${soglia.toFixed(2)}).`,
+      stile.margine,
+      doc.y,
+    );
+    doc.fillColor("#000").moveDown(0.6);
   },
 
   titolo({ doc, d, stile }, c) {
@@ -188,6 +250,12 @@ const DISEGNATORI: Record<string, Disegnatore> = {
     doc.text(d.emittente.ragioneSociale, stile.margine, doc.y + 2, { width: 230 });
     doc.font("corpo").fontSize(9).fillColor("#444");
     if (d.emittente.partitaIva) doc.text(`P.IVA ${d.emittente.partitaIva}`, { width: 230 });
+    if (d.emittente.codiceFiscale && d.emittente.codiceFiscale !== d.emittente.partitaIva) {
+      doc.text(`C.F. ${d.emittente.codiceFiscale}`, { width: 230 });
+    }
+    if (d.emittente.indirizzo || d.emittente.citta) {
+      doc.text([d.emittente.indirizzo, d.emittente.citta].filter(Boolean).join(", "), { width: 230 });
+    }
 
     doc.fontSize(8).fillColor("#666").text(String(c.etichettaSeconda ?? "E"), 320, y0);
     doc.fontSize(10).fillColor("#000").font("grassetto");

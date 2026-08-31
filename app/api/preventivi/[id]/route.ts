@@ -29,6 +29,7 @@ const Modifica = z.object({
   modalitaPagamento: z.string().optional().nullable(),
   validitaGiorni: z.coerce.number().int().positive().optional().nullable(),
   note: z.string().optional().nullable(),
+  aziendaId: z.string().optional().nullable(),
   voci: z.array(Voce).min(1, "serve almeno una voce"),
   /** Motivo della revisione, richiesto quando il preventivo è già inviato. */
   motivo: z.string().optional().nullable(),
@@ -120,6 +121,7 @@ export async function PATCH(
         validitaGiorni: d.validitaGiorni ?? null,
         note: d.note || null,
         scadeIl: d.scadeIl ? new Date(d.scadeIl) : null,
+        aziendaId: d.aziendaId || null,
         revisioneCorrente: numeroRevisione,
         // Motivo della modifica appena fatta: descrive la versione che stiamo
         // creando adesso, e la seguirà quando verrà congelata.

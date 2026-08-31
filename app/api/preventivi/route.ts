@@ -31,6 +31,7 @@ const NuovoPreventivo = z.object({
   modalitaPagamento: z.string().optional().nullable(),
   validitaGiorni: z.coerce.number().int().positive().optional().nullable(),
   note: z.string().optional().nullable(),
+  aziendaId: z.string().optional().nullable(),
   voci: z.array(Voce).min(1, "serve almeno una voce"),
 });
 
@@ -94,6 +95,7 @@ export async function POST(req: Request) {
       validitaGiorni: d.validitaGiorni ?? null,
       note: d.note || predefiniti.note || null,
       scadeIl: d.scadeIl ? new Date(d.scadeIl) : null,
+      aziendaId: d.aziendaId || null,
       voci: {
         create: d.voci.map((v, i) => ({
           descrizione: v.descrizione,

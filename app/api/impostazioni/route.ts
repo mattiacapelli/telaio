@@ -7,22 +7,21 @@ import { invalidate } from "@/lib/redis";
 export const dynamic = "force-dynamic";
 
 const Modifica = z.object({
-  ragioneSociale: z.string().min(1).optional(),
-  partitaIva: z.string().optional().nullable(),
-  iban: z.string().optional().nullable(),
   tariffaListino: z.coerce.number().nonnegative().optional(),
   terminiPagamento: z.coerce.number().int().nonnegative().optional(),
   modalitaTrasferta: z.enum(["CHILOMETRICA", "PIE_DI_LISTA", "FORFETTARIA"]).optional(),
   tariffaChilometrica: z.coerce.number().nonnegative().optional(),
   forfaitTrasferta: z.coerce.number().nonnegative().optional(),
   twentyFrequenza: z.coerce.number().int().positive().optional(),
+  sogliaBollo: z.coerce.number().nonnegative().optional(),
+  importoBollo: z.coerce.number().nonnegative().optional(),
 });
 
 /**
- * Modifica i dati dello studio.
+ * Modifica le preferenze dello studio (tariffe, trasferte, bollo, Twenty).
  *
- * Ragione sociale, P.IVA e IBAN finiscono nei PDF di preventivi e contratti:
- * finora si cambiavano solo a database.
+ * I dati anagrafici dell'emittente (ragione sociale, P.IVA...) vivono in
+ * Azienda, non qui: uno studio può fatturare da più ragioni sociali.
  */
 export async function PATCH(req: Request) {
   if (!(await leggiSessione())) {

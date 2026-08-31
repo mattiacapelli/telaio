@@ -5,6 +5,7 @@ import { SyncTwenty } from "@/components/sync-twenty";
 import { SchedulerPannello } from "@/components/scheduler-pannello";
 import { TestiStandard } from "@/components/testi-standard";
 import { ElencoModelli } from "@/components/pdf-builder/elenco-modelli";
+import { ElencoAziende } from "@/components/impostazioni/aziende";
 import { NavigazioneImpostazioni } from "@/components/impostazioni/navigazione";
 import { Sezione, Riquadro, Riga, Stato, Dato, ZonaPericolosa } from "@/components/impostazioni/blocchi";
 import { ModificaDatiStudio } from "@/components/impostazioni/dati-studio";
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { eurCent, n } from "@/lib/format";
 import {
   Building2, FileText, RefreshCw, Plug, Clock, Users,
-  Database, KeyRound, Mail, GitCommit, LayoutTemplate, Bot,
+  Database, KeyRound, Mail, GitCommit, LayoutTemplate, Bot, Stamp,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ const MODALITA_TRASFERTA: Record<string, string> = {
 };
 
 export default async function ImpostazioniPage() {
-  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf] = await Promise.all([
+  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf, aziende] = await Promise.all([
     getImpostazioni(),
     ultimaEsecuzione(),
     prisma.testoStandard.findMany({
@@ -40,6 +41,7 @@ export default async function ImpostazioniPage() {
     }),
     prisma.utente.findMany({ orderBy: { email: "asc" } }),
     prisma.modelloPdf.findMany({ orderBy: [{ ambito: "asc" }, { nome: "asc" }] }),
+    prisma.azienda.findMany({ orderBy: [{ predefinita: "desc" }, { ragioneSociale: "asc" }] }),
   ]);
 
   const twentyAttivo = Boolean(process.env.TWENTY_API_KEY);
@@ -60,30 +62,10 @@ export default async function ImpostazioniPage() {
           contenuto: (
             <>
               <Sezione
-                titolo="Dati dello studio"
-                descrizione="Compaiono nell'intestazione di preventivi, contratti e fatture."
+                titolo="Aziende"
+                descrizione="Le ragioni sociali da cui puoi emettere documenti. Su ogni preventivo o contratto puoi scegliere quale usare; senza scelta si usa quella predefinita."
               >
-                <Riquadro>
-                  <Dato etichetta="Ragione sociale" valore={imp?.ragioneSociale} />
-                  <Dato etichetta="Partita IVA" valore={imp?.partitaIva} />
-                  <Dato etichetta="IBAN" valore={imp?.iban} />
-                </Riquadro>
-                <div className="flex">
-                  <div className="flex-1" />
-                  <ModificaDatiStudio
-                    titolo="Dati dello studio"
-                    valori={{
-                      ragioneSociale: imp?.ragioneSociale ?? "",
-                      partitaIva: imp?.partitaIva ?? "",
-                      iban: imp?.iban ?? "",
-                    }}
-                    campi={[
-                      { chiave: "ragioneSociale", etichetta: "Ragione sociale" },
-                      { chiave: "partitaIva", etichetta: "Partita IVA" },
-                      { chiave: "iban", etichetta: "IBAN", nota: "Stampato sui documenti di pagamento" },
-                    ]}
-                  />
-                </div>
+                <ElencoAziende aziende={aziende} />
               </Sezione>
 
               <Sezione
@@ -155,6 +137,30 @@ export default async function ImpostazioniPage() {
                       },
                       { chiave: "tariffaChilometrica", etichetta: "Tariffa al km (EUR)", tipo: "numero" },
                       { chiave: "forfaitTrasferta", etichetta: "Forfait per uscita (EUR)", tipo: "numero" },
+                    ]}
+                  />
+                </div>
+              </Sezione>
+
+              <Sezione
+                titolo="Marca da bollo"
+                descrizione="Per i regimi esenti IVA: il blocco «Marca da bollo» nei modelli PDF segnala quando applicarla, se attivato."
+              >
+                <Riquadro>
+                  <Dato etichetta="Soglia" valore={imp ? eurCent(imp.sogliaBollo) : null} />
+                  <Dato etichetta="Importo" valore={imp ? eurCent(imp.importoBollo) : null} />
+                </Riquadro>
+                <div className="flex">
+                  <div className="flex-1" />
+                  <ModificaDatiStudio
+                    titolo="Marca da bollo"
+                    valori={{
+                      sogliaBollo: String(n(imp?.sogliaBollo ?? 77.47)),
+                      importoBollo: String(n(imp?.importoBollo ?? 2)),
+                    }}
+                    campi={[
+                      { chiave: "sogliaBollo", etichetta: "Soglia (EUR)", tipo: "numero" },
+                      { chiave: "importoBollo", etichetta: "Importo bollo (EUR)", tipo: "numero" },
                     ]}
                   />
                 </div>
