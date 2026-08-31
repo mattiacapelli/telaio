@@ -27,6 +27,7 @@ const Nuovo = z.object({
   preavvisoGiorni: z.coerce.number().int().nonnegative().default(30),
   note: z.string().optional().nullable(),
   aziendaId: z.string().optional().nullable(),
+  prodottiIds: z.array(z.string()).optional().default([]),
 });
 
 export async function POST(req: Request) {
@@ -59,6 +60,13 @@ export async function POST(req: Request) {
     );
   }
 
+  if (d.prodottiIds.length > 0) {
+    const trovati = await prisma.prodotto.count({ where: { id: { in: d.prodottiIds } } });
+    if (trovati !== d.prodottiIds.length) {
+      return NextResponse.json({ errore: "uno o più prodotti non esistono" }, { status: 400 });
+    }
+  }
+
   // I testi non indicati vengono presi dai modelli predefiniti, e da lì in poi
   // appartengono al contratto: modificare il modello non lo riscrive.
   const predefiniti = await testiPredefiniti("CONTRATTO");
@@ -87,6 +95,30 @@ export async function POST(req: Request) {
     },
     select: { id: true, numero: true },
   });
+
+  // Un prodotto già in licenza a questo cliente si ricollega al nuovo
+  // contratto invece di duplicare la licenza: il canone del prodotto è
+  // uno solo, anche se cambia il contratto che lo copre.
+  for (const prodottoId of d.prodottiIds) {
+    const esistente = await prisma.licenzaProdotto.findFirst({
+      where: { prodottoId, clienteId: d.clienteId, eliminataIl: null },
+    });
+    if (esistente) {
+      await prisma.licenzaProdotto.update({
+        where: { id: esistente.id },
+        data: { contrattoId: c.id },
+      });
+    } else {
+      await prisma.licenzaProdotto.create({
+        data: {
+          prodottoId,
+          clienteId: d.clienteId,
+          contrattoId: c.id,
+          attivataIl: new Date(d.inizioIl),
+        },
+      });
+    }
+  }
 
   await invalidate();
   return NextResponse.json({ ok: true, ...c }, { status: 201 });

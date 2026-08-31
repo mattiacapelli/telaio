@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getContrattoCompleto } from "@/lib/queries";
+import { getContrattoCompleto, getProdottiPerSelezione } from "@/lib/queries";
 import { titoloPagina, nomeRecord } from "@/lib/titolo";
 import { Badge } from "@/components/ui/badge";
 import { Barra } from "@/components/ui-legacy";
@@ -8,11 +8,12 @@ import { Chip, coloreDa } from "@/components/chip";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { DocumentiProgetto } from "@/components/documenti-progetto";
 import { AzioniContratto } from "@/components/azioni-contratto";
+import { ProdottiContratto } from "@/components/prodotti-contratto";
 import { eur, eurCent, ore, data, dataEstesa } from "@/lib/format";
 import { TIPI, STATI, PERIODICITA } from "@/lib/contratti";
 import {
   FileText, Building2, User, Euro, Clock, Calendar, Tag, Receipt,
-  LifeBuoy, RefreshCw, AlertTriangle, FolderKanban,
+  LifeBuoy, RefreshCw, AlertTriangle, FolderKanban, Package,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,10 @@ export default async function ContrattoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const c = await getContrattoCompleto(id);
+  const [c, catalogoProdotti] = await Promise.all([
+    getContrattoCompleto(id),
+    getProdottiPerSelezione(),
+  ]);
   if (!c) notFound();
 
   const esaurito = c.consumo?.residue !== null && c.consumo?.residue !== undefined && c.consumo.residue < 0;
@@ -220,6 +224,19 @@ export default async function ContrattoPage({
                     )}
                   </div>
                 </div>
+              ),
+            },
+            {
+              chiave: "prodotti",
+              etichetta: "Prodotti",
+              icona: <Package size={13} />,
+              conteggio: c.prodotti.length,
+              contenuto: (
+                <ProdottiContratto
+                  contrattoId={c.id}
+                  prodottiCollegati={c.prodotti}
+                  catalogo={catalogoProdotti}
+                />
               ),
             },
             {

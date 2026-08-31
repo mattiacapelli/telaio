@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getContratti, getClientiPerSelezione } from "@/lib/queries";
+import { getContratti, getClientiPerSelezione, getProdottiPerSelezione } from "@/lib/queries";
 import { titoloPagina } from "@/lib/titolo";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
@@ -18,10 +18,11 @@ export async function generateMetadata() {
 }
 
 export default async function ContrattiPage() {
-  const [contratti, clienti, progetti, aziende] = await Promise.all([
+  const [contratti, clienti, progetti, prodotti, aziende] = await Promise.all([
     getContratti(),
     getClientiPerSelezione(),
     prisma.progetto.findMany({ where: { eliminataIl: null }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
+    getProdottiPerSelezione(),
     prisma.azienda.findMany({ select: { id: true, ragioneSociale: true }, orderBy: { ragioneSociale: "asc" } }),
   ]);
 
@@ -48,7 +49,7 @@ export default async function ContrattiPage() {
           {contratti.length} contratti · {attivi.length} attivi
         </span>
         <div className="flex-1" />
-        <NuovoContratto clienti={clienti} progetti={progetti} aziende={aziende} />
+        <NuovoContratto clienti={clienti} progetti={progetti} prodotti={prodotti} aziende={aziende} />
       </div>
 
       {(inScadenza.length > 0 || monteEsaurito.length > 0) && (

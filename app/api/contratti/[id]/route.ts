@@ -21,6 +21,7 @@ const Modifica = z.object({
   oggetto: z.string().optional().nullable(),
   condizioniPagamento: z.string().optional().nullable(),
   condizioniServizio: z.string().optional().nullable(),
+  prodottiIds: z.array(z.string()).optional(),
 });
 
 export async function PATCH(
@@ -44,6 +45,13 @@ export async function PATCH(
   const c = await prisma.contratto.findUnique({ where: { id } });
   if (!c) {
     return NextResponse.json({ errore: "contratto inesistente" }, { status: 404 });
+  }
+
+  if (d.prodottiIds) {
+    const trovati = await prisma.prodotto.count({ where: { id: { in: d.prodottiIds } } });
+    if (trovati !== d.prodottiIds.length) {
+      return NextResponse.json({ errore: "uno o più prodotti non esistono" }, { status: 400 });
+    }
   }
 
   await prisma.contratto.update({
@@ -72,6 +80,41 @@ export async function PATCH(
         : {}),
     },
   });
+
+  // Sincronizza i prodotti collegati: chi entra ottiene una licenza (o si
+  // ricollega a una già esistente per lo stesso cliente), chi esce si
+  // scollega dal contratto senza perdere la licenza né il suo storico.
+  if (d.prodottiIds) {
+    const attuali = await prisma.licenzaProdotto.findMany({
+      where: { contrattoId: id, eliminataIl: null },
+      select: { id: true, prodottoId: true },
+    });
+    const daRimuovere = attuali.filter((l) => !d.prodottiIds!.includes(l.prodottoId));
+    const idProdottiAttuali = new Set(attuali.map((l) => l.prodottoId));
+    const daAggiungere = d.prodottiIds.filter((p) => !idProdottiAttuali.has(p));
+
+    if (daRimuovere.length > 0) {
+      await prisma.licenzaProdotto.updateMany({
+        where: { id: { in: daRimuovere.map((l) => l.id) } },
+        data: { contrattoId: null },
+      });
+    }
+    for (const prodottoId of daAggiungere) {
+      const esistente = await prisma.licenzaProdotto.findFirst({
+        where: { prodottoId, clienteId: c.clienteId, eliminataIl: null },
+      });
+      if (esistente) {
+        await prisma.licenzaProdotto.update({
+          where: { id: esistente.id },
+          data: { contrattoId: id },
+        });
+      } else {
+        await prisma.licenzaProdotto.create({
+          data: { prodottoId, clienteId: c.clienteId, contrattoId: id, attivataIl: new Date() },
+        });
+      }
+    }
+  }
 
   // Attivando un contratto di assistenza, i ticket aperti del cliente non
   // ancora coperti gli vengono collegati: senza, il monte ore resterebbe

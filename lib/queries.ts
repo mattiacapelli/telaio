@@ -575,6 +575,16 @@ export async function getContrattiPerSelezione() {
   return c;
 }
 
+/** Catalogo prodotti, per collegarli a un contratto. */
+export async function getProdottiPerSelezione() {
+  const p = await prisma.prodotto.findMany({
+    where: { eliminataIl: null },
+    select: { id: true, nome: true },
+    orderBy: { nome: "asc" },
+  });
+  return p;
+}
+
 /** Predefiniti per il calcolo delle trasferte. */
 export async function getPredefinitiTrasferta() {
   const imp = await prisma.impostazioni.findUnique({ where: { id: 1 } });
@@ -936,6 +946,7 @@ export async function getContrattoCompleto(id: string) {
       documenti: { orderBy: { createdAt: "desc" } },
       periodi: { orderBy: { inizioIl: "desc" }, take: 12 },
       ticket: { orderBy: { apertoIl: "desc" }, include: { registrazioni: true } },
+      licenze: { where: { eliminataIl: null }, include: { prodotto: true } },
     },
   });
   if (!c) return null;
@@ -984,6 +995,12 @@ export async function getContrattoCompleto(id: string) {
       stato: t.stato,
       ore: t.registrazioni.reduce((s, r) => s + n(r.ore), 0),
       apertoIl: t.apertoIl,
+    })),
+    prodotti: c.licenze.map((l) => ({
+      licenzaId: l.id,
+      id: l.prodotto.id,
+      nome: l.prodotto.nome,
+      stato: l.stato,
     })),
   };
 }

@@ -11,16 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 export function NuovoContratto({
   clienti,
   progetti,
+  prodotti = [],
   aziende = [],
 }: {
   clienti: { id: string; ragioneSociale: string; tariffaOraria: number }[];
   progetti: { id: string; nome: string }[];
+  prodotti?: { id: string; nome: string }[];
   aziende?: { id: string; ragioneSociale: string }[];
 }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+  const [prodottiIds, setProdottiIds] = useState<string[]>([]);
 
   const oggi = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState({
@@ -42,6 +45,9 @@ export function NuovoContratto({
 
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => setD({ ...d, [k]: v });
 
+  const toggleProdotto = (id: string) =>
+    setProdottiIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
   async function salva(e: React.FormEvent) {
     e.preventDefault();
     setErrore(null);
@@ -58,6 +64,7 @@ export function NuovoContratto({
         scadeIl: d.scadeIl || null,
         note: d.note || null,
         aziendaId: d.aziendaId || null,
+        prodottiIds,
       }),
     }).catch(() => null);
     setSalvando(false);
@@ -200,6 +207,23 @@ export function NuovoContratto({
                     <option key={a.id} value={a.id}>{a.ragioneSociale}</option>
                   ))}
                 </Select>
+              </Campo>
+            )}
+
+            {prodotti.length > 0 && (
+              <Campo etichetta="Prodotti collegati" nota="Facoltativo: crea una licenza per ciascuno">
+                <div className="flex flex-col gap-1 rounded border border-border p-2">
+                  {prodotti.map((p) => (
+                    <label key={p.id} className="flex items-center gap-1.5 text-md text-muted">
+                      <input
+                        type="checkbox"
+                        checked={prodottiIds.includes(p.id)}
+                        onChange={() => toggleProdotto(p.id)}
+                      />
+                      {p.nome}
+                    </label>
+                  ))}
+                </div>
               </Campo>
             )}
 
