@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { registraEvento } from "../eventi";
+import { notificaWebhook } from "../webhook";
 import { n } from "../format";
 import type { Blocco, SchemaWorkflow } from "./tipi";
 
@@ -234,8 +235,8 @@ async function registra(
 
 /**
  * Punto d'ingresso dal resto dell'app: cerca i workflow attivi per l'evento
- * e li esegue. Non solleva mai: un'automazione che fallisce non deve far
- * fallire l'operazione che l'ha innescata.
+ * e li esegue, poi notifica i webhook iscritti. Non solleva mai: un'auto-
+ * mazione che fallisce non deve far fallire l'operazione che l'ha innescata.
  */
 export async function scatena(evento: string, ctx: Omit<Contesto, "evento">) {
   try {
@@ -251,4 +252,6 @@ export async function scatena(evento: string, ctx: Omit<Contesto, "evento">) {
   } catch {
     /* nessun impatto sull'operazione chiamante */
   }
+
+  await notificaWebhook(evento, ctx);
 }

@@ -7,14 +7,18 @@ import { TestiStandard } from "@/components/testi-standard";
 import { ElencoModelli } from "@/components/pdf-builder/elenco-modelli";
 import { ElencoAziende } from "@/components/impostazioni/aziende";
 import { CestinoPannello } from "@/components/impostazioni/cestino-pannello";
+import { ElencoApiKey } from "@/components/impostazioni/api-keys";
+import { ElencoWebhook } from "@/components/impostazioni/webhook";
 import { NavigazioneImpostazioni } from "@/components/impostazioni/navigazione";
 import { Sezione, Riquadro, Riga, Stato, Dato, ZonaPericolosa } from "@/components/impostazioni/blocchi";
 import { ModificaDatiStudio } from "@/components/impostazioni/dati-studio";
 import { Button } from "@/components/ui/button";
 import { eurCent, n } from "@/lib/format";
+import { CATALOGO_EVENTI } from "@/lib/webhook";
 import {
   Building2, FileText, RefreshCw, Plug, Clock, Users,
   Database, KeyRound, Mail, GitCommit, LayoutTemplate, Bot, Stamp, Trash2,
+  Webhook as WebhookIcon,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +38,7 @@ const MODALITA_TRASFERTA: Record<string, string> = {
 };
 
 export default async function ImpostazioniPage() {
-  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf, aziende] = await Promise.all([
+  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf, aziende, apiKeys, webhook] = await Promise.all([
     getImpostazioni(),
     ultimaEsecuzione(),
     prisma.testoStandard.findMany({
@@ -44,6 +48,12 @@ export default async function ImpostazioniPage() {
     prisma.utente.findMany({ orderBy: { email: "asc" } }),
     prisma.modelloPdf.findMany({ where: { eliminataIl: null }, orderBy: [{ ambito: "asc" }, { nome: "asc" }] }),
     prisma.azienda.findMany({ orderBy: [{ predefinita: "desc" }, { ragioneSociale: "asc" }] }),
+    prisma.apiKey.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.webhook.findMany({
+      where: { eliminataIl: null },
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { consegne: true } } },
+    }),
   ]);
 
   const twentyAttivo = Boolean(process.env.TWENTY_API_KEY);
@@ -290,56 +300,88 @@ export default async function ImpostazioniPage() {
         },
 
         {
-          chiave: "mcp",
-          etichetta: "Accesso AI (MCP)",
+          chiave: "api",
+          etichetta: "Accesso API",
           icona: <Bot size={14} />,
           gruppo: "Integrazioni",
           contenuto: (
-            <Sezione
-              titolo="Server MCP"
-              descrizione="Espone i dati di Telaio a un assistente AI (Claude e simili) tramite il protocollo MCP: può consultare clienti, progetti, ticket, ore, fatture e contratti, oltre a creare ticket, registrare ore e costi, aprire attività."
-            >
-              <Riquadro>
-                <Riga
-                  icona={<Plug size={14} />}
-                  titolo="Stato"
-                  dettaglio="POST /api/mcp"
-                  stato={
-                    <Stato
-                      testo={mcpAttivo ? "Attivo" : "Non configurato"}
-                      tono={mcpAttivo ? "attivo" : "neutro"}
-                    />
-                  }
-                />
-              </Riquadro>
+            <>
+              <Sezione
+                titolo="Server MCP"
+                descrizione="Espone i dati di Telaio a un assistente AI (Claude e simili) tramite il protocollo MCP: può consultare clienti, progetti, ticket, ore, fatture e contratti, oltre a creare ticket, registrare ore e costi, aprire attività."
+              >
+                <Riquadro>
+                  <Riga
+                    icona={<Plug size={14} />}
+                    titolo="Stato"
+                    dettaglio="POST /api/mcp"
+                    stato={
+                      <Stato
+                        testo={apiKeys.some((k) => !k.revocataIl) || mcpAttivo ? "Attivo" : "Non configurato"}
+                        tono={apiKeys.some((k) => !k.revocataIl) || mcpAttivo ? "attivo" : "neutro"}
+                      />
+                    }
+                  />
+                </Riquadro>
 
-              {!mcpAttivo ? (
-                <div className="rounded-md border border-border bg-surface2 px-3 py-2 text-xs text-muted">
-                  Imposta <code className="text-text">MCP_TOKEN</code> nel file{" "}
-                  <code className="text-text">.env</code> (genera un valore con{" "}
-                  <code className="text-text">openssl rand -hex 32</code>) per attivare
-                  l&apos;endpoint.
-                </div>
-              ) : (
                 <div className="space-y-2 rounded-md border border-border bg-surface2 px-3 py-2 text-xs text-muted">
                   <p>
                     Configura il client MCP con l&apos;URL del tuo endpoint e l&apos;header{" "}
-                    <code className="text-text">Authorization: Bearer &lt;MCP_TOKEN&gt;</code>.
-                    Il token è quello in <code className="text-text">.env</code>: chi lo conosce
-                    può leggere e modificare i dati dello studio, trattalo come una password.
+                    <code className="text-text">Authorization: Bearer &lt;chiave&gt;</code>, usando
+                    una delle API key qui sotto.
                   </p>
                   <pre className="overflow-x-auto rounded bg-surface3 p-2 text-[11px] text-text">
 {`{
   "mcpServers": {
     "telaio": {
       "url": "https://<il-tuo-dominio>/api/mcp",
-      "headers": { "Authorization": "Bearer <MCP_TOKEN>" }
+      "headers": { "Authorization": "Bearer <chiave>" }
     }
   }
 }`}
                   </pre>
                 </div>
-              )}
+              </Sezione>
+
+              <Sezione
+                titolo="API key"
+                descrizione="Ogni chiave è revocabile singolarmente senza toccare le altre. La chiave in chiaro si vede una volta sola, alla creazione."
+              >
+                <ElencoApiKey chiavi={apiKeys.map((k) => ({
+                  id: k.id,
+                  nome: k.nome,
+                  suffisso: k.suffisso,
+                  scadeIl: k.scadeIl ? k.scadeIl.toISOString() : null,
+                  ultimoUsoIl: k.ultimoUsoIl ? k.ultimoUsoIl.toISOString() : null,
+                  revocataIl: k.revocataIl ? k.revocataIl.toISOString() : null,
+                  createdAt: k.createdAt.toISOString(),
+                }))} />
+              </Sezione>
+            </>
+          ),
+        },
+        {
+          chiave: "webhook",
+          etichetta: "Webhook",
+          icona: <WebhookIcon size={14} />,
+          gruppo: "Integrazioni",
+          contenuto: (
+            <Sezione
+              titolo="Webhook"
+              descrizione="Notifica un tuo sistema esterno quando succede uno degli eventi scelti: una POST firmata (header X-Telaio-Signature) con i dati dell'evento."
+            >
+              <ElencoWebhook
+                webhook={webhook.map((w) => ({
+                  id: w.id,
+                  nome: w.nome,
+                  url: w.url,
+                  eventi: w.eventi,
+                  attivo: w.attivo,
+                  createdAt: w.createdAt.toISOString(),
+                  _count: w._count,
+                }))}
+                catalogo={CATALOGO_EVENTI.map((e) => ({ chiave: e.chiave, etichetta: e.etichetta }))}
+              />
             </Sezione>
           ),
         },

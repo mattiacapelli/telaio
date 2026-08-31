@@ -876,3 +876,64 @@ model Utente {
 
   @@index([email])
 }
+
+/// Chiave per l'accesso programmatico (oggi: il server MCP).
+///
+/// La chiave vera si mostra una sola volta, alla creazione: qui resta solo
+/// il suo hash, come per le password. Revocare non cancella la riga, così
+/// resta uno storico di chi ha avuto accesso e quando.
+model ApiKey {
+  id          String    @id @default(cuid())
+  nome        String
+  /// SHA-256 della chiave: basta per verificarla, non serve poterla rileggere.
+  hash        String    @unique
+  /// Ultimi caratteri della chiave, per riconoscerla nell'elenco senza rivelarla.
+  suffisso    String
+  scadeIl     DateTime?
+  ultimoUsoIl DateTime?
+  revocataIl  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([hash])
+}
+
+/// Notifica in uscita verso un sistema esterno, come le API integrations
+/// di Twenty: quando succede un evento a cui il webhook è iscritto, Telaio
+/// invia una POST con il payload, firmata con il secret così chi riceve può
+/// verificarne l'origine.
+model Webhook {
+  id          String    @id @default(cuid())
+  nome        String
+  url         String
+  /// Eventi a cui è iscritto, es. "preventivo.accettato". "*" per tutti.
+  eventi      String[]
+  /// Usato per firmare il payload (header X-Telaio-Signature, HMAC-SHA256).
+  secret      String
+  attivo      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  eliminataIl DateTime?
+
+  consegne RegistroWebhook[]
+
+  @@index([attivo])
+  @@index([eliminataIl])
+}
+
+/// Esito di un tentativo di consegna: serve a capire se un webhook sta
+/// davvero funzionando o se l'endpoint remoto è irraggiungibile da tempo.
+model RegistroWebhook {
+  id         String   @id @default(cuid())
+  webhookId  String
+  evento     String
+  /// Payload inviato, per poterlo rivedere in caso di problemi.
+  payload    Json
+  successo   Boolean
+  statusHttp Int?
+  errore     String?
+  inviataIl  DateTime @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, inviataIl])
+}

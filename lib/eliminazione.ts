@@ -31,7 +31,8 @@ export type Entita =
   | "documento"
   | "workflow"
   | "modelloPdf"
-  | "testoStandard";
+  | "testoStandard"
+  | "webhook";
 
 export class ErroreEliminazione extends Error {}
 
@@ -207,6 +208,12 @@ const CONFIG: Record<Entita, ConfigEntita> = {
     campoNome: "titolo",
     nome: async (id) => (await prisma.testoStandard.findUnique({ where: { id }, select: { titolo: true } }))?.titolo ?? null,
   },
+
+  webhook: {
+    modello: "webhook",
+    campoNome: "nome",
+    nome: async (id) => (await prisma.webhook.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null,
+  },
 };
 
 async function figliBloccanti(config: ConfigEntita, id: string) {
@@ -324,6 +331,7 @@ function nomeCestino(entita: Entita, r: any): string {
     case "modelloPdf": return r.nome;
     case "testoStandard": return r.titolo;
     case "documento": return r.nome;
+    case "webhook": return r.nome;
   }
 }
 
@@ -340,6 +348,8 @@ function dettaglioCestino(entita: Entita, r: any): string | undefined {
     case "costo":
     case "registrazioneOre":
       return r.progetto?.nome ?? r.ticket?.titolo ?? undefined;
+    case "webhook":
+      return r.url;
     default:
       return undefined;
   }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 import { leggiSessione } from "@/lib/auth";
+import { verificaChiave } from "@/lib/apikey";
 import { TOOLS, schemaJson, Errore404, ErroreInput, type ToolContesto } from "@/lib/mcp/tools";
 
 export const dynamic = "force-dynamic";
@@ -11,17 +12,23 @@ export const dynamic = "force-dynamic";
  * senza sessione SSE: ogni chiamata è una richiesta/risposta indipendente,
  * il modo più semplice che i client MCP remoti sanno già parlare).
  *
- * Autenticazione: token dedicato in `Authorization: Bearer`, non la sessione
- * dell'app — un agente esterno non deve dipendere da un cookie di
+ * Autenticazione: API key generata da Impostazioni → Accessi, non la
+ * sessione dell'app — un agente esterno non deve dipendere da un cookie di
  * navigazione, e revocare il suo accesso non deve disconnettere anche te.
+ * `MCP_TOKEN` in `.env` resta come fallback per chi lo aveva già configurato
+ * prima che esistessero le API key.
  */
 const PROTOCOLLO = "2024-11-05";
 
-function autorizzato(req: Request) {
-  const atteso = process.env.MCP_TOKEN;
-  if (!atteso) return false;
+async function autorizzato(req: Request) {
   const header = req.headers.get("authorization") ?? "";
-  return header === `Bearer ${atteso}`;
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return false;
+
+  if ((await verificaChiave(token)) !== null) return true;
+
+  const atteso = process.env.MCP_TOKEN;
+  return Boolean(atteso) && token === atteso;
 }
 
 type Richiesta = { jsonrpc?: string; id?: string | number | null; method?: string; params?: any };
@@ -35,7 +42,7 @@ function rpcErrore(id: Richiesta["id"], code: number, message: string) {
 }
 
 export async function POST(req: Request) {
-  if (!autorizzato(req)) {
+  if (!(await autorizzato(req))) {
     return NextResponse.json({ errore: "non autorizzato" }, { status: 401 });
   }
 

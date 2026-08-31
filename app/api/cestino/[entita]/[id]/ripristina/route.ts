@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const ENTITA_VALIDE: Entita[] = [
   "cliente", "preventivo", "progetto", "attivita", "ticket", "fattura",
   "contratto", "costo", "registrazioneOre", "documento", "workflow",
-  "modelloPdf", "testoStandard",
+  "modelloPdf", "testoStandard", "webhook",
 ];
 
 export async function POST(
