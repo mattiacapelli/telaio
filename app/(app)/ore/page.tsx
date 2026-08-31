@@ -1,10 +1,15 @@
 import { getSettimana, getRiferimentiOre } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { InserisciOre } from "@/components/inserisci-ore";
 import { Card } from "@/components/ui/card";
 import { Vuoto } from "@/components/ui-legacy";
 import { ore } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Timesheet") };
+}
 
 const GIORNI = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 

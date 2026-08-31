@@ -20,15 +20,18 @@ export default async function AppLayout({
   const sessione = await leggiSessione();
   if (!sessione) redirect("/login");
 
-  const azienda = await prisma.azienda.findFirst({
-    where: { predefinita: true },
-    select: { ragioneSociale: true },
+  const impostazioni = await prisma.impostazioni.findUnique({
+    where: { id: 1 },
+    select: { nomeSpazio: true, inizialeSpazio: true },
   });
 
   return (
     <NavMobileProvider>
       <div className="flex min-h-screen bg-bg text-text">
-        <Sidebar nomeStudio={azienda?.ragioneSociale} />
+        <Sidebar
+          nomeStudio={impostazioni?.nomeSpazio}
+          inizialeStudio={impostazioni?.inizialeSpazio}
+        />
         <main className="flex min-w-0 flex-1 flex-col">
           <Topbar utente={sessione.nome} />
           <div className="flex-1 p-3 sm:p-5">{children}</div>

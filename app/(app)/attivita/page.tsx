@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAttivita } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
 import { Vuoto } from "@/components/ui-legacy";
@@ -8,6 +9,10 @@ import { AvviaTimer } from "@/components/avvia-timer";
 import { CircleCheck, FolderKanban, Clock, Calendar, Tag } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Attività") };
+}
 
 const COLONNE = [
   { stato: "DA_FARE", titolo: "Da fare" },

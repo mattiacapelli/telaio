@@ -1,4 +1,5 @@
 import { getFatture } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
 import { GeneraDaOre, NuovaFattura } from "@/components/nuova-fattura";
@@ -10,6 +11,10 @@ import { eur, data, daGiorni } from "@/lib/format";
 import { getClientiPerSelezione } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Fatture") };
+}
 
 const COLONNE = [
   { stato: "DA_EMETTERE", titolo: "Da emettere" },

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAttivitaCompleta } from "@/lib/queries";
+import { titoloPagina, nomeRecord } from "@/lib/titolo";
 import { Badge } from "@/components/ui/badge";
 import { Barra } from "@/components/ui-legacy";
 import { Chip, coloreDa } from "@/components/chip";
@@ -16,6 +17,12 @@ import {
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const nome = await nomeRecord("attivita", id);
+  return { title: await titoloPagina(nome ?? "Attività") };
+}
 
 const STATI: Record<string, string> = {
   DA_FARE: "Da fare",

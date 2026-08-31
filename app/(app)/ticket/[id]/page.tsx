@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTicketCompleto, getPredefinitiTrasferta } from "@/lib/queries";
+import { titoloPagina, nomeRecord } from "@/lib/titolo";
 import { Badge } from "@/components/ui/badge";
 import { Chip, coloreDa } from "@/components/chip";
 import { eur, eurCent, ore, data, dataEstesa, daGiorni } from "@/lib/format";
@@ -17,6 +18,12 @@ import {
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const nome = await nomeRecord("ticket", id);
+  return { title: await titoloPagina(nome ?? "Ticket") };
+}
 
 const STATI: Record<string, string> = {
   APERTO: "Aperto",

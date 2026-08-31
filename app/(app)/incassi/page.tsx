@@ -1,10 +1,15 @@
 import { getIncassi, getFattureDaIncassare } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { RegistraIncasso, EliminaIncasso } from "@/components/registra-incasso";
 import { Card, CardHead } from "@/components/ui/card";
 import { Stat, Vuoto } from "@/components/ui-legacy";
 import { eur, data } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Incassi") };
+}
 
 const MESI = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 

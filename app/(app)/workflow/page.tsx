@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { titoloPagina } from "@/lib/titolo";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,10 @@ import { Plus, Workflow as IconaWorkflow } from "lucide-react";
 import { EVENTI, FREQUENZE } from "@/lib/workflow/tipi";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Workflow") };
+}
 
 const INNESCHI: Record<string, string> = {
   EVENTO: "Evento",

@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCliente } from "@/lib/queries";
+import { titoloPagina, nomeRecord } from "@/lib/titolo";
 import { Card, CardHead } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EliminaRecord } from "@/components/elimina-record";
 import { eur, eurCent, ore, data, n } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const nome = await nomeRecord("cliente", id);
+  return { title: await titoloPagina(nome ?? "Cliente") };
+}
 
 export default async function ClientePage({
   params,

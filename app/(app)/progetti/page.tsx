@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getProgetti } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
 import { Barra, Vuoto } from "@/components/ui-legacy";
@@ -8,6 +9,10 @@ import { eur, ore, data } from "@/lib/format";
 import { FolderKanban, Building2, Euro, Clock, Tag } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Progetti") };
+}
 
 const COLONNE = [
   { stato: "DA_AVVIARE", titolo: "Da avviare" },

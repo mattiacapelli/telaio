@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getContratti, getClientiPerSelezione } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,10 @@ import { TIPI, STATI, PERIODICITA } from "@/lib/contratti";
 import { FileSignature, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Contratti") };
+}
 
 export default async function ContrattiPage() {
   const [contratti, clienti, progetti, aziende] = await Promise.all([

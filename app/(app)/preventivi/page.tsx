@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPreventivi, getClientiPerSelezione, getTariffaListino } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { prisma } from "@/lib/prisma";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,10 @@ import { NuovoPreventivo } from "@/components/nuovo-preventivo";
 import { FileText, Building2, Euro, Calendar, Tag } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Preventivi") };
+}
 
 const COLONNE = [
   { stato: "BOZZA", titolo: "Bozza" },

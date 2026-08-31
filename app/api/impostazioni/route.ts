@@ -7,6 +7,8 @@ import { invalidate } from "@/lib/redis";
 export const dynamic = "force-dynamic";
 
 const Modifica = z.object({
+  nomeSpazio: z.string().min(1).optional(),
+  inizialeSpazio: z.string().max(2).optional().nullable(),
   tariffaListino: z.coerce.number().nonnegative().optional(),
   terminiPagamento: z.coerce.number().int().nonnegative().optional(),
   modalitaTrasferta: z.enum(["CHILOMETRICA", "PIE_DI_LISTA", "FORFETTARIA"]).optional(),

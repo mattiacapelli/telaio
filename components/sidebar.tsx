@@ -58,7 +58,14 @@ const IMPOSTAZIONI = {
   tinta: "gray",
 } as const;
 
-export function Sidebar({ nomeStudio = "Telaio" }: { nomeStudio?: string }) {
+export function Sidebar({
+  nomeStudio = "Telaio",
+  inizialeStudio,
+}: {
+  nomeStudio?: string;
+  inizialeStudio?: string | null;
+}) {
+  const iniziale = (inizialeStudio || nomeStudio.trim()[0] || "T").toUpperCase();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { aperto, chiudi } = useNavMobile();
@@ -102,7 +109,7 @@ export function Sidebar({ nomeStudio = "Telaio" }: { nomeStudio?: string }) {
       {/* Intestazione workspace, come la riga "Mattia Capelli" di Twenty. */}
       <div className="flex h-[48px] flex-none items-center gap-2 px-2">
         <div className="grid h-[24px] w-[24px] flex-none place-items-center rounded bg-accent text-xs font-semibold text-accent-fg">
-          T
+          {iniziale}
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">

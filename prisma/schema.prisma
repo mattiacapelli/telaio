@@ -807,6 +807,13 @@ model TestoStandard {
 /// uniche per tutto lo studio.
 model Impostazioni {
   id                  Int               @id @default(1)
+  /// Nome dello spazio di lavoro: sidebar e titolo delle pagine. Non è un
+  /// dato fiscale — a differenza della ragione sociale, resta lo stesso
+  /// anche cambiando quale Azienda è predefinita per la fatturazione.
+  nomeSpazio          String            @default("Telaio")
+  /// Iniziale mostrata nel riquadro colorato della sidebar. Se vuota si usa
+  /// la prima lettera di nomeSpazio.
+  inizialeSpazio      String?
   tariffaListino      Decimal           @default(65) @db.Decimal(10, 2)
   terminiPagamento    Int               @default(30)
   twentyWorkspace     String?

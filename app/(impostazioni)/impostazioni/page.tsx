@@ -1,4 +1,5 @@
 import { getImpostazioni } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
 import { SyncTwenty } from "@/components/sync-twenty";
@@ -22,6 +23,10 @@ import {
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Impostazioni") };
+}
 
 async function ultimaEsecuzione() {
   try {
@@ -73,6 +78,34 @@ export default async function ImpostazioniPage() {
           gruppo: "Studio",
           contenuto: (
             <>
+              <Sezione
+                titolo="Spazio di lavoro"
+                descrizione="Il nome mostrato nella sidebar e nel titolo delle pagine. Non è un dato fiscale: resta lo stesso anche cambiando quale azienda emette i documenti."
+              >
+                <Riquadro>
+                  <Dato etichetta="Nome" valore={imp?.nomeSpazio} />
+                  <Dato
+                    etichetta="Iniziale"
+                    valore={imp?.inizialeSpazio}
+                    vuoto={`Prima lettera del nome (${(imp?.nomeSpazio ?? "T")[0]?.toUpperCase()})`}
+                  />
+                </Riquadro>
+                <div className="flex">
+                  <div className="flex-1" />
+                  <ModificaDatiStudio
+                    titolo="Spazio di lavoro"
+                    valori={{
+                      nomeSpazio: imp?.nomeSpazio ?? "Telaio",
+                      inizialeSpazio: imp?.inizialeSpazio ?? "",
+                    }}
+                    campi={[
+                      { chiave: "nomeSpazio", etichetta: "Nome" },
+                      { chiave: "inizialeSpazio", etichetta: "Iniziale", nota: "1-2 caratteri, facoltativa" },
+                    ]}
+                  />
+                </div>
+              </Sezione>
+
               <Sezione
                 titolo="Aziende"
                 descrizione="Le ragioni sociali da cui puoi emettere documenti. Su ogni preventivo o contratto puoi scegliere quale usare; senza scelta si usa quella predefinita."

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDashboard } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { redis } from "@/lib/redis";
 import { Card, CardHead } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,10 @@ import {
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Dashboard") };
+}
 
 const PRIORITA: Record<string, string> = {
   BASSA: "Bassa", MEDIA: "Media", ALTA: "Alta", URGENTE: "Urgente",

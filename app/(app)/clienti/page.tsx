@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getClienti } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { Card } from "@/components/ui/card";
 import { Vuoto } from "@/components/ui-legacy";
 import { Chip } from "@/components/chip";
@@ -8,6 +9,10 @@ import { eur, eurCent } from "@/lib/format";
 import { SyncTwenty } from "@/components/sync-twenty";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Clienti") };
+}
 
 export default async function ClientiPage() {
   const clienti = await getClienti();

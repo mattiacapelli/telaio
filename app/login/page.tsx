@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
 import { leggiSessione } from "@/lib/auth";
 import { FormLogin } from "@/components/form-login";
+import { titoloPagina } from "@/lib/titolo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Accedi") };
+}
 
 export default async function LoginPage({
   searchParams,

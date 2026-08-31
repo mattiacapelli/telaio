@@ -10,7 +10,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Telaio · Studio Ferrero",
+  // Titolo di riserva, sovrascritto da ogni pagina con generateMetadata:
+  // qui non possiamo leggere Impostazioni, perché il root layout copre
+  // anche /login, dove ancora non c'è una sessione da cui partire.
+  title: "Telaio",
   description:
     "Gestionale per studio: clienti, preventivi, progetti, ore, fatture e incassi.",
 };

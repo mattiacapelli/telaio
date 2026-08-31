@@ -3,9 +3,16 @@ import { notFound } from "next/navigation";
 import { X } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PdfBuilder } from "@/components/pdf-builder/builder";
+import { titoloPagina } from "@/lib/titolo";
 import type { BloccoPdf } from "@/lib/pdf/blocchi";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const m = await prisma.modelloPdf.findUnique({ where: { id }, select: { nome: true } });
+  return { title: await titoloPagina(m?.nome ?? "Modello PDF") };
+}
 
 export default async function ModelloPdfPage({
   params,

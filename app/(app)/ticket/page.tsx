@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTicket } from "@/lib/queries";
+import { titoloPagina } from "@/lib/titolo";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
 import { Stat, Vuoto } from "@/components/ui-legacy";
@@ -9,6 +10,10 @@ import { LifeBuoy, Building2, Clock, Tag, AlertCircle } from "lucide-react";
 import { AvviaTimer } from "@/components/avvia-timer";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: await titoloPagina("Ticket") };
+}
 
 const COLONNE = [
   { stato: "APERTO", titolo: "Aperto" },
