@@ -122,7 +122,10 @@ export function Board({
                   />
                 ))}
                 {items.length === 0 && (
-                  <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-md text-faint">
+                  <div
+                    key="vuoto"
+                    className="rounded-md border border-dashed border-border px-3 py-6 text-center text-md text-faint"
+                  >
                     Trascina qui
                   </div>
                 )}

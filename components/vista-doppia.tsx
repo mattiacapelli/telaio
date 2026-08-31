@@ -42,9 +42,15 @@ export function VistaDoppia({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <SelettoreVista chiave={chiave} vista={vista} setVista={setVista} />
-        {intestazione}
+        {/* `intestazione` e `azioni` sono JSX creato dal server component
+            chiamante e passato come prop: senza una key qui, React a volte
+            confonde questo slot con una lista quando il contenuto del
+            componente varia in forma (rami condizionali diversi tra le
+            pagine), producendo un avviso "key" fuorviante che punta al
+            chiamante invece che a questo div. */}
+        <div key="intestazione">{intestazione}</div>
         <div className="flex-1" />
-        {azioni}
+        <div key="azioni">{azioni}</div>
       </div>
 
       {vista === "kanban" ? (
