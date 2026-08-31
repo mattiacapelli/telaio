@@ -579,10 +579,22 @@ export async function getContrattiPerSelezione() {
 export async function getProdottiPerSelezione() {
   const p = await prisma.prodotto.findMany({
     where: { eliminataIl: null },
-    select: { id: true, nome: true },
+    select: {
+      id: true,
+      nome: true,
+      piani: {
+        where: { eliminataIl: null },
+        select: { id: true, nome: true, canone: true },
+        orderBy: { canone: "asc" },
+      },
+    },
     orderBy: { nome: "asc" },
   });
-  return p;
+  return p.map((x) => ({
+    id: x.id,
+    nome: x.nome,
+    piani: x.piani.map((pi) => ({ id: pi.id, nome: pi.nome, canone: n(pi.canone) })),
+  }));
 }
 
 /** Predefiniti per il calcolo delle trasferte. */

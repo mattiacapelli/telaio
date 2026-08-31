@@ -17,7 +17,7 @@ export function NuovoContratto({
 }: {
   clienti: { id: string; ragioneSociale: string; tariffaOraria: number }[];
   progetti: { id: string; nome: string }[];
-  prodotti?: { id: string; nome: string }[];
+  prodotti?: { id: string; nome: string; piani: { id: string; nome: string; canone: number }[] }[];
   aziende?: { id: string; ragioneSociale: string }[];
 }) {
   const router = useRouter();
@@ -25,6 +25,7 @@ export function NuovoContratto({
   const [salvando, setSalvando] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
   const [prodottiIds, setProdottiIds] = useState<string[]>([]);
+  const [pianiScelti, setPianiScelti] = useState<Record<string, string>>({});
 
   const oggi = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState({
@@ -46,6 +47,15 @@ export function NuovoContratto({
 
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => setD({ ...d, [k]: v });
 
+  function cambiaSelezione(ids: string[]) {
+    setProdottiIds(ids);
+    setPianiScelti((prev) => {
+      const next: Record<string, string> = {};
+      for (const id of ids) if (prev[id]) next[id] = prev[id];
+      return next;
+    });
+  }
+
   async function salva(e: React.FormEvent) {
     e.preventDefault();
     setErrore(null);
@@ -66,7 +76,10 @@ export function NuovoContratto({
         scadeIl: d.scadeIl || null,
         note: d.note || null,
         aziendaId: d.aziendaId || null,
-        prodottiIds,
+        prodotti: prodottiIds.map((prodottoId) => ({
+          prodottoId,
+          pianoId: pianiScelti[prodottoId] || null,
+        })),
       }),
     }).catch(() => null);
     setSalvando(false);
@@ -105,9 +118,30 @@ export function NuovoContratto({
                 onTitoloChange={(v) => set("titolo", v)}
                 prodotti={prodotti}
                 selezionati={prodottiIds}
-                onSelezionatiChange={setProdottiIds}
+                onSelezionatiChange={cambiaSelezione}
               />
             </Campo>
+
+            {prodottiIds
+              .map((id) => prodotti.find((p) => p.id === id))
+              .filter((p): p is NonNullable<typeof p> => Boolean(p) && p!.piani.length > 0)
+              .map((p) => (
+                <Campo key={p.id} etichetta={`Piano · ${p.nome}`}>
+                  <Select
+                    value={pianiScelti[p.id] ?? ""}
+                    onChange={(e) =>
+                      setPianiScelti((prev) => ({ ...prev, [p.id]: e.target.value }))
+                    }
+                  >
+                    <option value="">Canone libero (nessun piano)</option>
+                    {p.piani.map((piano) => (
+                      <option key={piano.id} value={piano.id}>
+                        {piano.nome} · {piano.canone.toLocaleString("it-IT", { style: "currency", currency: "EUR" })}
+                      </option>
+                    ))}
+                  </Select>
+                </Campo>
+              ))}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo etichetta="Cliente">

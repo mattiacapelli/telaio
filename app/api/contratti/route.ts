@@ -27,7 +27,10 @@ const Nuovo = z.object({
   preavvisoGiorni: z.coerce.number().int().nonnegative().default(30),
   note: z.string().optional().nullable(),
   aziendaId: z.string().optional().nullable(),
-  prodottiIds: z.array(z.string()).optional().default([]),
+  prodotti: z
+    .array(z.object({ prodottoId: z.string(), pianoId: z.string().optional().nullable() }))
+    .optional()
+    .default([]),
 });
 
 export async function POST(req: Request) {
@@ -60,10 +63,25 @@ export async function POST(req: Request) {
     );
   }
 
-  if (d.prodottiIds.length > 0) {
-    const trovati = await prisma.prodotto.count({ where: { id: { in: d.prodottiIds } } });
-    if (trovati !== d.prodottiIds.length) {
+  if (d.prodotti.length > 0) {
+    const idProdotti = d.prodotti.map((p) => p.prodottoId);
+    const trovati = await prisma.prodotto.count({ where: { id: { in: idProdotti } } });
+    if (trovati !== idProdotti.length) {
       return NextResponse.json({ errore: "uno o più prodotti non esistono" }, { status: 400 });
+    }
+    const idPiani = d.prodotti.map((p) => p.pianoId).filter((x): x is string => !!x);
+    if (idPiani.length > 0) {
+      const piani = await prisma.pianoProdotto.findMany({ where: { id: { in: idPiani } }, select: { id: true, prodottoId: true } });
+      if (piani.length !== idPiani.length) {
+        return NextResponse.json({ errore: "uno o più piani non esistono" }, { status: 400 });
+      }
+      for (const p of d.prodotti) {
+        if (!p.pianoId) continue;
+        const piano = piani.find((x) => x.id === p.pianoId);
+        if (piano?.prodottoId !== p.prodottoId) {
+          return NextResponse.json({ errore: "un piano selezionato non appartiene al prodotto scelto" }, { status: 400 });
+        }
+      }
     }
   }
 
@@ -99,14 +117,14 @@ export async function POST(req: Request) {
   // Un prodotto già in licenza a questo cliente si ricollega al nuovo
   // contratto invece di duplicare la licenza: il canone del prodotto è
   // uno solo, anche se cambia il contratto che lo copre.
-  for (const prodottoId of d.prodottiIds) {
+  for (const { prodottoId, pianoId } of d.prodotti) {
     const esistente = await prisma.licenzaProdotto.findFirst({
       where: { prodottoId, clienteId: d.clienteId, eliminataIl: null },
     });
     if (esistente) {
       await prisma.licenzaProdotto.update({
         where: { id: esistente.id },
-        data: { contrattoId: c.id },
+        data: { contrattoId: c.id, pianoId: pianoId || null },
       });
     } else {
       await prisma.licenzaProdotto.create({
@@ -114,6 +132,7 @@ export async function POST(req: Request) {
           prodottoId,
           clienteId: d.clienteId,
           contrattoId: c.id,
+          pianoId: pianoId || null,
           attivataIl: new Date(d.inizioIl),
         },
       });
