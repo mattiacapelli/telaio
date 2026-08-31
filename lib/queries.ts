@@ -276,10 +276,11 @@ export async function getCliente(id: string) {
     where: { id },
     include: {
       referenti: true,
-      progetti: { include: { registrazioni: true } },
-      ticket: { orderBy: { apertoIl: "desc" }, take: 5 },
+      progetti: { include: { registrazioni: true }, orderBy: { updatedAt: "desc" } },
+      ticket: { orderBy: { apertoIl: "desc" } },
       fatture: { include: { incassi: true }, orderBy: { emessaIl: "desc" } },
       preventivi: { orderBy: { createdAt: "desc" } },
+      contratti: { orderBy: { createdAt: "desc" } },
     },
   });
   return c;
