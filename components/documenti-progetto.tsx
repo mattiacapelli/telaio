@@ -24,8 +24,9 @@ function pesoLeggibile(byte: number) {
 /**
  * Allegati di un record.
  *
- * Stesso componente per progetti, ticket e contratti: cambia solo l'endpoint,
- * perché il modello Documento è condiviso.
+ * Stesso componente per progetti, ticket, contratti, prodotti, clienti e
+ * preventivi: cambia solo l'endpoint, perché il modello Documento è
+ * condiviso.
  */
 export function DocumentiProgetto({
   progettoId,
@@ -33,7 +34,7 @@ export function DocumentiProgetto({
   documenti,
 }: {
   progettoId: string;
-  entita?: "progetti" | "ticket" | "contratti";
+  entita?: "progetti" | "ticket" | "contratti" | "prodotti" | "clienti" | "preventivi";
   documenti: Documento[];
 }) {
   const router = useRouter();

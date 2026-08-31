@@ -40,6 +40,7 @@ model Cliente {
   contratti     Contratto[]
   licenze       LicenzaProdotto[]
   registrazioni RegistrazioneOre[]
+  documenti     Documento[]
 
   @@index([ragioneSociale])
   @@index([eliminataIl])
@@ -115,6 +116,7 @@ model Preventivo {
   /// Motivo dell'ultima modifica: viene trasferito alla revisione quando
   /// questa versione verrà a sua volta congelata.
   motivoCorrente    String?
+  documenti         Documento[]
 
   @@index([stato])
   @@index([eliminataIl])
@@ -302,6 +304,9 @@ model Documento {
   progettoId  String?
   ticketId    String?
   contrattoId String?
+  prodottoId  String?
+  clienteId   String?
+  preventivoId String?
   nome        String
   chiave      String    @unique // percorso dell'oggetto su S3
   tipo        String // MIME
@@ -310,13 +315,19 @@ model Documento {
   createdAt   DateTime  @default(now())
   eliminataIl DateTime?
 
-  progetto  Progetto?  @relation(fields: [progettoId], references: [id], onDelete: Cascade)
-  ticket    Ticket?    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  contratto Contratto? @relation(fields: [contrattoId], references: [id], onDelete: Cascade)
+  progetto   Progetto?   @relation(fields: [progettoId], references: [id], onDelete: Cascade)
+  ticket     Ticket?     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  contratto  Contratto?  @relation(fields: [contrattoId], references: [id], onDelete: Cascade)
+  prodotto   Prodotto?   @relation(fields: [prodottoId], references: [id], onDelete: Cascade)
+  cliente    Cliente?    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  preventivo Preventivo? @relation(fields: [preventivoId], references: [id], onDelete: Cascade)
 
   @@index([progettoId])
   @@index([ticketId])
   @@index([contrattoId])
+  @@index([prodottoId])
+  @@index([clienteId])
+  @@index([preventivoId])
   @@index([eliminataIl])
 }
 
@@ -729,9 +740,10 @@ model Prodotto {
   updatedAt     DateTime  @updatedAt
   eliminataIl   DateTime?
 
-  progetto Progetto?         @relation(fields: [progettoId], references: [id], onDelete: SetNull)
-  licenze  LicenzaProdotto[]
-  piani    PianoProdotto[]
+  progetto  Progetto?         @relation(fields: [progettoId], references: [id], onDelete: SetNull)
+  licenze   LicenzaProdotto[]
+  piani     PianoProdotto[]
+  documenti Documento[]
 
   @@index([eliminataIl])
 }

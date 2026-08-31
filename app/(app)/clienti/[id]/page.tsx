@@ -7,11 +7,12 @@ import { Chip, coloreDa } from "@/components/chip";
 import { EliminaRecord } from "@/components/elimina-record";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { InserisciOre } from "@/components/inserisci-ore";
+import { DocumentiProgetto } from "@/components/documenti-progetto";
 import { eur, eurCent, ore, data, dataEstesa, n } from "@/lib/format";
 import { STATI as STATI_CONTRATTO, TIPI as TIPI_CONTRATTO } from "@/lib/contratti";
 import {
   Building2, MapPin, CreditCard, Mail, Hash, Clock, Wallet, Euro,
-  Users, FolderKanban, LifeBuoy, FileText, Receipt, FileSignature,
+  Users, FolderKanban, LifeBuoy, FileText, Receipt, FileSignature, Paperclip,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -371,6 +372,15 @@ export default async function ClientePage({
                     )}
                   </div>
                 </div>
+              ),
+            },
+            {
+              chiave: "documenti",
+              etichetta: "Documenti",
+              icona: <Paperclip size={13} />,
+              conteggio: c.documenti.length,
+              contenuto: (
+                <DocumentiProgetto progettoId={c.id} entita="clienti" documenti={c.documenti} />
               ),
             },
             {

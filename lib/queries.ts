@@ -287,6 +287,7 @@ export async function getCliente(id: string) {
       // Ore registrate direttamente sul cliente, non su un progetto/ticket:
       // lavoro generico che non appartiene a nient'altro.
       registrazioni: { where: { eliminataIl: null }, orderBy: { data: "desc" } },
+      documenti: { where: { eliminataIl: null }, orderBy: { createdAt: "desc" } },
     },
   });
   return c;
@@ -1118,6 +1119,7 @@ export async function getProdottoCompleto(id: string) {
         include: { cliente: true, contratto: { select: { id: true, numero: true } }, piano: true },
         orderBy: { createdAt: "desc" },
       },
+      documenti: { where: { eliminataIl: null }, orderBy: { createdAt: "desc" } },
     },
   });
   if (!p) return null;
@@ -1128,6 +1130,7 @@ export async function getProdottoCompleto(id: string) {
     descrizione: p.descrizione,
     prezzoListino: p.prezzoListino === null ? null : n(p.prezzoListino),
     progetto: p.progetto,
+    documenti: p.documenti,
     piani: p.piani.map((pi) => ({
       id: pi.id,
       nome: pi.nome,

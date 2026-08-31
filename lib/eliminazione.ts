@@ -70,6 +70,7 @@ const CONFIG: Record<Entita, ConfigEntita> = {
       { etichetta: "ticket", conta: (id) => prisma.ticket.count({ where: { clienteId: id, eliminataIl: null } }) },
       { etichetta: "fatture", conta: (id) => prisma.fattura.count({ where: { clienteId: id, eliminataIl: null } }) },
       { etichetta: "contratti", conta: (id) => prisma.contratto.count({ where: { clienteId: id, eliminataIl: null } }) },
+      { etichetta: "documenti", conta: (id) => prisma.documento.count({ where: { clienteId: id, eliminataIl: null } }) },
     ],
   },
 
@@ -79,6 +80,7 @@ const CONFIG: Record<Entita, ConfigEntita> = {
     nome: async (id) => (await prisma.preventivo.findUnique({ where: { id }, select: { numero: true } }))?.numero ?? null,
     figli: [
       { etichetta: "un progetto", conta: async (id) => (await prisma.progetto.count({ where: { preventivoId: id, eliminataIl: null } })) },
+      { etichetta: "documenti", conta: (id) => prisma.documento.count({ where: { preventivoId: id, eliminataIl: null } }) },
     ],
   },
 
@@ -247,6 +249,7 @@ const CONFIG: Record<Entita, ConfigEntita> = {
     nome: async (id) => (await prisma.prodotto.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null,
     figli: [
       { etichetta: "licenze attive", conta: (id) => prisma.licenzaProdotto.count({ where: { prodottoId: id, stato: { in: ["ATTIVA", "SOSPESA"] } } }) },
+      { etichetta: "documenti", conta: (id) => prisma.documento.count({ where: { prodottoId: id, eliminataIl: null } }) },
     ],
   },
 

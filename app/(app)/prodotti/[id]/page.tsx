@@ -9,9 +9,10 @@ import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello"
 import { NuovaLicenza } from "@/components/nuova-licenza";
 import { NuovoPiano } from "@/components/nuovo-piano";
 import { StatoLicenza } from "@/components/stato-licenza";
+import { DocumentiProgetto } from "@/components/documenti-progetto";
 import { eur, ore, data } from "@/lib/format";
 import { PERIODICITA } from "@/lib/contratti";
-import { Package, FolderKanban, Euro, Users, Layers } from "lucide-react";
+import { Package, FolderKanban, Euro, Users, Layers, Paperclip } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -176,6 +177,15 @@ export default async function ProdottoPage({
                     </div>
                   )}
                 </div>
+              ),
+            },
+            {
+              chiave: "documenti",
+              etichetta: "Documenti",
+              icona: <Paperclip size={13} />,
+              conteggio: p.documenti.length,
+              contenuto: (
+                <DocumentiProgetto progettoId={p.id} entita="prodotti" documenti={p.documenti} />
               ),
             },
           ]}

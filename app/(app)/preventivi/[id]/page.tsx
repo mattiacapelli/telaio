@@ -11,6 +11,7 @@ import { titoloPagina, nomeRecord } from "@/lib/titolo";
 import { etichettaRevisione, type VoceCongelata } from "@/lib/revisioni";
 import { ModificaPreventivo } from "@/components/modifica-preventivo";
 import { EliminaRecord } from "@/components/elimina-record";
+import { DocumentiProgetto } from "@/components/documenti-progetto";
 import { FileDown } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export default async function PreventivoPage({
         referente: true,
         voci: { orderBy: { ordine: "asc" } },
         revisioni: { orderBy: { numero: "desc" } },
+        documenti: { where: { eliminataIl: null }, orderBy: { createdAt: "desc" } },
       },
     }),
     getClientiPerSelezione(),
@@ -331,6 +333,11 @@ export default async function PreventivoPage({
           </div>
         </Card>
       )}
+
+      <Card>
+        <CardHead titolo="Documenti" extra={<span className="text-xs text-faint">{p.documenti.length}</span>} />
+        <DocumentiProgetto progettoId={p.id} entita="preventivi" documenti={p.documenti} />
+      </Card>
     </div>
   );
 }
