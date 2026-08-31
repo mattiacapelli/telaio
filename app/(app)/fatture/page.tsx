@@ -29,7 +29,15 @@ export default async function FatturePage() {
     getClientiPerSelezione(),
   ]);
   if (fatture.length === 0) {
-    return <Vuoto titolo="Nessuna fattura" nota="Genera la prima fattura dalle ore registrate." />;
+    return (
+      <div className="tl-in">
+        <div className="mb-3 flex items-center justify-end gap-2">
+          <GeneraDaOre />
+          <NuovaFattura clienti={clienti} />
+        </div>
+        <Vuoto titolo="Nessuna fattura" nota="Genera la prima fattura dalle ore registrate." />
+      </div>
+    );
   }
 
   const emesso = fatture

@@ -33,7 +33,9 @@ export type Entita =
   | "modelloPdf"
   | "testoStandard"
   | "webhook"
-  | "contoIncasso";
+  | "contoIncasso"
+  | "prodotto"
+  | "licenzaProdotto";
 
 export class ErroreEliminazione extends Error {}
 
@@ -237,6 +239,27 @@ const CONFIG: Record<Entita, ConfigEntita> = {
       if (altro) await prisma.contoIncasso.update({ where: { id: altro.id }, data: { predefinito: true } });
     },
   },
+
+  prodotto: {
+    modello: "prodotto",
+    campoNome: "nome",
+    nome: async (id) => (await prisma.prodotto.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null,
+    figli: [
+      { etichetta: "licenze attive", conta: (id) => prisma.licenzaProdotto.count({ where: { prodottoId: id, stato: { in: ["ATTIVA", "SOSPESA"] } } }) },
+    ],
+  },
+
+  licenzaProdotto: {
+    modello: "licenzaProdotto",
+    campoNome: "id",
+    nome: async (id) => {
+      const l = await prisma.licenzaProdotto.findUnique({
+        where: { id },
+        include: { prodotto: { select: { nome: true } }, cliente: { select: { ragioneSociale: true } } },
+      });
+      return l ? `${l.prodotto.nome} · ${l.cliente.ragioneSociale}` : null;
+    },
+  },
 };
 
 async function figliBloccanti(config: ConfigEntita, id: string) {
@@ -319,6 +342,7 @@ const INCLUDE_CESTINO: Partial<Record<Entita, Record<string, boolean>>> = {
   contratto: { cliente: true },
   costo: { progetto: true, ticket: true },
   registrazioneOre: { progetto: true, ticket: true },
+  licenzaProdotto: { prodotto: true, cliente: true, contratto: true },
 };
 
 /** Elenco del cestino per un'entità, con il nome e un dettaglio leggibile. */
@@ -356,6 +380,8 @@ function nomeCestino(entita: Entita, r: any): string {
     case "documento": return r.nome;
     case "webhook": return r.nome;
     case "contoIncasso": return r.nome;
+    case "prodotto": return r.nome;
+    case "licenzaProdotto": return `${r.prodotto?.nome ?? "?"} · ${r.cliente?.ragioneSociale ?? "?"}`;
   }
 }
 
@@ -374,6 +400,8 @@ function dettaglioCestino(entita: Entita, r: any): string | undefined {
       return r.progetto?.nome ?? r.ticket?.titolo ?? undefined;
     case "webhook":
       return r.url;
+    case "licenzaProdotto":
+      return r.contratto?.numero;
     default:
       return undefined;
   }

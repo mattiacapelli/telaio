@@ -15,6 +15,7 @@ const Nuova = z.object({
   progettoId: z.string().optional().nullable(),
   attivitaId: z.string().optional().nullable(),
   ticketId: z.string().optional().nullable(),
+  clienteId: z.string().optional().nullable(),
 });
 
 /**
@@ -40,11 +41,17 @@ export async function POST(req: Request) {
 
   // Le ore devono appartenere a qualcosa, altrimenti non sono attribuibili
   // né a un progetto né a un cliente.
-  if (!d.progettoId && !d.attivitaId && !d.ticketId) {
+  if (!d.progettoId && !d.attivitaId && !d.ticketId && !d.clienteId) {
     return NextResponse.json(
-      { errore: "indica un progetto, un'attività o un ticket" },
+      { errore: "indica un progetto, un'attività, un ticket o un cliente" },
       { status: 400 },
     );
+  }
+  if (d.clienteId) {
+    const c = await prisma.cliente.findUnique({ where: { id: d.clienteId }, select: { id: true } });
+    if (!c) {
+      return NextResponse.json({ errore: "cliente inesistente" }, { status: 400 });
+    }
   }
 
   // Se arriva un'attività, il progetto si deduce da lei: così le ore
@@ -82,6 +89,7 @@ export async function POST(req: Request) {
       progettoId,
       attivitaId: d.attivitaId || null,
       ticketId: d.ticketId || null,
+      clienteId: d.clienteId || null,
     },
     select: { id: true, ore: true },
   });

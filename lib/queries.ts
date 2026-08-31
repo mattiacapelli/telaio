@@ -89,7 +89,7 @@ export async function getDashboard() {
       return {
         id: p.id,
         nome: p.nome,
-        cliente: p.cliente.ragioneSociale,
+        cliente: p.cliente?.ragioneSociale ?? "Interno",
         stato: p.stato,
         valore: n(p.valore),
         budgetOre: budget,
@@ -97,7 +97,10 @@ export async function getDashboard() {
         oltreBudget: oreFatte > budget,
         consegnaIl: p.consegnaIl,
         // Margine residuo alla tariffa del cliente: dice se il progetto regge.
-        margine: n(p.valore) - oreFatte * n(p.cliente.tariffaOraria),
+        // Un progetto interno non ha una tariffa cliente da confrontare: il
+        // margine coincide col valore assegnato, che qui rappresenta il
+        // budget interno più che un ricavo.
+        margine: n(p.valore) - oreFatte * n(p.cliente?.tariffaOraria ?? 0),
       };
     });
 
@@ -281,6 +284,9 @@ export async function getCliente(id: string) {
       fatture: { include: { incassi: true }, orderBy: { emessaIl: "desc" } },
       preventivi: { orderBy: { createdAt: "desc" } },
       contratti: { orderBy: { createdAt: "desc" } },
+      // Ore registrate direttamente sul cliente, non su un progetto/ticket:
+      // lavoro generico che non appartiene a nient'altro.
+      registrazioni: { where: { eliminataIl: null }, orderBy: { data: "desc" } },
     },
   });
   return c;
@@ -323,7 +329,7 @@ export async function getProgetti() {
     return p.map((x) => ({
       id: x.id,
       nome: x.nome,
-      cliente: x.cliente.ragioneSociale,
+      cliente: x.cliente?.ragioneSociale ?? "Interno",
       stato: x.stato,
       valore: n(x.valore),
       budgetOre: n(x.budgetOre),
@@ -395,24 +401,26 @@ export async function getSettimana(offset = 0) {
       progetto: true,
       attivita: true,
       ticket: true,
+      cliente: true,
     },
     orderBy: { data: "asc" },
   });
 
-  // Raggruppa per attività/ticket: una riga per la griglia settimanale.
+  // Raggruppa per attività/ticket/cliente: una riga per la griglia settimanale.
   const gruppi = new Map<
     string,
     { etichetta: string; contesto: string; giorni: number[]; totale: number }
   >();
 
   for (const r of righe) {
-    const chiave = r.attivitaId ?? r.ticketId ?? r.progettoId ?? "altro";
+    const chiave = r.attivitaId ?? r.ticketId ?? r.progettoId ?? r.clienteId ?? "altro";
     const etichetta =
       r.attivita?.titolo ??
       (r.ticket ? `#${r.ticket.numero} ${r.ticket.titolo}` : null) ??
       r.progetto?.nome ??
+      r.cliente?.ragioneSociale ??
       "Altro";
-    const contesto = r.progetto?.nome ?? "—";
+    const contesto = r.progetto?.nome ?? (r.cliente ? "lavoro generico" : "—");
 
     if (!gruppi.has(chiave)) {
       gruppi.set(chiave, {
@@ -547,6 +555,26 @@ export async function getClientiPerSelezione() {
   return c.map((x) => ({ ...x, tariffaOraria: n(x.tariffaOraria) }));
 }
 
+/** Progetti non chiusi, per collegare un ticket a un progetto in corso. */
+export async function getProgettiPerSelezione() {
+  const p = await prisma.progetto.findMany({
+    where: { eliminataIl: null, stato: { not: "CONCLUSO" } },
+    select: { id: true, nome: true, clienteId: true },
+    orderBy: { nome: "asc" },
+  });
+  return p;
+}
+
+/** Contratti attivi, per collegare una licenza al contratto che ne copre il canone. */
+export async function getContrattiPerSelezione() {
+  const c = await prisma.contratto.findMany({
+    where: { eliminataIl: null, stato: "ATTIVO" },
+    select: { id: true, numero: true, clienteId: true },
+    orderBy: { numero: "desc" },
+  });
+  return c;
+}
+
 /** Predefiniti per il calcolo delle trasferte. */
 export async function getPredefinitiTrasferta() {
   const imp = await prisma.impostazioni.findUnique({ where: { id: 1 } });
@@ -597,7 +625,9 @@ export async function getProgettoCompleto(id: string) {
   const oreFatte = p.registrazioni.reduce((s, r) => s + n(r.ore), 0);
   const budgetOre = n(p.budgetOre);
   const valore = n(p.valore);
-  const tariffa = n(p.cliente.tariffaOraria);
+  // Un progetto interno non ha una tariffa cliente contro cui misurare il
+  // lavoro svolto: il "valore lavorato" resta 0, non ha un prezzo di mercato.
+  const tariffa = n(p.cliente?.tariffaOraria ?? 0);
 
   // Le ore già inserite in una fattura, contro quelle ancora da fatturare.
   const oreFatturate = p.registrazioni
@@ -674,14 +704,16 @@ export async function getProgettoCompleto(id: string) {
     eventi: p.eventi,
     inizioIl: p.inizioIl,
     consegnaIl: p.consegnaIl,
-    cliente: {
-      id: p.cliente.id,
-      ragioneSociale: p.cliente.ragioneSociale,
-      tariffaOraria: tariffa,
-      referente: p.cliente.referenti[0]
-        ? `${p.cliente.referenti[0].nome} ${p.cliente.referenti[0].cognome}`
-        : null,
-    },
+    cliente: p.cliente
+      ? {
+          id: p.cliente.id,
+          ragioneSociale: p.cliente.ragioneSociale,
+          tariffaOraria: tariffa,
+          referente: p.cliente.referenti[0]
+            ? `${p.cliente.referenti[0].nome} ${p.cliente.referenti[0].cognome}`
+            : null,
+        }
+      : null,
     preventivo: p.preventivo
       ? { ...p.preventivo, imponibile: n(p.preventivo.imponibile) }
       : null,
@@ -737,7 +769,7 @@ export async function getAttivitaCompleta(id: string) {
 
   const oreFatte = a.registrazioni.reduce((s, r) => s + n(r.ore), 0);
   const stima = n(a.stimaOre);
-  const tariffa = a.progetto ? n(a.progetto.cliente.tariffaOraria) : 0;
+  const tariffa = a.progetto?.cliente ? n(a.progetto.cliente.tariffaOraria) : 0;
 
   return {
     id: a.id,
@@ -753,7 +785,7 @@ export async function getAttivitaCompleta(id: string) {
       ? {
           id: a.progetto.id,
           nome: a.progetto.nome,
-          cliente: a.progetto.cliente.ragioneSociale,
+          cliente: a.progetto.cliente?.ragioneSociale ?? "Interno",
           clienteId: a.progetto.clienteId,
         }
       : null,
@@ -958,7 +990,7 @@ export async function getContrattoCompleto(id: string) {
 
 /** Opzioni per il selettore di inserimento ore. */
 export async function getRiferimentiOre() {
-  const [progetti, attivita, ticket] = await Promise.all([
+  const [progetti, attivita, ticket, clienti] = await Promise.all([
     prisma.progetto.findMany({
       where: { stato: { in: ["IN_CORSO", "DA_AVVIARE", "IN_PAUSA"] }, eliminataIl: null },
       include: { cliente: true },
@@ -974,12 +1006,19 @@ export async function getRiferimentiOre() {
       include: { cliente: true },
       orderBy: { numero: "desc" },
     }),
+    // Per registrare ore direttamente su un cliente, senza passare da un
+    // progetto/attività/ticket: lavoro generico che non appartiene a nient'altro.
+    prisma.cliente.findMany({
+      where: { eliminataIl: null },
+      select: { id: true, ragioneSociale: true },
+      orderBy: { ragioneSociale: "asc" },
+    }),
   ]);
 
   return {
     progetti: progetti.map((p) => ({
       id: p.id,
-      etichetta: `${p.nome} · ${p.cliente.ragioneSociale}`,
+      etichetta: p.cliente ? `${p.nome} · ${p.cliente.ragioneSociale}` : `${p.nome} · Interno`,
     })),
     attivita: attivita.map((a) => ({
       id: a.id,
@@ -988,6 +1027,10 @@ export async function getRiferimentiOre() {
     ticket: ticket.map((t) => ({
       id: t.id,
       etichetta: `#${t.numero} ${t.titolo} · ${t.cliente.ragioneSociale}`,
+    })),
+    clienti: clienti.map((c) => ({
+      id: c.id,
+      etichetta: c.ragioneSociale,
     })),
   };
 }
@@ -1009,4 +1052,56 @@ export async function getFattureDaIncassare() {
     }))
     // Una fattura già coperta non deve comparire tra quelle da incassare.
     .filter((f) => f.residuo > 0.01);
+}
+
+/** Catalogo prodotti (software propri venduti a più clienti), con licenze attive. */
+export async function getProdotti() {
+  const p = await prisma.prodotto.findMany({
+    where: { eliminataIl: null },
+    include: { progetto: { select: { nome: true } }, licenze: { where: { eliminataIl: null } } },
+    orderBy: { nome: "asc" },
+  });
+  return p.map((x) => ({
+    id: x.id,
+    nome: x.nome,
+    descrizione: x.descrizione,
+    prezzoListino: x.prezzoListino === null ? null : n(x.prezzoListino),
+    progetto: x.progetto?.nome ?? null,
+    licenzeAttive: x.licenze.filter((l) => l.stato === "ATTIVA").length,
+    licenzeTotali: x.licenze.length,
+  }));
+}
+
+/** Scheda completa di un prodotto, con le licenze per cliente. */
+export async function getProdottoCompleto(id: string) {
+  const p = await prisma.prodotto.findUnique({
+    where: { id },
+    include: {
+      progetto: { select: { id: true, nome: true } },
+      licenze: {
+        where: { eliminataIl: null },
+        include: { cliente: true, contratto: { select: { id: true, numero: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+  if (!p) return null;
+
+  return {
+    id: p.id,
+    nome: p.nome,
+    descrizione: p.descrizione,
+    prezzoListino: p.prezzoListino === null ? null : n(p.prezzoListino),
+    progetto: p.progetto,
+    licenze: p.licenze.map((l) => ({
+      id: l.id,
+      cliente: { id: l.cliente.id, ragioneSociale: l.cliente.ragioneSociale },
+      contratto: l.contratto ? { id: l.contratto.id, numero: l.contratto.numero } : null,
+      stato: l.stato,
+      attivataIl: l.attivataIl,
+      scadeIl: l.scadeIl,
+      canone: l.canone === null ? null : n(l.canone),
+      note: l.note,
+    })),
+  };
 }

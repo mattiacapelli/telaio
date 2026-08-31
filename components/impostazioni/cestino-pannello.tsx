@@ -21,6 +21,8 @@ const ENTITA: { chiave: Entita; etichetta: string }[] = [
   { chiave: "testoStandard", etichetta: "Testi standard" },
   { chiave: "webhook", etichetta: "Webhook" },
   { chiave: "contoIncasso", etichetta: "Conti incasso" },
+  { chiave: "prodotto", etichetta: "Prodotti" },
+  { chiave: "licenzaProdotto", etichetta: "Licenze" },
 ];
 
 type Riga = { id: string; nome: string; dettaglio?: string; eliminataIl: string };

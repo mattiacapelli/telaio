@@ -81,13 +81,14 @@ export default async function ProgettoPage({
           <div className="text-center">
             <h1 className="text-md font-semibold">{p.nome}</h1>
             <div className="mt-0.5 text-xs text-faint">
-              {p.cliente.ragioneSociale}
+              {p.cliente?.ragioneSociale ?? "Progetto interno"}
             </div>
           </div>
           <div className="mt-1 flex flex-wrap justify-center gap-1">
             <Badge tono={p.stato === "IN_CORSO" ? "accento" : "neutro"}>
               {STATI[p.stato]}
             </Badge>
+            {!p.cliente && <Badge>interno</Badge>}
             {oltreBudget && <Badge tono="attenzione">budget superato</Badge>}
           </div>
           <div className="mt-2 flex flex-wrap justify-center gap-1.5">
@@ -118,15 +119,19 @@ export default async function ProgettoPage({
         <div className="px-3 pb-1 text-md font-medium">Campi</div>
 
         <SezioneCampi titolo="Generale">
-          <CampoRecord icona={<Building2 size={12} />} etichetta="Cliente">
-            <Link href={`/clienti/${p.cliente.id}`} className="flex items-center gap-1.5 hover:underline">
-              <Chip testo={p.cliente.ragioneSociale} />
-              <span className="truncate">{p.cliente.ragioneSociale}</span>
-            </Link>
+          <CampoRecord icona={<Building2 size={12} />} etichetta="Cliente" vuoto="Progetto interno">
+            {p.cliente && (
+              <Link href={`/clienti/${p.cliente.id}`} className="flex items-center gap-1.5 hover:underline">
+                <Chip testo={p.cliente.ragioneSociale} />
+                <span className="truncate">{p.cliente.ragioneSociale}</span>
+              </Link>
+            )}
           </CampoRecord>
-          <CampoRecord icona={<User size={12} />} etichetta="Referente" vuoto="Nessun referente">
-            {p.cliente.referente}
-          </CampoRecord>
+          {p.cliente && (
+            <CampoRecord icona={<User size={12} />} etichetta="Referente" vuoto="Nessun referente">
+              {p.cliente.referente}
+            </CampoRecord>
+          )}
           <CampoRecord icona={<Tag size={12} />} etichetta="Stato">
             {STATI[p.stato]}
           </CampoRecord>
@@ -154,9 +159,11 @@ export default async function ProgettoPage({
           <CampoRecord icona={<Receipt size={12} />} etichetta="Da fatturare">
             {eur(p.daFatturare)}
           </CampoRecord>
-          <CampoRecord icona={<Hash size={12} />} etichetta="Tariffa">
-            {eurCent(p.cliente.tariffaOraria)}
-          </CampoRecord>
+          {p.cliente && (
+            <CampoRecord icona={<Hash size={12} />} etichetta="Tariffa">
+              {eurCent(p.cliente.tariffaOraria)}
+            </CampoRecord>
+          )}
         </SezioneCampi>
 
         <SezioneCampi titolo="Tempi">

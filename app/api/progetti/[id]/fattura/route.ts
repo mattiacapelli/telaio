@@ -31,6 +31,13 @@ export async function POST(
   if (!progetto) {
     return NextResponse.json({ errore: "progetto inesistente" }, { status: 404 });
   }
+  if (!progetto.cliente) {
+    return NextResponse.json(
+      { errore: "un progetto interno non ha un cliente da fatturare" },
+      { status: 400 },
+    );
+  }
+  const cliente = progetto.cliente;
 
   const [registrazioni, costi] = await Promise.all([
     prisma.registrazioneOre.findMany({
@@ -50,7 +57,7 @@ export async function POST(
   }
 
   const oreTotali = registrazioni.reduce((s, r) => s + n(r.ore), 0);
-  const tariffa = n(progetto.cliente.tariffaOraria);
+  const tariffa = n(cliente.tariffaOraria);
   const totaleCosti = costi.reduce((s, c) => s + n(c.importo), 0);
   const imponibile = oreTotali * tariffa + totaleCosti;
 
@@ -58,10 +65,10 @@ export async function POST(
     const f = await tx.fattura.create({
       data: {
         numero: await prossimoNumeroFattura(),
-        clienteId: progetto.clienteId,
+        clienteId: cliente.id,
         stato: "DA_EMETTERE",
         imponibile,
-        scadeIl: new Date(Date.now() + progetto.cliente.terminiPagamento * 86400000),
+        scadeIl: new Date(Date.now() + cliente.terminiPagamento * 86400000),
         righe: {
           create: [
             ...(oreTotali > 0

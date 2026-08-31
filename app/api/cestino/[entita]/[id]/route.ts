@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 const ENTITA_VALIDE: Entita[] = [
   "cliente", "preventivo", "progetto", "attivita", "ticket", "fattura",
   "contratto", "costo", "registrazioneOre", "documento", "workflow",
-  "modelloPdf", "testoStandard", "webhook", "contoIncasso",
+  "modelloPdf", "testoStandard", "webhook", "contoIncasso", "prodotto", "licenzaProdotto",
 ];
 
 function entitaValida(v: string): v is Entita {

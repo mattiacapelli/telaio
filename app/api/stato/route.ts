@@ -180,7 +180,7 @@ async function scatenaPerEntita(entita: string, id: string, stato: string) {
       id,
       dati: {
         nome: pr.nome,
-        cliente: pr.cliente.ragioneSociale,
+        cliente: pr.cliente?.ragioneSociale ?? "Interno",
         valore: n(pr.valore),
         stato: pr.stato,
       },

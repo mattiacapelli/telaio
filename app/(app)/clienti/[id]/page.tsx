@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Chip, coloreDa } from "@/components/chip";
 import { EliminaRecord } from "@/components/elimina-record";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
+import { InserisciOre } from "@/components/inserisci-ore";
 import { eur, eurCent, ore, data, dataEstesa, n } from "@/lib/format";
 import { STATI as STATI_CONTRATTO, TIPI as TIPI_CONTRATTO } from "@/lib/contratti";
 import {
@@ -317,6 +318,54 @@ export default async function ClientePage({
                             {f.stato.toLowerCase().replace("_", " ")}
                           </Badge>
                           <span className="w-20 flex-none text-right text-md">{eur(f.imponibile)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+            {
+              chiave: "ore",
+              etichetta: "Ore",
+              icona: <Clock size={13} />,
+              conteggio: c.registrazioni.length,
+              contenuto: (
+                <div className="p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-md text-muted">
+                      Ore registrate direttamente sul cliente, senza passare da un progetto.
+                    </span>
+                    <InserisciOre clienteFisso={{ id: c.id, nome: c.ragioneSociale }} />
+                  </div>
+                  <div className="rounded border border-border">
+                    {c.registrazioni.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-md text-faint">
+                        Nessuna ora registrata direttamente sul cliente.
+                      </div>
+                    ) : (
+                      c.registrazioni.map((r) => (
+                        <div
+                          key={r.id}
+                          className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-0"
+                        >
+                          <span className="w-20 flex-none text-xs text-faint">{data(r.data)}</span>
+                          <div className="min-w-0 flex-1 truncate text-md">
+                            {r.descrizione || "—"}
+                          </div>
+                          {!r.fatturabile && <Badge>non fatturabile</Badge>}
+                          <span className="w-16 flex-none text-right text-md tabular-nums">
+                            {ore(r.ore)}
+                          </span>
+                          <InserisciOre
+                            registrazione={{
+                              id: r.id,
+                              data: r.data.toISOString().slice(0, 10),
+                              ore: n(r.ore),
+                              descrizione: r.descrizione ?? "",
+                              fatturabile: r.fatturabile,
+                            }}
+                          />
                         </div>
                       ))
                     )}

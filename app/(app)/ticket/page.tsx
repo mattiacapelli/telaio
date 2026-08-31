@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTicket } from "@/lib/queries";
+import { getTicket, getClientiPerSelezione, getProgettiPerSelezione } from "@/lib/queries";
 import { titoloPagina } from "@/lib/titolo";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Chip } from "@/components/chip";
 import { eur, ore, data, daGiorni } from "@/lib/format";
 import { LifeBuoy, Building2, Clock, Tag, AlertCircle } from "lucide-react";
 import { AvviaTimer } from "@/components/avvia-timer";
+import { NuovoTicket } from "@/components/nuovo-ticket";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,21 @@ const PRIORITA: Record<string, string> = {
 };
 
 export default async function TicketPage() {
-  const ticket = await getTicket();
+  const [ticket, clienti, progetti] = await Promise.all([
+    getTicket(),
+    getClientiPerSelezione(),
+    getProgettiPerSelezione(),
+  ]);
+
   if (ticket.length === 0) {
-    return <Vuoto titolo="Nessun ticket" nota="Qui arrivano le richieste di assistenza dei clienti." />;
+    return (
+      <div className="tl-in">
+        <div className="mb-3 flex items-center justify-end">
+          <NuovoTicket clienti={clienti} progetti={progetti} />
+        </div>
+        <Vuoto titolo="Nessun ticket" nota="Qui arrivano le richieste di assistenza dei clienti." />
+      </div>
+    );
   }
 
   const aperti = ticket.filter(
@@ -119,7 +132,10 @@ export default async function TicketPage() {
         colonne={COLONNE}
         elementi={elementi}
         intestazione={
-          <span className="text-md text-muted">{ticket.length} ticket</span>
+          <div className="flex items-center gap-3">
+            <span className="text-md text-muted">{ticket.length} ticket</span>
+            <NuovoTicket clienti={clienti} progetti={progetti} />
+          </div>
         }
         colonneTabella={[
           { intestazione: "N.", larghezza: "60px", icona: <LifeBuoy key="i1" size={13} /> },

@@ -39,7 +39,14 @@ export default async function PreventiviPage() {
   ]);
 
   if (preventivi.length === 0) {
-    return <Vuoto titolo="Nessun preventivo" nota="Crea il primo preventivo per iniziare." />;
+    return (
+      <div className="tl-in">
+        <div className="mb-3 flex items-center justify-end">
+          <NuovoPreventivo clienti={clienti} tariffaListino={tariffaListino} aziende={aziende} />
+        </div>
+        <Vuoto titolo="Nessun preventivo" nota="Crea il primo preventivo per iniziare." />
+      </div>
+    );
   }
 
   const inTrattativa = preventivi

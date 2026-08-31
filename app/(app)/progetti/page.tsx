@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getProgetti } from "@/lib/queries";
+import { getProgetti, getClientiPerSelezione } from "@/lib/queries";
 import { titoloPagina } from "@/lib/titolo";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Barra, Vuoto } from "@/components/ui-legacy";
 import { Chip } from "@/components/chip";
 import { eur, ore, data } from "@/lib/format";
 import { FolderKanban, Building2, Euro, Clock, Tag } from "lucide-react";
+import { NuovoProgetto } from "@/components/nuovo-progetto";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +30,17 @@ const STATI: Record<string, string> = {
 };
 
 export default async function ProgettiPage() {
-  const progetti = await getProgetti();
+  const [progetti, clienti] = await Promise.all([getProgetti(), getClientiPerSelezione()]);
+
   if (progetti.length === 0) {
-    return <Vuoto titolo="Nessun progetto" nota="I progetti nascono dai preventivi accettati." />;
+    return (
+      <div className="tl-in">
+        <div className="mb-3 flex items-center justify-end">
+          <NuovoProgetto clienti={clienti} />
+        </div>
+        <Vuoto titolo="Nessun progetto" nota="I progetti nascono dai preventivi accettati, oppure si creano manualmente." />
+      </div>
+    );
   }
 
   const elementi = progetti.map((p) => ({
@@ -84,7 +93,10 @@ export default async function ProgettiPage() {
         colonne={COLONNE}
         elementi={elementi}
         intestazione={
-          <span className="text-md text-muted">{progetti.length} progetti</span>
+          <div className="flex items-center gap-3">
+            <span className="text-md text-muted">{progetti.length} progetti</span>
+            <NuovoProgetto clienti={clienti} />
+          </div>
         }
         colonneTabella={[
           { intestazione: "Progetto", larghezza: "minmax(0, 1.6fr)", icona: <FolderKanban key="i1" size={13} /> },

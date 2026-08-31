@@ -73,6 +73,7 @@ export default async function OrePage({
           progetti={riferimenti.progetti}
           attivita={riferimenti.attivita}
           ticket={riferimenti.ticket}
+          clienti={riferimenti.clienti}
         />
         <span className="text-md text-muted">
           Totale settimana <strong className="text-text">{ore(settimana.totale)}</strong> · da
@@ -124,6 +125,7 @@ export default async function OrePage({
                           progetti={riferimenti.progetti}
                           attivita={riferimenti.attivita}
                           ticket={riferimenti.ticket}
+                          clienti={riferimenti.clienti}
                           dataIniziale={iso}
                           compatto
                         />

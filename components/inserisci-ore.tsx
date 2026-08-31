@@ -16,16 +16,21 @@ type Opzione = { id: string; etichetta: string; gruppo?: string };
  * il tempo sarebbe ricordarsi di avviare il cronometro.
  */
 export function InserisciOre({
-  progetti,
-  attivita,
-  ticket,
+  progetti = [],
+  attivita = [],
+  ticket = [],
+  clienti = [],
+  clienteFisso,
   registrazione,
   dataIniziale,
   compatto,
 }: {
-  progetti: Opzione[];
-  attivita: Opzione[];
-  ticket: Opzione[];
+  progetti?: Opzione[];
+  attivita?: Opzione[];
+  ticket?: Opzione[];
+  clienti?: Opzione[];
+  /** Se indicato, le ore si registrano sempre su questo cliente: niente selettore "Su cosa". */
+  clienteFisso?: { id: string; nome: string };
   registrazione?: {
     id: string;
     data: string;
@@ -67,15 +72,20 @@ export function InserisciOre({
     };
 
     if (!registrazione) {
-      const [tipo, id] = d.riferimento.split(":");
-      if (!id) {
-        setInCorso(false);
-        setErrore("Scegli un progetto, un'attività o un ticket");
-        return;
+      if (clienteFisso) {
+        corpo.clienteId = clienteFisso.id;
+      } else {
+        const [tipo, id] = d.riferimento.split(":");
+        if (!id) {
+          setInCorso(false);
+          setErrore("Scegli un progetto, un'attività o un ticket");
+          return;
+        }
+        if (tipo === "p") corpo.progettoId = id;
+        if (tipo === "a") corpo.attivitaId = id;
+        if (tipo === "t") corpo.ticketId = id;
+        if (tipo === "c") corpo.clienteId = id;
       }
-      if (tipo === "p") corpo.progettoId = id;
-      if (tipo === "a") corpo.attivitaId = id;
-      if (tipo === "t") corpo.ticketId = id;
     }
 
     const r = await fetch(registrazione ? `/api/ore/${registrazione.id}` : "/api/ore", {
@@ -150,8 +160,14 @@ export function InserisciOre({
               </Campo>
             </div>
 
-            {!registrazione && (
-              <Campo etichetta="Su cosa" nota="Progetto, attività o ticket">
+            {!registrazione && clienteFisso && (
+              <Campo etichetta="Cliente">
+                <Input value={clienteFisso.nome} disabled />
+              </Campo>
+            )}
+
+            {!registrazione && !clienteFisso && (
+              <Campo etichetta="Su cosa" nota="Progetto, attività, ticket o direttamente un cliente">
                 <Select
                   value={d.riferimento}
                   onChange={(e) => set("riferimento", e.target.value)}
@@ -176,6 +192,13 @@ export function InserisciOre({
                     <optgroup label="Progetti">
                       {progetti.map((p) => (
                         <option key={p.id} value={`p:${p.id}`}>{p.etichetta}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {clienti.length > 0 && (
+                    <optgroup label="Clienti (lavoro generico)">
+                      {clienti.map((c) => (
+                        <option key={c.id} value={`c:${c.id}`}>{c.etichetta}</option>
                       ))}
                     </optgroup>
                   )}
