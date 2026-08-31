@@ -22,6 +22,7 @@ const ENTITA: { chiave: Entita; etichetta: string }[] = [
   { chiave: "webhook", etichetta: "Webhook" },
   { chiave: "contoIncasso", etichetta: "Conti incasso" },
   { chiave: "prodotto", etichetta: "Prodotti" },
+  { chiave: "pianoProdotto", etichetta: "Piani prodotto" },
   { chiave: "licenzaProdotto", etichetta: "Licenze" },
 ];
 

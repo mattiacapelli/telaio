@@ -12,10 +12,12 @@ export function NuovaLicenza({
   prodottoId,
   clienti,
   contratti,
+  piani = [],
 }: {
   prodottoId: string;
   clienti: { id: string; ragioneSociale: string }[];
   contratti: { id: string; numero: string; clienteId: string }[];
+  piani?: { id: string; nome: string; canone: number }[];
 }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
@@ -26,6 +28,7 @@ export function NuovaLicenza({
   const [d, setD] = useState({
     clienteId: "",
     contrattoId: "",
+    pianoId: "",
     attivataIl: oggi,
     scadeIl: "",
     canone: "",
@@ -47,6 +50,7 @@ export function NuovaLicenza({
       body: JSON.stringify({
         clienteId: d.clienteId,
         contrattoId: d.contrattoId || null,
+        pianoId: d.pianoId || null,
         attivataIl: d.attivataIl,
         scadeIl: d.scadeIl || null,
         canone: d.canone === "" ? null : d.canone,
@@ -62,7 +66,7 @@ export function NuovaLicenza({
     }
 
     setAperto(false);
-    setD({ clienteId: "", contrattoId: "", attivataIl: oggi, scadeIl: "", canone: "", note: "" });
+    setD({ clienteId: "", contrattoId: "", pianoId: "", attivataIl: oggi, scadeIl: "", canone: "", note: "" });
     router.refresh();
   }
 
@@ -110,14 +114,29 @@ export function NuovaLicenza({
               </Campo>
             </div>
 
-            <Campo etichetta="Canone (EUR)" nota="Facoltativo: vuoto se incluso nel contratto">
-              <Input
-                value={d.canone}
-                onChange={(e) => set("canone", e.target.value)}
-                inputMode="decimal"
-                className="text-right"
-              />
-            </Campo>
+            {piani.length > 0 && (
+              <Campo etichetta="Piano" nota="Facoltativo: fissa canone e termini della licenza">
+                <Select value={d.pianoId} onChange={(e) => set("pianoId", e.target.value)}>
+                  <option value="">Nessuno (canone libero)</option>
+                  {piani.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome} · {p.canone.toLocaleString("it-IT", { style: "currency", currency: "EUR" })}
+                    </option>
+                  ))}
+                </Select>
+              </Campo>
+            )}
+
+            {!d.pianoId && (
+              <Campo etichetta="Canone (EUR)" nota="Facoltativo: vuoto se incluso nel contratto">
+                <Input
+                  value={d.canone}
+                  onChange={(e) => set("canone", e.target.value)}
+                  inputMode="decimal"
+                  className="text-right"
+                />
+              </Campo>
+            )}
 
             <Campo etichetta="Note" nota="Facoltative">
               <Textarea rows={2} value={d.note} onChange={(e) => set("note", e.target.value)} />

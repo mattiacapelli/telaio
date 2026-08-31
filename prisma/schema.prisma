@@ -731,7 +731,35 @@ model Prodotto {
 
   progetto Progetto?         @relation(fields: [progettoId], references: [id], onDelete: SetNull)
   licenze  LicenzaProdotto[]
+  piani    PianoProdotto[]
 
+  @@index([eliminataIl])
+}
+
+/// Un prodotto può avere più piani (es. Base/Pro), ognuno con il proprio
+/// prezzo e i propri termini: una licenza sceglie un piano invece di avere
+/// canone e condizioni liberi, così i piani restano confrontabili tra loro.
+model PianoProdotto {
+  id                  String               @id @default(cuid())
+  prodottoId          String
+  nome                String
+  descrizione         String?
+  canone              Decimal              @db.Decimal(10, 2)
+  periodicita         PeriodicitaContratto @default(MENSILE)
+  /// Giorni dall'emissione della fattura alla scadenza del pagamento.
+  terminiPagamento    Int                  @default(30)
+  /// Ore di assistenza incluse nel periodo; nullo = nessuna ora inclusa.
+  monteOre            Decimal?             @db.Decimal(10, 2)
+  /// Tariffa delle ore eccedenti il monte incluso.
+  tariffaExtra        Decimal?             @db.Decimal(10, 2)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  eliminataIl         DateTime?
+
+  prodotto Prodotto          @relation(fields: [prodottoId], references: [id], onDelete: Cascade)
+  licenze  LicenzaProdotto[]
+
+  @@index([prodottoId])
   @@index([eliminataIl])
 }
 
@@ -753,24 +781,30 @@ model LicenzaProdotto {
   prodottoId  String
   clienteId   String
   contrattoId String?
+  /// Se indicato, canone/periodicità/termini/monte ore vengono dal piano:
+  /// non si sovrascrivono qui, altrimenti i piani non sarebbero più
+  /// confrontabili tra i clienti che li hanno sottoscritti.
+  pianoId     String?
   stato       StatoLicenza @default(ATTIVA)
   attivataIl  DateTime     @db.Date
   scadeIl     DateTime?    @db.Date
-  /// Canone della licenza, se non è già coperto dal contratto collegato.
+  /// Canone della licenza quando non ha un piano collegato.
   canone      Decimal?     @db.Decimal(10, 2)
   note        String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   eliminataIl DateTime?
 
-  prodotto  Prodotto   @relation(fields: [prodottoId], references: [id], onDelete: Cascade)
-  cliente   Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  contratto Contratto? @relation(fields: [contrattoId], references: [id], onDelete: SetNull)
+  prodotto  Prodotto       @relation(fields: [prodottoId], references: [id], onDelete: Cascade)
+  cliente   Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  contratto Contratto?     @relation(fields: [contrattoId], references: [id], onDelete: SetNull)
+  piano     PianoProdotto? @relation(fields: [pianoId], references: [id], onDelete: SetNull)
 
   @@index([prodottoId])
   @@index([clienteId])
   @@index([stato])
   @@index([eliminataIl])
+  @@index([pianoId])
 }
 
 // ---------------------------------------------------------------- workflow

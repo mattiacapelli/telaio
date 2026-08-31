@@ -1075,7 +1075,11 @@ export async function getFattureDaIncassare() {
 export async function getProdotti() {
   const p = await prisma.prodotto.findMany({
     where: { eliminataIl: null },
-    include: { progetto: { select: { nome: true } }, licenze: { where: { eliminataIl: null } } },
+    include: {
+      progetto: { select: { nome: true } },
+      licenze: { where: { eliminataIl: null } },
+      piani: { where: { eliminataIl: null } },
+    },
     orderBy: { nome: "asc" },
   });
   return p.map((x) => ({
@@ -1084,20 +1088,22 @@ export async function getProdotti() {
     descrizione: x.descrizione,
     prezzoListino: x.prezzoListino === null ? null : n(x.prezzoListino),
     progetto: x.progetto?.nome ?? null,
+    piani: x.piani.length,
     licenzeAttive: x.licenze.filter((l) => l.stato === "ATTIVA").length,
     licenzeTotali: x.licenze.length,
   }));
 }
 
-/** Scheda completa di un prodotto, con le licenze per cliente. */
+/** Scheda completa di un prodotto, con i piani e le licenze per cliente. */
 export async function getProdottoCompleto(id: string) {
   const p = await prisma.prodotto.findUnique({
     where: { id },
     include: {
       progetto: { select: { id: true, nome: true } },
+      piani: { where: { eliminataIl: null }, orderBy: { canone: "asc" } },
       licenze: {
         where: { eliminataIl: null },
-        include: { cliente: true, contratto: { select: { id: true, numero: true } } },
+        include: { cliente: true, contratto: { select: { id: true, numero: true } }, piano: true },
         orderBy: { createdAt: "desc" },
       },
     },
@@ -1110,14 +1116,27 @@ export async function getProdottoCompleto(id: string) {
     descrizione: p.descrizione,
     prezzoListino: p.prezzoListino === null ? null : n(p.prezzoListino),
     progetto: p.progetto,
+    piani: p.piani.map((pi) => ({
+      id: pi.id,
+      nome: pi.nome,
+      descrizione: pi.descrizione,
+      canone: n(pi.canone),
+      periodicita: pi.periodicita,
+      terminiPagamento: pi.terminiPagamento,
+      monteOre: pi.monteOre === null ? null : n(pi.monteOre),
+      tariffaExtra: pi.tariffaExtra === null ? null : n(pi.tariffaExtra),
+    })),
     licenze: p.licenze.map((l) => ({
       id: l.id,
       cliente: { id: l.cliente.id, ragioneSociale: l.cliente.ragioneSociale },
       contratto: l.contratto ? { id: l.contratto.id, numero: l.contratto.numero } : null,
+      piano: l.piano ? { id: l.piano.id, nome: l.piano.nome } : null,
       stato: l.stato,
       attivataIl: l.attivataIl,
       scadeIl: l.scadeIl,
-      canone: l.canone === null ? null : n(l.canone),
+      // Il canone effettivo viene dal piano quando c'è: la licenza smette di
+      // averne uno proprio nel momento in cui sceglie un piano.
+      canone: l.piano ? n(l.piano.canone) : l.canone === null ? null : n(l.canone),
       note: l.note,
     })),
   };

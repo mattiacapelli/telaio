@@ -35,6 +35,7 @@ export type Entita =
   | "webhook"
   | "contoIncasso"
   | "prodotto"
+  | "pianoProdotto"
   | "licenzaProdotto";
 
 export class ErroreEliminazione extends Error {}
@@ -249,6 +250,21 @@ const CONFIG: Record<Entita, ConfigEntita> = {
     ],
   },
 
+  pianoProdotto: {
+    modello: "pianoProdotto",
+    campoNome: "nome",
+    nome: async (id) => {
+      const p = await prisma.pianoProdotto.findUnique({
+        where: { id },
+        include: { prodotto: { select: { nome: true } } },
+      });
+      return p ? `${p.prodotto.nome} · ${p.nome}` : null;
+    },
+    figli: [
+      { etichetta: "licenze attive", conta: (id) => prisma.licenzaProdotto.count({ where: { pianoId: id, stato: { in: ["ATTIVA", "SOSPESA"] } } }) },
+    ],
+  },
+
   licenzaProdotto: {
     modello: "licenzaProdotto",
     campoNome: "id",
@@ -342,6 +358,7 @@ const INCLUDE_CESTINO: Partial<Record<Entita, Record<string, boolean>>> = {
   contratto: { cliente: true },
   costo: { progetto: true, ticket: true },
   registrazioneOre: { progetto: true, ticket: true },
+  pianoProdotto: { prodotto: true },
   licenzaProdotto: { prodotto: true, cliente: true, contratto: true },
 };
 
@@ -381,6 +398,7 @@ function nomeCestino(entita: Entita, r: any): string {
     case "webhook": return r.nome;
     case "contoIncasso": return r.nome;
     case "prodotto": return r.nome;
+    case "pianoProdotto": return `${r.prodotto?.nome ?? "?"} · ${r.nome}`;
     case "licenzaProdotto": return `${r.prodotto?.nome ?? "?"} · ${r.cliente?.ragioneSociale ?? "?"}`;
   }
 }
@@ -400,6 +418,8 @@ function dettaglioCestino(entita: Entita, r: any): string | undefined {
       return r.progetto?.nome ?? r.ticket?.titolo ?? undefined;
     case "webhook":
       return r.url;
+    case "pianoProdotto":
+      return r.prodotto?.nome;
     case "licenzaProdotto":
       return r.contratto?.numero;
     default:

@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const Aggiorna = z.object({
   stato: z.enum(["ATTIVA", "SOSPESA", "SCADUTA", "DISDETTA"]).optional(),
   contrattoId: z.string().optional().nullable(),
+  pianoId: z.string().optional().nullable(),
   scadeIl: z.string().optional().nullable(),
   canone: z.coerce.number().nonnegative().optional().nullable(),
   note: z.string().optional().nullable(),
@@ -43,14 +44,23 @@ export async function PATCH(
       return NextResponse.json({ errore: "contratto inesistente" }, { status: 400 });
     }
   }
+  if (d.pianoId) {
+    const piano = await prisma.pianoProdotto.findUnique({ where: { id: d.pianoId }, select: { id: true, prodottoId: true } });
+    if (!piano || piano.prodottoId !== l.prodottoId) {
+      return NextResponse.json({ errore: "piano inesistente per questo prodotto" }, { status: 400 });
+    }
+  }
 
   await prisma.licenzaProdotto.update({
     where: { id },
     data: {
       ...(d.stato !== undefined ? { stato: d.stato } : {}),
       ...(d.contrattoId !== undefined ? { contrattoId: d.contrattoId || null } : {}),
+      // Scegliere un piano azzera il canone libero: il piano diventa l'unica
+      // fonte del prezzo, non un valore di partenza modificabile.
+      ...(d.pianoId !== undefined ? { pianoId: d.pianoId || null, canone: d.pianoId ? null : d.canone } : {}),
       ...(d.scadeIl !== undefined ? { scadeIl: d.scadeIl ? new Date(`${d.scadeIl}T00:00:00.000Z`) : null } : {}),
-      ...(d.canone !== undefined ? { canone: d.canone } : {}),
+      ...(d.pianoId === undefined && d.canone !== undefined ? { canone: d.canone } : {}),
       ...(d.note !== undefined ? { note: d.note || null } : {}),
     },
   });

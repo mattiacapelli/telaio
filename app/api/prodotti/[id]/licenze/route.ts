@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const Nuova = z.object({
   clienteId: z.string().min(1, "il cliente è obbligatorio"),
   contrattoId: z.string().optional().nullable(),
+  pianoId: z.string().optional().nullable(),
   attivataIl: z.string().min(1, "la data di attivazione è obbligatoria"),
   scadeIl: z.string().optional().nullable(),
   canone: z.coerce.number().nonnegative().optional().nullable(),
@@ -47,15 +48,24 @@ export async function POST(
       return NextResponse.json({ errore: "contratto inesistente" }, { status: 400 });
     }
   }
+  if (d.pianoId) {
+    const piano = await prisma.pianoProdotto.findUnique({ where: { id: d.pianoId }, select: { id: true, prodottoId: true } });
+    if (!piano || piano.prodottoId !== prodottoId) {
+      return NextResponse.json({ errore: "piano inesistente per questo prodotto" }, { status: 400 });
+    }
+  }
 
   const licenza = await prisma.licenzaProdotto.create({
     data: {
       prodottoId,
       clienteId: d.clienteId,
       contrattoId: d.contrattoId || null,
+      pianoId: d.pianoId || null,
       attivataIl: new Date(`${d.attivataIl}T00:00:00.000Z`),
       scadeIl: d.scadeIl ? new Date(`${d.scadeIl}T00:00:00.000Z`) : null,
-      canone: d.canone ?? null,
+      // Con un piano il canone si legge da lì: qui resta nullo per non avere
+      // due fonti in disaccordo se il piano cambia prezzo in futuro.
+      canone: d.pianoId ? null : d.canone ?? null,
       note: d.note || null,
     },
     select: { id: true },

@@ -5,11 +5,13 @@ import { titoloPagina, nomeRecord } from "@/lib/titolo";
 import { Badge } from "@/components/ui/badge";
 import { Chip, coloreDa } from "@/components/chip";
 import { EliminaRecord } from "@/components/elimina-record";
-import { SezioneCampi, CampoRecord } from "@/components/record/pannello";
+import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { NuovaLicenza } from "@/components/nuova-licenza";
+import { NuovoPiano } from "@/components/nuovo-piano";
 import { StatoLicenza } from "@/components/stato-licenza";
-import { eur, data } from "@/lib/format";
-import { Package, FolderKanban, Euro } from "lucide-react";
+import { eur, ore, data } from "@/lib/format";
+import { PERIODICITA } from "@/lib/contratti";
+import { Package, FolderKanban, Euro, Users, Layers } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +47,7 @@ export default async function ProdottoPage({
           <div className="text-center">
             <h1 className="text-md font-semibold">{p.nome}</h1>
             <div className="mt-0.5 text-xs text-faint">
-              {p.licenze.length} licenz{p.licenze.length === 1 ? "a" : "e"}
+              {p.licenze.length} licenz{p.licenze.length === 1 ? "a" : "e"} · {p.piani.length} pian{p.piani.length === 1 ? "o" : "i"}
             </div>
           </div>
           <div className="mt-2 flex flex-wrap justify-center gap-1.5">
@@ -79,53 +81,105 @@ export default async function ProdottoPage({
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg">
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <span className="text-md font-medium">Licenze</span>
-          <div className="flex-1" />
-          <NuovaLicenza prodottoId={p.id} clienti={clienti} contratti={contratti} />
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4">
-          {p.licenze.length === 0 ? (
-            <div className="rounded border border-border px-3 py-6 text-center text-md text-faint">
-              Nessuna licenza attivata per questo prodotto.
-            </div>
-          ) : (
-            <div className="rounded border border-border">
-              {p.licenze.map((l) => (
-                <div
-                  key={l.id}
-                  className="flex items-center gap-3 border-b border-border px-3 py-2.5 last:border-0"
-                >
-                  <Link
-                    href={`/clienti/${l.cliente.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 hover:underline"
-                  >
-                    <Chip testo={l.cliente.ragioneSociale} />
-                    <span className="truncate text-md">{l.cliente.ragioneSociale}</span>
-                  </Link>
-                  {l.contratto && (
-                    <Link href={`/contratti/${l.contratto.id}`} className="flex-none">
-                      <Badge>{l.contratto.numero}</Badge>
-                    </Link>
-                  )}
-                  <span className="w-24 flex-none text-xs text-faint">
-                    dal {data(l.attivataIl)}
-                  </span>
-                  <span className="w-24 flex-none text-xs text-faint">
-                    {l.scadeIl ? `scade ${data(l.scadeIl)}` : "senza scadenza"}
-                  </span>
-                  <span className="w-20 flex-none text-right text-md">
-                    {l.canone !== null ? eur(l.canone) : "—"}
-                  </span>
-                  <div className="flex-none">
-                    <StatoLicenza id={l.id} stato={l.stato} />
+        <Schede
+          schede={[
+            {
+              chiave: "licenze",
+              etichetta: "Licenze",
+              icona: <Users size={13} />,
+              conteggio: p.licenze.length,
+              contenuto: (
+                <div className="p-4">
+                  <div className="mb-3 flex items-center justify-end">
+                    <NuovaLicenza prodottoId={p.id} clienti={clienti} contratti={contratti} piani={p.piani} />
                   </div>
+                  {p.licenze.length === 0 ? (
+                    <div className="rounded border border-border px-3 py-6 text-center text-md text-faint">
+                      Nessuna licenza attivata per questo prodotto.
+                    </div>
+                  ) : (
+                    <div className="rounded border border-border">
+                      {p.licenze.map((l) => (
+                        <div
+                          key={l.id}
+                          className="flex items-center gap-3 border-b border-border px-3 py-2.5 last:border-0"
+                        >
+                          <Link
+                            href={`/clienti/${l.cliente.id}`}
+                            className="flex min-w-0 flex-1 items-center gap-1.5 hover:underline"
+                          >
+                            <Chip testo={l.cliente.ragioneSociale} />
+                            <span className="truncate text-md">{l.cliente.ragioneSociale}</span>
+                          </Link>
+                          {l.piano && <Badge>{l.piano.nome}</Badge>}
+                          {l.contratto && (
+                            <Link href={`/contratti/${l.contratto.id}`} className="flex-none">
+                              <Badge>{l.contratto.numero}</Badge>
+                            </Link>
+                          )}
+                          <span className="w-24 flex-none text-xs text-faint">
+                            dal {data(l.attivataIl)}
+                          </span>
+                          <span className="w-24 flex-none text-xs text-faint">
+                            {l.scadeIl ? `scade ${data(l.scadeIl)}` : "senza scadenza"}
+                          </span>
+                          <span className="w-20 flex-none text-right text-md">
+                            {l.canone !== null ? eur(l.canone) : "—"}
+                          </span>
+                          <div className="flex-none">
+                            <StatoLicenza id={l.id} stato={l.stato} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              ),
+            },
+            {
+              chiave: "piani",
+              etichetta: "Piani",
+              icona: <Layers size={13} />,
+              conteggio: p.piani.length,
+              contenuto: (
+                <div className="p-4">
+                  <div className="mb-3 flex items-center justify-end">
+                    <NuovoPiano prodottoId={p.id} />
+                  </div>
+                  {p.piani.length === 0 ? (
+                    <div className="rounded border border-border px-3 py-6 text-center text-md text-faint">
+                      Nessun piano configurato: le licenze usano un canone libero.
+                    </div>
+                  ) : (
+                    <div className="rounded border border-border">
+                      {p.piani.map((piano) => (
+                        <div
+                          key={piano.id}
+                          className="flex items-center gap-3 border-b border-border px-3 py-2.5 last:border-0"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-md font-medium">{piano.nome}</div>
+                            {piano.descrizione && (
+                              <div className="truncate text-xs text-faint">{piano.descrizione}</div>
+                            )}
+                          </div>
+                          {piano.monteOre !== null && (
+                            <span className="text-xs text-faint">{ore(piano.monteOre)} incluse</span>
+                          )}
+                          <span className="text-xs text-faint">{piano.terminiPagamento} gg pagamento</span>
+                          <div className="w-28 flex-none text-right">
+                            <div className="text-md font-medium">{eur(piano.canone)}</div>
+                            <div className="text-xs text-faint">{PERIODICITA[piano.periodicita]}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
     </div>
   );
