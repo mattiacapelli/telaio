@@ -11,6 +11,7 @@ const Aggiorna = z.object({
   descrizione: z.string().optional().nullable(),
   prezzoListino: z.coerce.number().nonnegative().optional().nullable(),
   progettoId: z.string().optional().nullable(),
+  modalitaLicenza: z.enum(["NESSUNA", "ONLINE", "OFFLINE", "ENTRAMBE"]).optional(),
 });
 
 export async function PATCH(
@@ -43,6 +44,7 @@ export async function PATCH(
       ...(d.descrizione !== undefined ? { descrizione: d.descrizione || null } : {}),
       ...(d.prezzoListino !== undefined ? { prezzoListino: d.prezzoListino } : {}),
       ...(d.progettoId !== undefined ? { progettoId: d.progettoId || null } : {}),
+      ...(d.modalitaLicenza !== undefined ? { modalitaLicenza: d.modalitaLicenza } : {}),
     },
   });
 

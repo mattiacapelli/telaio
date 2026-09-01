@@ -11,8 +11,10 @@ import { COOKIE } from "@/lib/auth-cookie";
 // Lo scheduler e il server MCP si autenticano con un token dedicato (header
 // Authorization), non con il cookie di sessione: un processo interno o un
 // agente esterno non deve dipendere da un login da browser. Il controllo
-// vero resta nella route.
-const PUBBLICHE = ["/login", "/api/auth/login", "/api/scheduler", "/api/mcp"];
+// vero resta nella route. La verifica licenza è pubblica per costruzione:
+// la interroga il software installato presso il cliente, che non ha (né
+// deve avere) una sessione Telaio.
+const PUBBLICHE = ["/login", "/api/auth/login", "/api/scheduler", "/api/mcp", "/api/licenze/verifica"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

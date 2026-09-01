@@ -10,9 +10,12 @@ import { NuovaLicenza } from "@/components/nuova-licenza";
 import { NuovoPiano } from "@/components/nuovo-piano";
 import { StatoLicenza } from "@/components/stato-licenza";
 import { DocumentiProgetto } from "@/components/documenti-progetto";
+import { ModalitaLicenzaProdotto } from "@/components/modalita-licenza-prodotto";
+import { ChiaveMasterProdotto } from "@/components/chiave-master-prodotto";
+import { GeneraFileLicenza } from "@/components/genera-file-licenza";
 import { eur, ore, data } from "@/lib/format";
 import { PERIODICITA } from "@/lib/contratti";
-import { Package, FolderKanban, Euro, Users, Layers, Paperclip } from "lucide-react";
+import { Package, FolderKanban, Euro, Users, Layers, Paperclip, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +81,9 @@ export default async function ProdottoPage({
               </Link>
             )}
           </CampoRecord>
+          <CampoRecord icona={<ShieldCheck size={12} />} etichetta="Licenza">
+            <ModalitaLicenzaProdotto id={p.id} modalita={p.modalitaLicenza} />
+          </CampoRecord>
         </SezioneCampi>
       </aside>
 
@@ -91,6 +97,15 @@ export default async function ProdottoPage({
               conteggio: p.licenze.length,
               contenuto: (
                 <div className="p-4">
+                  {(p.modalitaLicenza === "OFFLINE" || p.modalitaLicenza === "ENTRAMBE") && (
+                    <div className="mb-3">
+                      <ChiaveMasterProdotto
+                        prodottoId={p.id}
+                        chiavePubblicaMaster={p.chiavePubblicaMaster}
+                        chiaveMasterGenerataIl={p.chiaveMasterGenerataIl?.toString() ?? null}
+                      />
+                    </div>
+                  )}
                   <div className="mb-3 flex items-center justify-end">
                     <NuovaLicenza prodottoId={p.id} clienti={clienti} contratti={contratti} piani={p.piani} />
                   </div>
@@ -130,6 +145,10 @@ export default async function ProdottoPage({
                           <div className="flex-none">
                             <StatoLicenza id={l.id} stato={l.stato} />
                           </div>
+                          {(p.modalitaLicenza === "OFFLINE" || p.modalitaLicenza === "ENTRAMBE") &&
+                            p.chiavePubblicaMaster && (
+                              <GeneraFileLicenza licenzaId={l.id} />
+                            )}
                         </div>
                       ))}
                     </div>

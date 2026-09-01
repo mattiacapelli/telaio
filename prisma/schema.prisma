@@ -736,6 +736,19 @@ model Prodotto {
   prezzoListino Decimal?  @db.Decimal(10, 2)
   /// Progetto interno da cui il prodotto nasce/evolve, se tracciato.
   progettoId    String?
+  /// Determina se le licenze di questo prodotto hanno una coppia di chiavi
+  /// dedicata per la firma offline (OFFLINE/ENTRAMBE) e se rispondono alla
+  /// verifica pubblica online (ONLINE/ENTRAMBE). NESSUNA non richiede alcun
+  /// materiale crittografico.
+  modalitaLicenza ModalitaLicenza @default(NESSUNA)
+  /// Pubblica Ed25519 master (SPKI/DER in base64): va compilata nel
+  /// software del cliente per verificare offline i certificati di licenza.
+  chiavePubblicaMaster String?
+  /// Privata Ed25519 master, cifrata AES-256-GCM con LICENSE_ENCRYPTION_KEY
+  /// prima di essere salvata ("v1:<iv-b64>:<authTag-b64>:<cifrato-b64>").
+  /// Mai esposta via API: letta solo server-side per certificare le licenze.
+  chiavePrivataMasterCifrata String?
+  chiaveMasterGenerataIl DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   eliminataIl   DateTime?
@@ -746,6 +759,17 @@ model Prodotto {
   documenti Documento[]
 
   @@index([eliminataIl])
+}
+
+/// Modalità di licenza del prodotto: determina se le sue licenze hanno una
+/// coppia di chiavi dedicata per la firma offline (OFFLINE/ENTRAMBE) e se
+/// rispondono alla verifica pubblica online (ONLINE/ENTRAMBE). NESSUNA non
+/// richiede alcun materiale crittografico.
+enum ModalitaLicenza {
+  NESSUNA
+  ONLINE
+  OFFLINE
+  ENTRAMBE
 }
 
 /// Un prodotto può avere più piani (es. Base/Pro), ognuno con il proprio
@@ -803,6 +827,14 @@ model LicenzaProdotto {
   /// Canone della licenza quando non ha un piano collegato.
   canone      Decimal?     @db.Decimal(10, 2)
   note        String?
+  /// Pubblica Ed25519 dedicata a questa licenza (SPKI/DER in base64). La
+  /// privata corrispondente firma il payload del file di licenza e viene
+  /// scartata subito dopo: non esiste una colonna per lei di proposito.
+  chiavePubblicaLicenza String?
+  /// chiavePubblicaLicenza firmata dalla privata master del prodotto (firma
+  /// Ed25519 raw, base64): prova che questa pubblica è stata emessa da Telaio.
+  certificatoLicenza String?
+  fileLicenzaGeneratoIl DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   eliminataIl DateTime?

@@ -1136,6 +1136,12 @@ export async function getProdottoCompleto(id: string) {
     prezzoListino: p.prezzoListino === null ? null : n(p.prezzoListino),
     progetto: p.progetto,
     documenti: p.documenti,
+    modalitaLicenza: p.modalitaLicenza,
+    // Mai la privata (nemmeno cifrata): questa query arriva a un Server
+    // Component che la passa a Client Component, e non deve mai finire
+    // serializzata nel payload React verso il browser.
+    chiavePubblicaMaster: p.chiavePubblicaMaster,
+    chiaveMasterGenerataIl: p.chiaveMasterGenerataIl,
     piani: p.piani.map((pi) => ({
       id: pi.id,
       nome: pi.nome,
@@ -1158,6 +1164,8 @@ export async function getProdottoCompleto(id: string) {
       // averne uno proprio nel momento in cui sceglie un piano.
       canone: l.piano ? n(l.piano.canone) : l.canone === null ? null : n(l.canone),
       note: l.note,
+      chiavePubblicaLicenza: l.chiavePubblicaLicenza,
+      fileLicenzaGeneratoIl: l.fileLicenzaGeneratoIl,
     })),
   };
 }
