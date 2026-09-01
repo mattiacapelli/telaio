@@ -142,6 +142,11 @@ export default async function ProdottoPage({
                           <span className="w-20 flex-none text-right text-md">
                             {l.canone !== null ? eur(l.canone) : "—"}
                           </span>
+                          <span className="w-32 flex-none text-xs text-faint">
+                            {l.fileLicenzaGeneratoIl
+                              ? `file generato il ${data(l.fileLicenzaGeneratoIl)}`
+                              : "nessun file generato"}
+                          </span>
                           <div className="flex-none">
                             <StatoLicenza id={l.id} stato={l.stato} />
                           </div>

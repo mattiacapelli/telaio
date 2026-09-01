@@ -292,6 +292,14 @@ export async function getCliente(id: string) {
       // lavoro generico che non appartiene a nient'altro.
       registrazioni: { where: { eliminataIl: null }, orderBy: { data: "desc" } },
       documenti: { where: { eliminataIl: null }, orderBy: { createdAt: "desc" } },
+      licenze: {
+        where: { eliminataIl: null },
+        include: {
+          prodotto: { select: { id: true, nome: true, modalitaLicenza: true, chiavePubblicaMaster: true } },
+          piano: { select: { nome: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   return c;

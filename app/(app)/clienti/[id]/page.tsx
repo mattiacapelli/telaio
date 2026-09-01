@@ -8,11 +8,13 @@ import { EliminaRecord } from "@/components/elimina-record";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { InserisciOre } from "@/components/inserisci-ore";
 import { DocumentiProgetto } from "@/components/documenti-progetto";
+import { StatoLicenza } from "@/components/stato-licenza";
+import { GeneraFileLicenza } from "@/components/genera-file-licenza";
 import { eur, eurCent, ore, data, dataEstesa, n } from "@/lib/format";
 import { STATI as STATI_CONTRATTO, TIPI as TIPI_CONTRATTO } from "@/lib/contratti";
 import {
   Building2, MapPin, CreditCard, Mail, Hash, Clock, Wallet, Euro,
-  Users, FolderKanban, LifeBuoy, FileText, Receipt, FileSignature, Paperclip,
+  Users, FolderKanban, LifeBuoy, FileText, Receipt, FileSignature, Paperclip, KeyRound,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -411,6 +413,56 @@ export default async function ClientePage({
                             {STATI_CONTRATTO[k.stato]}
                           </Badge>
                         </Link>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+            {
+              chiave: "licenze",
+              etichetta: "Licenze",
+              icona: <KeyRound size={13} />,
+              conteggio: c.licenze.length,
+              contenuto: (
+                <div className="p-4">
+                  <div className="rounded border border-border">
+                    {c.licenze.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-md text-faint">
+                        Nessuna licenza attivata per questo cliente.
+                      </div>
+                    ) : (
+                      c.licenze.map((l) => (
+                        <div
+                          key={l.id}
+                          className="flex items-center gap-3 border-b border-border px-3 py-2.5 last:border-0"
+                        >
+                          <Link
+                            href={`/prodotti/${l.prodotto.id}`}
+                            className="min-w-0 flex-1 truncate text-md hover:underline"
+                          >
+                            {l.prodotto.nome}
+                          </Link>
+                          {l.piano && <Badge>{l.piano.nome}</Badge>}
+                          <span className="w-24 flex-none text-xs text-faint">
+                            dal {data(l.attivataIl)}
+                          </span>
+                          <span className="w-24 flex-none text-xs text-faint">
+                            {l.scadeIl ? `scade ${data(l.scadeIl)}` : "senza scadenza"}
+                          </span>
+                          <span className="w-32 flex-none text-xs text-faint">
+                            {l.fileLicenzaGeneratoIl
+                              ? `file generato il ${data(l.fileLicenzaGeneratoIl)}`
+                              : "nessun file generato"}
+                          </span>
+                          <div className="flex-none">
+                            <StatoLicenza id={l.id} stato={l.stato} />
+                          </div>
+                          {(l.prodotto.modalitaLicenza === "OFFLINE" || l.prodotto.modalitaLicenza === "ENTRAMBE") &&
+                            l.prodotto.chiavePubblicaMaster && (
+                              <GeneraFileLicenza licenzaId={l.id} />
+                            )}
+                        </div>
                       ))
                     )}
                   </div>
