@@ -30,6 +30,35 @@ export function ore(v: Num) {
 }
 
 /**
+ * "2:30:00", "2:30" o "2" (ore, minuti, secondi) → ore decimali. Accetta
+ * anche solo ore o ore:minuti, per non forzare a digitare ":00" ogni volta.
+ * Ritorna null se il formato non è riconoscibile, mai NaN silenzioso.
+ */
+export function parseTempo(v: string): number | null {
+  const pulito = v.trim();
+  if (!pulito) return null;
+  const parti = pulito.split(":").map((p) => p.trim());
+  if (parti.length > 3 || parti.some((p) => p === "" || !/^\d+$/.test(p))) return null;
+
+  const [h, m = "0", s = "0"] = parti;
+  const ore = Number(h);
+  const minuti = Number(m);
+  const secondi = Number(s);
+  if (minuti >= 60 || secondi >= 60) return null;
+
+  return ore + minuti / 60 + secondi / 3600;
+}
+
+/** Ore decimali → "H:MM:SS", per pre-compilare il campo tempo in modifica. */
+export function formatTempo(v: Num): string {
+  const totaleSecondi = Math.round(n(v) * 3600);
+  const h = Math.floor(totaleSecondi / 3600);
+  const m = Math.floor((totaleSecondi % 3600) / 60);
+  const s = totaleSecondi % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+/**
  * Le date di dominio sono `@db.Date` (mezzanotte UTC): vanno formattate in UTC,
  * altrimenti a ovest di Greenwich mostrerebbero il giorno precedente.
  */

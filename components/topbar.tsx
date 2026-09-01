@@ -97,7 +97,14 @@ function TimerPill() {
   useEffect(() => {
     carica();
     const poll = setInterval(carica, 15000);
-    return () => clearInterval(poll);
+    // Avviare/fermare il timer da un'altra pagina (es. un'attività) non
+    // tocca questa topbar: senza l'evento, l'utente aspetterebbe fino a 15s
+    // per vedere la pillola comparire o sparire.
+    window.addEventListener("telaio:timer-cambiato", carica);
+    return () => {
+      clearInterval(poll);
+      window.removeEventListener("telaio:timer-cambiato", carica);
+    };
   }, []);
 
   useEffect(() => {
@@ -120,6 +127,7 @@ function TimerPill() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ azione: "stop" }),
     });
+    window.dispatchEvent(new Event("telaio:timer-cambiato"));
     carica();
   }
 

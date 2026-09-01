@@ -6,6 +6,7 @@ import { Plus, Trash2, Pencil } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Campo } from "@/components/ui/input";
+import { parseTempo, formatTempo } from "@/lib/format";
 
 type Opzione = { id: string; etichetta: string; gruppo?: string };
 
@@ -49,7 +50,7 @@ export function InserisciOre({
   const oggi = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState({
     data: registrazione?.data ?? dataIniziale ?? oggi,
-    ore: registrazione ? String(registrazione.ore) : "",
+    tempo: registrazione ? formatTempo(registrazione.ore) : "",
     descrizione: registrazione?.descrizione ?? "",
     fatturabile: registrazione?.fatturabile ?? true,
     // In modifica il collegamento non si cambia: sposterebbe le ore da un
@@ -62,11 +63,18 @@ export function InserisciOre({
   async function salva(e: React.FormEvent) {
     e.preventDefault();
     setErrore(null);
+
+    const ore = parseTempo(d.tempo);
+    if (ore === null || ore <= 0) {
+      setErrore("Indica il tempo come H:MM:SS, es. 2:30:00 per due ore e mezza");
+      return;
+    }
+
     setInCorso(true);
 
     const corpo: Record<string, unknown> = {
       data: d.data,
-      ore: d.ore,
+      ore,
       descrizione: d.descrizione || null,
       fatturabile: d.fatturabile,
     };
@@ -102,7 +110,7 @@ export function InserisciOre({
     }
 
     setAperto(false);
-    if (!registrazione) setD({ ...d, ore: "", descrizione: "", riferimento: "" });
+    if (!registrazione) setD({ ...d, tempo: "", descrizione: "", riferimento: "" });
     router.refresh();
   }
 
@@ -147,13 +155,12 @@ export function InserisciOre({
               <Campo etichetta="Data">
                 <Input type="date" value={d.data} onChange={(e) => set("data", e.target.value)} required />
               </Campo>
-              <Campo etichetta="Ore">
+              <Campo etichetta="Tempo" nota="H:MM:SS">
                 <Input
-                  value={d.ore}
-                  onChange={(e) => set("ore", e.target.value)}
-                  inputMode="decimal"
+                  value={d.tempo}
+                  onChange={(e) => set("tempo", e.target.value)}
                   className="text-right"
-                  placeholder="2,5"
+                  placeholder="2:30:00"
                   required
                   autoFocus
                 />

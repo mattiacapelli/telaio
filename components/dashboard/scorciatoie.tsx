@@ -28,6 +28,7 @@ export function Scorciatoie({
       body: JSON.stringify({ azione: "stop" }),
     }).catch(() => null);
     setInCorso(false);
+    window.dispatchEvent(new Event("telaio:timer-cambiato"));
     router.refresh();
   }
 

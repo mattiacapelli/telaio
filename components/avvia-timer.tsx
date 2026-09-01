@@ -30,6 +30,9 @@ export function AvviaTimer({
         etichetta,
       }),
     });
+    // La pillola del timer in topbar fa polling ogni 15s: senza questo
+    // evento l'utente non la vedrebbe comparire finché non scade il poll.
+    window.dispatchEvent(new Event("telaio:timer-cambiato"));
     router.refresh();
     setInCorso(false);
   }
