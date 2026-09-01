@@ -50,7 +50,12 @@ export function EliminaRecord({
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div
+      className="flex flex-col items-end gap-1"
+      // Dentro una card trascinabile, il click qui non deve avviare anche il
+      // drag/l'apertura della card sottostante.
+      onClick={(e) => e.stopPropagation()}
+    >
       <Button variant={variant} size={size} onClick={elimina} disabled={inCorso}>
         {inCorso ? <Loader2 className="animate-spin" /> : <Trash2 />}
         {inCorso ? "Elimino…" : "Elimina"}

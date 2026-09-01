@@ -76,7 +76,7 @@ export default async function FatturePage() {
             )}
           </div>
           {f.stato === "DA_EMETTERE" && (
-            <div className="mt-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <div className="mt-2 flex justify-end">
               <EliminaRecord entita="fattura" id={f.id} nome={f.numero} />
             </div>
           )}
