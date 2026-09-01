@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { invalidate } from "@/lib/redis";
 import { registraEvento } from "@/lib/eventi";
+import { arrotondaOre } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
       // La data arriva come "2026-08-30": la trattiamo in UTC come le altre
       // date di dominio, per non slittare di un giorno secondo il fuso.
       data: new Date(`${d.data}T00:00:00.000Z`),
-      ore: d.ore,
+      ore: arrotondaOre(d.ore),
       descrizione: d.descrizione || null,
       fatturabile: d.fatturabile,
       progettoId,

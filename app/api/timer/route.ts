@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { leggiSessione } from "@/lib/auth";
 import { redis } from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
+import { arrotondaOre } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
 
     // Sotto il minuto non vale la pena creare una registrazione.
     if (secondi >= 60) {
-      const ore = Math.round((secondi / 3600) * 100) / 100;
+      const ore = arrotondaOre(secondi / 3600);
       await prisma.registrazioneOre.create({
         data: {
           data: new Date(),

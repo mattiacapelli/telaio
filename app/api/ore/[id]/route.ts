@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { leggiSessione } from "@/lib/auth";
 import { invalidate } from "@/lib/redis";
 import { spostaNelCestino, ErroreEliminazione } from "@/lib/eliminazione";
+import { arrotondaOre } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export async function PATCH(
     where: { id },
     data: {
       ...(d.data !== undefined ? { data: new Date(`${d.data}T00:00:00.000Z`) } : {}),
-      ...(d.ore !== undefined ? { ore: d.ore } : {}),
+      ...(d.ore !== undefined ? { ore: arrotondaOre(d.ore) } : {}),
       ...(d.descrizione !== undefined ? { descrizione: d.descrizione || null } : {}),
       ...(d.fatturabile !== undefined ? { fatturabile: d.fatturabile } : {}),
     },

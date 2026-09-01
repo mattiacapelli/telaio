@@ -2,7 +2,7 @@ import { z, type ZodTypeAny } from "zod";
 import { prisma } from "@/lib/prisma";
 import { invalidate } from "@/lib/redis";
 import { registraEvento } from "@/lib/eventi";
-import { n } from "@/lib/format";
+import { n, arrotondaOre } from "@/lib/format";
 
 /**
  * Tool esposti all'AI via MCP.
@@ -449,7 +449,7 @@ const TOOLS_SCRITTURA: Record<string, Tool> = {
       const r = await prisma.registrazioneOre.create({
         data: {
           data: new Date(`${d.data}T00:00:00.000Z`),
-          ore: d.ore,
+          ore: arrotondaOre(d.ore),
           descrizione: d.descrizione || null,
           fatturabile: d.fatturabile,
           progettoId,
