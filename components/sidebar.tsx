@@ -11,6 +11,7 @@ import {
   CircleCheck,
   LifeBuoy,
   Clock,
+  CalendarDays,
   Receipt,
   Wallet,
   FileSignature,
@@ -20,6 +21,8 @@ import {
   Bell,
   PanelLeftClose,
   PanelLeft,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TileIcona, type Tinta } from "@/components/tile-icona";
@@ -32,8 +35,16 @@ import { useNavMobile } from "@/components/nav-mobile";
  * il colore identifica la sezione e resta fisso, mentre è l'etichetta a
  * cambiare colore quando la voce è attiva.
  */
+const DASHBOARD_SOTTO = [
+  { href: "/", label: "Generale" },
+  { href: "/dashboard/fatturazione", label: "Fatturazione" },
+  { href: "/dashboard/progetti", label: "PM" },
+  { href: "/dashboard/preventivi", label: "Preventivi" },
+  { href: "/dashboard/ticket", label: "Ticket" },
+  { href: "/dashboard/prodotti", label: "Prodotti" },
+] as const;
+
 const OPERATIVO = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, tinta: "blue" },
   { href: "/clienti", label: "Clienti", icon: Building2, tinta: "sky" },
   { href: "/preventivi", label: "Preventivi", icon: FileText, tinta: "purple" },
   { href: "/progetti", label: "Progetti", icon: FolderKanban, tinta: "orange" },
@@ -41,6 +52,7 @@ const OPERATIVO = [
   { href: "/attivita", label: "Attività", icon: CircleCheck, tinta: "green" },
   { href: "/ticket", label: "Ticket", icon: LifeBuoy, tinta: "red" },
   { href: "/ore", label: "Ore", icon: Clock, tinta: "turquoise" },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays, tinta: "pink" },
 ] as const;
 
 const DENARO = [
@@ -71,6 +83,9 @@ export function Sidebar({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { aperto, chiudi } = useNavMobile();
+
+  const dashboardAttiva = pathname === "/" || pathname.startsWith("/dashboard");
+  const [dashboardAperta, setDashboardAperta] = useState(dashboardAttiva);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -106,6 +121,50 @@ export function Sidebar({
     );
   };
 
+  const VoceDashboard = () => (
+    <div>
+      <button
+        type="button"
+        onClick={() => (collapsed ? undefined : setDashboardAperta((a) => !a))}
+        className={cn(
+          "flex h-[28px] w-full items-center gap-[8px] rounded-md px-[4px] text-md transition-colors",
+          dashboardAttiva
+            ? "bg-[var(--alpha-light)] text-text"
+            : "text-muted hover:bg-[var(--alpha-light)] hover:text-text",
+        )}
+      >
+        <TileIcona icona={LayoutDashboard} tinta="blue" />
+        {!collapsed && (
+          <>
+            <Link href="/" onClick={chiudi} className="flex-1 truncate text-left">
+              Dashboard
+            </Link>
+            {dashboardAperta ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </>
+        )}
+      </button>
+      {!collapsed && dashboardAperta && (
+        <div className="mt-0.5 flex flex-col gap-0.5 pl-[28px]">
+          {DASHBOARD_SOTTO.map((v) => (
+            <Link
+              key={v.href}
+              href={v.href}
+              onClick={chiudi}
+              className={cn(
+                "flex h-[24px] items-center rounded-md px-[8px] text-md transition-colors",
+                isActive(v.href)
+                  ? "bg-[var(--alpha-light)] text-text"
+                  : "text-muted hover:bg-[var(--alpha-light)] hover:text-text",
+              )}
+            >
+              <span className="truncate">{v.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const contenuto = (
     <>
       {/* Intestazione workspace, come la riga "Mattia Capelli" di Twenty. */}
@@ -133,6 +192,7 @@ export function Sidebar({
             Operativo
           </div>
         )}
+        <VoceDashboard />
         {OPERATIVO.map((v) => (
           <Voce key={v.href} {...v} />
         ))}

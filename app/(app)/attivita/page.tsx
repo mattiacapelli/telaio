@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { getAttivita } from "@/lib/queries";
+import { getAttivita, getProgettiPerSelezione } from "@/lib/queries";
 import { titoloPagina } from "@/lib/titolo";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
 import { Vuoto } from "@/components/ui-legacy";
 import { data } from "@/lib/format";
 import { AvviaTimer } from "@/components/avvia-timer";
+import { NuovaAttivita } from "@/components/nuova-attivita";
 import { CircleCheck, FolderKanban, Clock, Calendar, Tag } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -29,9 +30,16 @@ const STATI: Record<string, string> = {
 };
 
 export default async function AttivitaPage() {
-  const attivita = await getAttivita();
+  const [attivita, progetti] = await Promise.all([getAttivita(), getProgettiPerSelezione()]);
+
   if (attivita.length === 0) {
-    return <Vuoto titolo="Nessuna attività" nota="Le attività si creano all'interno di un progetto." />;
+    return (
+      <Vuoto
+        titolo="Nessuna attività"
+        nota="Crea un'attività libera oppure aggiungila da un progetto."
+        azione={<NuovaAttivita progetti={progetti} />}
+      />
+    );
   }
 
   const elementi = attivita.map((a) => ({
@@ -77,6 +85,7 @@ export default async function AttivitaPage() {
         intestazione={
           <span className="text-md text-muted">{attivita.length} attività</span>
         }
+        azioni={<NuovaAttivita progetti={progetti} />}
         colonneTabella={[
           { intestazione: "Attività", larghezza: "minmax(0, 1.8fr)", icona: <CircleCheck key="i1" size={13} /> },
           { intestazione: "Progetto", icona: <FolderKanban key="i2" size={13} /> },

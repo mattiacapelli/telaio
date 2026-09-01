@@ -101,7 +101,7 @@ export default async function AttivitaDettaglioPage({
             )}
           </CampoRecord>
           <CampoRecord icona={<Building2 size={12} />} etichetta="Cliente" vuoto="—">
-            {a.progetto && (
+            {a.progetto?.clienteId && (
               <Link href={`/clienti/${a.progetto.clienteId}`} className="flex items-center gap-1.5 hover:underline">
                 <Chip testo={a.progetto.cliente} />
                 <span className="truncate">{a.progetto.cliente}</span>

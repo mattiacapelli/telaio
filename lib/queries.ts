@@ -242,6 +242,10 @@ export function inizioSettimana(base = new Date()) {
   return d;
 }
 
+export function inizioMese(offset = 0, base = new Date()) {
+  return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + offset, 1));
+}
+
 export async function getClienti() {
   return cached("clienti", TTL, async () => {
     const clienti = await prisma.cliente.findMany({
@@ -1078,6 +1082,7 @@ export async function getFattureDaIncassare() {
       id: f.id,
       numero: f.numero,
       cliente: f.cliente.ragioneSociale,
+      scadeIl: f.scadeIl,
       residuo: n(f.imponibile) - f.incassi.reduce((s, i) => s + n(i.importo), 0),
     }))
     // Una fattura già coperta non deve comparire tra quelle da incassare.
@@ -1155,4 +1160,114 @@ export async function getProdottoCompleto(id: string) {
       note: l.note,
     })),
   };
+}
+
+/** Milestone di progetto non ancora completate, senza filtro sulla scadenza. */
+export async function getMilestoneAperte() {
+  return cached("milestone-aperte", TTL, async () => {
+    const m = await prisma.milestone.findMany({
+      where: { completata: false, progetto: { eliminataIl: null } },
+      include: { progetto: { include: { cliente: true } } },
+      orderBy: { scadenzaIl: "asc" },
+    });
+    return m.map((x) => ({
+      id: x.id,
+      titolo: x.titolo,
+      scadenzaIl: x.scadenzaIl,
+      progettoId: x.progettoId,
+      progetto: x.progetto.nome,
+      cliente: x.progetto.cliente?.ragioneSociale ?? "Interno",
+    }));
+  });
+}
+
+export type EventoCalendario = {
+  tipo: "progetto" | "attivita" | "milestone" | "contratto" | "fattura";
+  id: string;
+  titolo: string;
+  inizio: Date;
+  fine: Date | null;
+  contesto: string;
+  link: string;
+};
+
+/** Eventi unificati per la vista Calendario/Gantt: progetti, attività, milestone, contratti, fatture da incassare. */
+export async function getCalendario() {
+  return cached("calendario", TTL, async () => {
+    const [progetti, attivita, milestone, contratti, fattureDaIncassare] = await Promise.all([
+      getProgetti(),
+      getAttivita(),
+      getMilestoneAperte(),
+      getContratti(),
+      getFattureDaIncassare(),
+    ]);
+
+    const eventi: EventoCalendario[] = [];
+
+    for (const p of progetti) {
+      if (!p.inizioIl && !p.consegnaIl) continue;
+      eventi.push({
+        tipo: "progetto",
+        id: p.id,
+        titolo: p.nome,
+        inizio: p.inizioIl ?? p.consegnaIl!,
+        fine: p.consegnaIl,
+        contesto: p.cliente,
+        link: `/progetti/${p.id}`,
+      });
+    }
+
+    for (const a of attivita) {
+      if (!a.scadenzaIl) continue;
+      eventi.push({
+        tipo: "attivita",
+        id: a.id,
+        titolo: a.titolo,
+        inizio: a.scadenzaIl,
+        fine: null,
+        contesto: a.progetto,
+        link: `/attivita/${a.id}`,
+      });
+    }
+
+    for (const m of milestone) {
+      if (!m.scadenzaIl) continue;
+      eventi.push({
+        tipo: "milestone",
+        id: m.id,
+        titolo: m.titolo,
+        inizio: m.scadenzaIl,
+        fine: null,
+        contesto: m.progetto,
+        link: `/progetti/${m.progettoId}`,
+      });
+    }
+
+    for (const c of contratti) {
+      eventi.push({
+        tipo: "contratto",
+        id: c.id,
+        titolo: `${c.numero} · ${c.titolo}`,
+        inizio: c.inizioIl,
+        fine: c.scadeIl,
+        contesto: c.cliente,
+        link: `/contratti/${c.id}`,
+      });
+    }
+
+    for (const f of fattureDaIncassare) {
+      if (!f.scadeIl) continue;
+      eventi.push({
+        tipo: "fattura",
+        id: f.id,
+        titolo: `Fattura ${f.numero}`,
+        inizio: f.scadeIl,
+        fine: null,
+        contesto: f.cliente,
+        link: `/fatture`,
+      });
+    }
+
+    return eventi;
+  });
 }
