@@ -25,6 +25,7 @@ export async function GET() {
     include: {
       progetto: { include: { cliente: true } },
       ticket: { include: { cliente: true } },
+      cliente: true,
     },
   });
 
@@ -35,7 +36,9 @@ export async function GET() {
   >();
 
   for (const r of righe) {
-    const cliente = r.progetto?.cliente ?? r.ticket?.cliente;
+    // L'ora può essere legata a un progetto/ticket, oppure dichiarata
+    // direttamente su un cliente (lavoro generico senza altro riferimento).
+    const cliente = r.progetto?.cliente ?? r.ticket?.cliente ?? r.cliente;
     if (!cliente) continue;
     const g = perCliente.get(cliente.id) ?? {
       cliente: cliente.ragioneSociale,
@@ -77,6 +80,7 @@ export async function POST(req: Request) {
       OR: [
         { progetto: { clienteId: cliente.id } },
         { ticket: { clienteId: cliente.id } },
+        { clienteId: cliente.id },
       ],
       eliminataIl: null,
     },
@@ -90,7 +94,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // Una riga per progetto (le ore su ticket confluiscono in "Assistenza").
+  // Una riga per progetto: le ore su ticket e quelle dichiarate direttamente
+  // sul cliente (senza progetto) confluiscono in "Assistenza e interventi".
   const gruppi = new Map<string, number>();
   for (const r of registrazioni) {
     const etichetta = r.progetto?.nome ?? "Assistenza e interventi";
