@@ -1,0 +1,19 @@
+# Override per la VPS di produzione, dove altri stack Docker (es. Twenty CRM)
+# girano già sulla stessa macchina con i propri postgres/redis/minio.
+#
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d --build
+#
+# Qui si tolgono le porte host di postgres/redis/minio: l'unico servizio che
+# deve essere raggiungibile dall'host (per Nginx) è "app". Gli altri si
+# parlano tra loro per nome di servizio sulla rete Docker interna del
+# progetto, che è già isolata da quella di qualsiasi altro stack sulla VPS —
+# niente conflitti di porta con postgres/redis/minio di altri progetti.
+services:
+  postgres:
+    ports: !override []
+
+  redis:
+    ports: !override []
+
+  minio:
+    ports: !override []
