@@ -32,6 +32,22 @@ RUN npm config set fetch-timeout 900000 \
  && npm install --ignore-scripts --no-audit --no-fund prisma@6 \
  && npm cache clean --force
 
+# ---- cli-deps: dependencies for scripts/*.mjs run manually inside the container ----
+# Turbopack bundles ioredis straight into the server chunks, so it never
+# lands in the standalone node_modules — fine for the app itself, but
+# scripts/utente.mjs runs standalone and needs the real package on disk,
+# transitive deps included. Same isolated-install pattern as prisma-cli
+# above, and for the same reason: the app's package.json would drag in
+# next/typescript/etc.
+FROM node:22-alpine AS cli-deps
+WORKDIR /cli
+RUN npm config set fetch-timeout 900000 \
+ && npm config set fetch-retries 8 \
+ && npm config set fetch-retry-maxtimeout 180000 \
+ && npm init -y >/dev/null \
+ && npm install --ignore-scripts --no-audit --no-fund ioredis@6 \
+ && npm cache clean --force
+
 # ---- runner: minimal standalone image ----
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -48,11 +64,23 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # @effect/*, ...), so install it in its own stage and copy that tree whole —
 # cherry-picking prisma/@prisma alone leaves those requires unresolved.
 COPY --from=builder /app/prisma ./prisma
-# Copied into a staging dir first: writing straight to ./node_modules would
-# clobber the standalone tree Next needs. `cp -r` merges the two instead.
-COPY --from=prisma-cli /cli/node_modules ./cli-modules
-RUN cp -r ./cli-modules/. ./node_modules/ \
- && rm -rf ./cli-modules \
+# Gestione utenti da riga di comando (crea/password/disattiva/elenco): non
+# fa parte del bundle Next, va copiata a parte per poterla lanciare a mano
+# nel container in produzione (docker compose exec app node scripts/utente.mjs ...).
+COPY --from=builder /app/scripts ./scripts
+# Copied into staging dirs first: writing straight to ./node_modules would
+# clobber the standalone tree Next needs. `cp -r` merges them instead.
+# - prisma-cli: the Prisma CLI, for boot-time migrations.
+# - cli-deps: ioredis, for scripts/utente.mjs's session revocation. Turbopack
+#   bundles ioredis straight into the server chunks, so it never lands in
+#   the standalone node_modules — fine for the app itself, but the script
+#   runs standalone and needs the real package on disk, transitive deps
+#   included.
+COPY --from=prisma-cli /cli/node_modules ./cli-modules-prisma
+COPY --from=cli-deps /cli/node_modules ./cli-modules-ioredis
+RUN cp -r ./cli-modules-prisma/. ./node_modules/ \
+ && cp -r ./cli-modules-ioredis/. ./node_modules/ \
+ && rm -rf ./cli-modules-prisma ./cli-modules-ioredis \
  && chown -R nextjs:nodejs ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
