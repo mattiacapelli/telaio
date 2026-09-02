@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { leggiSessione } from "@/lib/auth";
 import { FormLogin } from "@/components/form-login";
 import { titoloPagina } from "@/lib/titolo";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,14 @@ export default async function LoginPage({
 }) {
   const { da } = await searchParams;
   if (await leggiSessione()) redirect(da || "/");
+
+  // Query minimale apposta: questa è una pagina pubblica, niente bisogno dei
+  // conteggi che getImpostazioni() calcola per la pagina Impostazioni.
+  const imp = await prisma.impostazioni.findUnique({
+    where: { id: 1 },
+    select: { nomeSpazio: true },
+  });
+  const nomeSpazio = imp?.nomeSpazio ?? "Telaio";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
@@ -37,7 +46,7 @@ export default async function LoginPage({
           <div>
             <div className="text-sm font-semibold tracking-tight">Telaio</div>
             <div className="text-xs uppercase tracking-wider text-faint">
-              Studio Ferrero
+              {nomeSpazio}
             </div>
           </div>
         </div>
