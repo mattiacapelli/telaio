@@ -21,9 +21,15 @@ type ContoOpzione = { id: string; nome: string; predefinito: boolean };
 export function RegistraIncasso({
   fatture,
   conti = [],
+  /** Se indicata, il dialog si apre già con questa fattura fissata (usato dal dettaglio fattura): niente select, solo il residuo di quella fattura. */
+  fatturaFissa,
+  /** Personalizza il bottone che apre il dialog, es. dimensione/variante diverse dal contesto board. */
+  trigger,
 }: {
   fatture: FatturaAperta[];
   conti?: ContoOpzione[];
+  fatturaFissa?: FatturaAperta;
+  trigger?: React.ReactNode;
 }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
@@ -32,16 +38,16 @@ export function RegistraIncasso({
 
   const oggi = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState({
-    fatturaId: "",
+    fatturaId: fatturaFissa?.id ?? "",
     data: oggi,
-    importo: "",
+    importo: fatturaFissa ? String(fatturaFissa.residuo) : "",
     metodo: "BONIFICO",
     contoId: conti.find((c) => c.predefinito)?.id ?? "",
     nota: "",
   });
 
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => setD({ ...d, [k]: v });
-  const scelta = fatture.find((f) => f.id === d.fatturaId);
+  const scelta = fatturaFissa ?? fatture.find((f) => f.id === d.fatturaId);
 
   async function salva(e: React.FormEvent) {
     e.preventDefault();
@@ -60,11 +66,11 @@ export function RegistraIncasso({
       return;
     }
     setAperto(false);
-    setD({ ...d, fatturaId: "", importo: "", nota: "" });
+    setD({ ...d, fatturaId: fatturaFissa?.id ?? "", importo: fatturaFissa ? String(fatturaFissa.residuo) : "", nota: "" });
     router.refresh();
   }
 
-  if (fatture.length === 0) {
+  if (!fatturaFissa && fatture.length === 0) {
     return (
       <Button size="sm" disabled title="Nessuna fattura da incassare">
         <Plus /> Registra incasso
@@ -74,38 +80,50 @@ export function RegistraIncasso({
 
   return (
     <Dialog open={aperto} onOpenChange={setAperto}>
-      <DialogTrigger asChild>
-        <Button size="sm"><Plus /> Registra incasso</Button>
-      </DialogTrigger>
+      {/* Dentro una card trascinabile, il click qui non deve avviare anche
+          il drag/l'apertura della card sottostante (vedi elimina-record.tsx). */}
+      <div onClick={(e) => e.stopPropagation()}>
+        <DialogTrigger asChild>
+          {trigger ?? <Button size="sm"><Plus /> Registra incasso</Button>}
+        </DialogTrigger>
+      </div>
       <DialogContent
         titolo="Registra un incasso"
         descrizione="Quando il totale copre l'imponibile la fattura passa a pagata."
       >
         <form onSubmit={salva} className="flex flex-col">
           <div className="flex flex-col gap-3 p-4">
-            <Campo etichetta="Fattura">
-              <Select
-                value={d.fatturaId}
-                onChange={(e) => {
-                  const f = fatture.find((x) => x.id === e.target.value);
-                  // Preimposta il residuo: il caso normale è il saldo pieno.
-                  setD({
-                    ...d,
-                    fatturaId: e.target.value,
-                    importo: f ? String(f.residuo) : "",
-                  });
-                }}
-                required
-                autoFocus
-              >
-                <option value="">Scegli…</option>
-                {fatture.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.numero} · {f.cliente} · residuo {eur(f.residuo)}
-                  </option>
-                ))}
-              </Select>
-            </Campo>
+            {fatturaFissa ? (
+              <Campo etichetta="Fattura">
+                <div className="rounded-md border border-border bg-surface2 px-2.5 py-1.5 text-md text-muted">
+                  {fatturaFissa.numero} · {fatturaFissa.cliente} · residuo {eur(fatturaFissa.residuo)}
+                </div>
+              </Campo>
+            ) : (
+              <Campo etichetta="Fattura">
+                <Select
+                  value={d.fatturaId}
+                  onChange={(e) => {
+                    const f = fatture.find((x) => x.id === e.target.value);
+                    // Preimposta il residuo: il caso normale è il saldo pieno.
+                    setD({
+                      ...d,
+                      fatturaId: e.target.value,
+                      importo: f ? String(f.residuo) : "",
+                    });
+                  }}
+                  required
+                  autoFocus
+                >
+                  <option value="">Scegli…</option>
+                  {fatture.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.numero} · {f.cliente} · residuo {eur(f.residuo)}
+                    </option>
+                  ))}
+                </Select>
+              </Campo>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo etichetta="Data">

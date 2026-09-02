@@ -112,14 +112,17 @@ export function GeneraDaOre() {
 /** Fattura compilata a mano. */
 export function NuovaFattura({
   clienti,
+  aziende = [],
 }: {
   clienti: { id: string; ragioneSociale: string; tariffaOraria: number }[];
+  aziende?: { id: string; ragioneSociale: string }[];
 }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
   const [clienteId, setClienteId] = useState("");
+  const [aziendaId, setAziendaId] = useState("");
   const [scadeIl, setScadeIl] = useState("");
   const [righe, setRighe] = useState<Riga[]>([
     { descrizione: "", quantita: "1", prezzo: "" },
@@ -144,6 +147,7 @@ export function NuovaFattura({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         clienteId,
+        aziendaId: aziendaId || null,
         scadeIl: scadeIl || null,
         righe: righe
           .filter((x) => x.descrizione.trim())
@@ -164,6 +168,7 @@ export function NuovaFattura({
 
     setAperto(false);
     setClienteId("");
+    setAziendaId("");
     setScadeIl("");
     setRighe([{ descrizione: "", quantita: "1", prezzo: "" }]);
     router.refresh();
@@ -213,6 +218,16 @@ export function NuovaFattura({
                   onChange={(e) => setScadeIl(e.target.value)}
                 />
               </Campo>
+              {aziende.length > 1 && (
+                <Campo etichetta="Ragione sociale emittente" nota="Vuoto = quella predefinita">
+                  <Select value={aziendaId} onChange={(e) => setAziendaId(e.target.value)}>
+                    <option value="">Predefinita</option>
+                    {aziende.map((a) => (
+                      <option key={a.id} value={a.id}>{a.ragioneSociale}</option>
+                    ))}
+                  </Select>
+                </Campo>
+              )}
             </div>
 
             <div className="mt-4">

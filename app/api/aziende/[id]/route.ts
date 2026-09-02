@@ -13,6 +13,7 @@ const Modifica = z.object({
   codiceFiscale: z.string().optional().nullable(),
   iban: z.string().optional().nullable(),
   regimeFiscale: z.string().optional().nullable(),
+  regimeFiscaleId: z.string().optional().nullable(),
   indirizzo: z.string().optional().nullable(),
   citta: z.string().optional().nullable(),
   cap: z.string().optional().nullable(),

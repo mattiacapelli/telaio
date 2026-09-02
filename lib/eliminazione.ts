@@ -36,7 +36,8 @@ export type Entita =
   | "contoIncasso"
   | "prodotto"
   | "pianoProdotto"
-  | "licenzaProdotto";
+  | "licenzaProdotto"
+  | "regimeFiscale";
 
 export class ErroreEliminazione extends Error {}
 
@@ -279,6 +280,28 @@ const CONFIG: Record<Entita, ConfigEntita> = {
       return l ? `${l.prodotto.nome} · ${l.cliente.ragioneSociale}` : null;
     },
   },
+
+  regimeFiscale: {
+    modello: "regimeFiscale",
+    campoNome: "nome",
+    nome: async (id) => (await prisma.regimeFiscale.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null,
+    figli: [
+      { etichetta: "aziende con questo regime", conta: (id) => prisma.azienda.count({ where: { regimeFiscaleId: id } }) },
+    ],
+    vincoloHard: async (id) => {
+      const r = await prisma.regimeFiscale.findUnique({ where: { id }, select: { predefinito: true } });
+      if (!r?.predefinito) return null;
+      const altri = await prisma.regimeFiscale.count({ where: { eliminataIl: null, NOT: { id } } });
+      if (altri === 0) return "è l'unico regime configurato: designa prima un altro come predefinito, oppure lascialo nel cestino";
+      return null;
+    },
+    gestisciPredefinito: async (id) => {
+      const r = await prisma.regimeFiscale.findUnique({ where: { id }, select: { predefinito: true } });
+      if (!r?.predefinito) return;
+      const altro = await prisma.regimeFiscale.findFirst({ where: { eliminataIl: null, NOT: { id } } });
+      if (altro) await prisma.regimeFiscale.update({ where: { id: altro.id }, data: { predefinito: true } });
+    },
+  },
 };
 
 async function figliBloccanti(config: ConfigEntita, id: string) {
@@ -403,6 +426,7 @@ function nomeCestino(entita: Entita, r: any): string {
     case "prodotto": return r.nome;
     case "pianoProdotto": return `${r.prodotto?.nome ?? "?"} · ${r.nome}`;
     case "licenzaProdotto": return `${r.prodotto?.nome ?? "?"} · ${r.cliente?.ragioneSociale ?? "?"}`;
+    case "regimeFiscale": return r.nome;
   }
 }
 

@@ -22,7 +22,7 @@ export async function titoloPagina(sezione: string) {
  * fetch completa, questa non deve duplicarne il peso solo per un titolo.
  */
 export async function nomeRecord(
-  entita: "ticket" | "attivita" | "cliente" | "contratto" | "preventivo" | "progetto" | "workflow" | "prodotto",
+  entita: "ticket" | "attivita" | "cliente" | "contratto" | "preventivo" | "progetto" | "workflow" | "prodotto" | "fattura",
   id: string,
 ): Promise<string | null> {
   switch (entita) {
@@ -44,5 +44,7 @@ export async function nomeRecord(
       return (await prisma.workflow.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null;
     case "prodotto":
       return (await prisma.prodotto.findUnique({ where: { id }, select: { nome: true } }))?.nome ?? null;
+    case "fattura":
+      return (await prisma.fattura.findUnique({ where: { id }, select: { numero: true } }))?.numero ?? null;
   }
 }

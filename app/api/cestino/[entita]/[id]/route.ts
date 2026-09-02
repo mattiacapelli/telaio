@@ -15,6 +15,7 @@ const ENTITA_VALIDE: Entita[] = [
   "cliente", "preventivo", "progetto", "attivita", "ticket", "fattura",
   "contratto", "costo", "registrazioneOre", "documento", "workflow",
   "modelloPdf", "testoStandard", "webhook", "contoIncasso", "prodotto", "pianoProdotto", "licenzaProdotto",
+  "regimeFiscale",
 ];
 
 function entitaValida(v: string): v is Entita {

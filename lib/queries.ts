@@ -2,6 +2,8 @@ import { prisma } from "./prisma";
 import { cached } from "./redis";
 import { n } from "./format";
 import { etichettaRevisione } from "./revisioni";
+import { calcolaFiscale, type CalcoloFiscale, type RegimeCalcolo } from "./tasse";
+import { assicuraRegimeForfettarioDefault } from "./regimi-fiscali";
 
 const TTL = 30; // secondi: i dati cambiano spesso, la cache serve a smorzare i picchi
 
@@ -480,6 +482,53 @@ export async function getFatture() {
       scadeIl: x.scadeIl,
     }));
   });
+}
+
+/** Scheda completa di una fattura: righe, cliente, azienda emittente, incassi. */
+export async function getFatturaCompleta(id: string) {
+  const f = await prisma.fattura.findUnique({
+    where: { id },
+    include: {
+      cliente: true,
+      azienda: true,
+      righe: { orderBy: { ordine: "asc" } },
+      incassi: { include: { conto: true }, orderBy: { data: "desc" } },
+    },
+  });
+  if (!f) return null;
+
+  const incassato = f.incassi.reduce((s, i) => s + n(i.importo), 0);
+  const imponibile = n(f.imponibile);
+
+  return {
+    id: f.id,
+    numero: f.numero,
+    stato: f.stato,
+    imponibile,
+    aliquotaIva: n(f.aliquotaIva),
+    emessaIl: f.emessaIl,
+    scadeIl: f.scadeIl,
+    createdAt: f.createdAt,
+    cliente: { id: f.cliente.id, ragioneSociale: f.cliente.ragioneSociale },
+    azienda: f.azienda ? { id: f.azienda.id, ragioneSociale: f.azienda.ragioneSociale } : null,
+    righe: f.righe.map((r) => ({
+      id: r.id,
+      descrizione: r.descrizione,
+      quantita: n(r.quantita),
+      prezzo: n(r.prezzo),
+      totale: n(r.quantita) * n(r.prezzo),
+    })),
+    incassato,
+    residuo: imponibile - incassato,
+    incassi: f.incassi.map((i) => ({
+      id: i.id,
+      data: i.data,
+      importo: n(i.importo),
+      metodo: i.metodo,
+      conto: i.conto?.nome ?? null,
+      nota: i.nota,
+    })),
+  };
 }
 
 export async function getIncassi() {
@@ -1286,4 +1335,121 @@ export async function getCalendario() {
 
     return eventi;
   });
+}
+
+export type RisultatoTasse = {
+  anno: number;
+  calcoli: (CalcoloFiscale & { aziendaId: string; aziendaNome: string })[];
+  aggregato: {
+    incassatoAnno: number;
+    contributiInpsDovuti: number;
+    impostaSostitutivaDovuta: number;
+    totaleDaAccantonare: number;
+    nettoResiduo: number;
+  } | null;
+  nonCalcolabile: { incassato: number; aziende: { id: string; nome: string }[] } | null;
+};
+
+/**
+ * Calcolo fiscale sull'incassato dell'anno (filtro su Incasso.data, non su
+ * Fattura.emessaIl: il forfettario tassa per cassa). aziendaId=null aggrega
+ * su tutte le aziende — MAI sommando "redditi lordi forfettari" tra aziende
+ * con coefficienti/aliquote diversi prima di applicare le aliquote (produrrebbe
+ * un numero fiscalmente insensato): si calcola ogni azienda separatamente e
+ * si sommano solo i risultati finali per i KPI aggregati.
+ *
+ * Non passa da cached(): i suoi input (incassi appena registrati, regime
+ * appena cambiato in Impostazioni) sono troppo sensibili a un TTL di 30s per
+ * una pagina che l'utente guarda apposta per una cifra da accantonare ora.
+ */
+export async function getTasse(anno?: number, aziendaId?: string | null): Promise<RisultatoTasse> {
+  await assicuraRegimeForfettarioDefault();
+  const annoCalcolo = anno ?? new Date().getFullYear();
+  const inizio = new Date(Date.UTC(annoCalcolo, 0, 1));
+  const fine = new Date(Date.UTC(annoCalcolo + 1, 0, 1));
+
+  const incassi = await prisma.incasso.findMany({
+    where: {
+      data: { gte: inizio, lt: fine },
+      fattura: { eliminataIl: null, ...(aziendaId ? { aziendaId } : {}) },
+    },
+    select: {
+      importo: true,
+      fattura: {
+        select: {
+          azienda: {
+            select: {
+              id: true,
+              ragioneSociale: true,
+              regimeFiscaleRel: {
+                select: {
+                  nome: true,
+                  coefficienteRedditivita: true,
+                  aliquotaSostitutiva: true,
+                  aliquotaInps: true,
+                  minimaleInps: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const perAzienda = new Map<string, { nome: string; incassato: number; regime: RegimeCalcolo | null }>();
+  let incassatoSenzaAzienda = 0;
+
+  for (const i of incassi) {
+    const importo = n(i.importo);
+    const azienda = i.fattura.azienda;
+    if (!azienda) {
+      incassatoSenzaAzienda += importo;
+      continue;
+    }
+    const voce = perAzienda.get(azienda.id) ?? {
+      nome: azienda.ragioneSociale,
+      incassato: 0,
+      regime: azienda.regimeFiscaleRel
+        ? {
+            nome: azienda.regimeFiscaleRel.nome,
+            coefficienteRedditivita: n(azienda.regimeFiscaleRel.coefficienteRedditivita),
+            aliquotaSostitutiva: n(azienda.regimeFiscaleRel.aliquotaSostitutiva),
+            aliquotaInps: n(azienda.regimeFiscaleRel.aliquotaInps),
+            minimaleInps: azienda.regimeFiscaleRel.minimaleInps !== null ? n(azienda.regimeFiscaleRel.minimaleInps) : null,
+          }
+        : null,
+    };
+    voce.incassato += importo;
+    perAzienda.set(azienda.id, voce);
+  }
+
+  const calcoli: RisultatoTasse["calcoli"] = [];
+  const nonCalcolabile = { incassato: incassatoSenzaAzienda, aziende: [] as { id: string; nome: string }[] };
+
+  for (const [id, v] of perAzienda) {
+    if (!v.regime) {
+      nonCalcolabile.incassato += v.incassato;
+      nonCalcolabile.aziende.push({ id, nome: v.nome });
+      continue;
+    }
+    calcoli.push({ aziendaId: id, aziendaNome: v.nome, ...calcolaFiscale(v.incassato, v.regime) });
+  }
+
+  const aggregato = calcoli.length > 0
+    ? {
+        incassatoAnno: calcoli.reduce((s, c) => s + c.incassatoAnno, 0),
+        contributiInpsDovuti: calcoli.reduce((s, c) => s + c.contributiInpsDovuti, 0),
+        impostaSostitutivaDovuta: calcoli.reduce((s, c) => s + c.impostaSostitutivaDovuta, 0),
+        totaleDaAccantonare: calcoli.reduce((s, c) => s + c.totaleDaAccantonare, 0),
+        nettoResiduo: calcoli.reduce((s, c) => s + c.nettoResiduo, 0),
+      }
+    : null;
+
+  return {
+    anno: annoCalcolo,
+    calcoli,
+    aggregato,
+    nonCalcolabile: nonCalcolabile.incassato > 0 ? nonCalcolabile : null,
+  };
 }

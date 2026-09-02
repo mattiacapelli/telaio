@@ -8,6 +8,8 @@ import { TestiStandard } from "@/components/testi-standard";
 import { ElencoModelli } from "@/components/pdf-builder/elenco-modelli";
 import { ElencoAziende } from "@/components/impostazioni/aziende";
 import { ElencoContiIncasso } from "@/components/impostazioni/conti-incasso";
+import { ElencoRegimiFiscali } from "@/components/impostazioni/regimi-fiscali";
+import { assicuraRegimeForfettarioDefault } from "@/lib/regimi-fiscali";
 import { CestinoPannello } from "@/components/impostazioni/cestino-pannello";
 import { ElencoApiKey } from "@/components/impostazioni/api-keys";
 import { ElencoWebhook } from "@/components/impostazioni/webhook";
@@ -44,7 +46,11 @@ const MODALITA_TRASFERTA: Record<string, string> = {
 };
 
 export default async function ImpostazioniPage() {
-  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf, aziende, apiKeys, webhook, conti] = await Promise.all([
+  // Sequenziale, non dentro il Promise.all: alla primissima visita, il
+  // regime forfettario di default deve esistere già quando si legge l'elenco.
+  await assicuraRegimeForfettarioDefault();
+
+  const [{ imp, clienti, referenti }, ultima, testi, utenti, modelliPdf, aziende, apiKeys, webhook, conti, regimiFiscali] = await Promise.all([
     getImpostazioni(),
     ultimaEsecuzione(),
     prisma.testoStandard.findMany({
@@ -63,6 +69,10 @@ export default async function ImpostazioniPage() {
     prisma.contoIncasso.findMany({
       where: { eliminataIl: null },
       orderBy: [{ predefinito: "desc" }, { ordine: "asc" }, { nome: "asc" }],
+    }),
+    prisma.regimeFiscale.findMany({
+      where: { eliminataIl: null },
+      orderBy: [{ predefinito: "desc" }, { nome: "asc" }],
     }),
   ]);
 
@@ -115,7 +125,25 @@ export default async function ImpostazioniPage() {
                 titolo="Aziende"
                 descrizione="Le ragioni sociali da cui puoi emettere documenti. Su ogni preventivo o contratto puoi scegliere quale usare; senza scelta si usa quella predefinita."
               >
-                <ElencoAziende aziende={aziende} />
+                <ElencoAziende
+                  aziende={aziende}
+                  regimi={regimiFiscali.map((r) => ({ id: r.id, nome: r.nome }))}
+                />
+              </Sezione>
+
+              <Sezione
+                titolo="Regimi fiscali"
+                descrizione="Coefficiente di redditività, aliquota dell'imposta sostitutiva e aliquota INPS: alimentano il calcolatore di Dashboard → Tasse. Assegna un regime a ogni azienda per includerla nel calcolo."
+              >
+                <ElencoRegimiFiscali regimi={regimiFiscali.map((r) => ({
+                  id: r.id,
+                  nome: r.nome,
+                  coefficienteRedditivita: n(r.coefficienteRedditivita),
+                  aliquotaSostitutiva: n(r.aliquotaSostitutiva),
+                  aliquotaInps: n(r.aliquotaInps),
+                  minimaleInps: r.minimaleInps !== null ? n(r.minimaleInps) : null,
+                  predefinito: r.predefinito,
+                }))} />
               </Sezione>
 
               <Sezione

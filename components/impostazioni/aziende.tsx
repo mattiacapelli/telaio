@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Star, Trash2, Building2, Image as ImageIcon, X } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input, Campo } from "@/components/ui/input";
+import { Input, Campo, Select } from "@/components/ui/input";
 
 export type Azienda = {
   id: string;
@@ -14,6 +14,7 @@ export type Azienda = {
   codiceFiscale: string | null;
   iban: string | null;
   regimeFiscale: string | null;
+  regimeFiscaleId: string | null;
   indirizzo: string | null;
   citta: string | null;
   cap: string | null;
@@ -25,6 +26,8 @@ export type Azienda = {
   logoChiave: string | null;
   predefinita: boolean;
 };
+
+export type RegimeFiscaleOpzione = { id: string; nome: string };
 
 const CAMPI: { chiave: keyof Azienda; etichetta: string; nota?: string }[] = [
   { chiave: "ragioneSociale", etichetta: "Ragione sociale" },
@@ -48,7 +51,7 @@ const CAMPI: { chiave: keyof Azienda; etichetta: string; nota?: string }[] = [
  * Un campo lasciato vuoto qui non appare nei PDF: non c'è bisogno di
  * compilare tutto subito, solo quello che serve stampare.
  */
-export function ElencoAziende({ aziende }: { aziende: Azienda[] }) {
+export function ElencoAziende({ aziende, regimi }: { aziende: Azienda[]; regimi: RegimeFiscaleOpzione[] }) {
   const router = useRouter();
   const [errore, setErrore] = useState<string | null>(null);
   const [modificaId, setModificaId] = useState<string | null>(null);
@@ -134,7 +137,7 @@ export function ElencoAziende({ aziende }: { aziende: Azienda[] }) {
       </div>
 
       {azienda && (
-        <ModificaAzienda azienda={azienda} onClose={() => setModificaId(null)} />
+        <ModificaAzienda azienda={azienda} regimi={regimi} onClose={() => setModificaId(null)} />
       )}
     </div>
   );
@@ -203,7 +206,15 @@ function NuovaAzienda() {
   );
 }
 
-function ModificaAzienda({ azienda, onClose }: { azienda: Azienda; onClose: () => void }) {
+function ModificaAzienda({
+  azienda,
+  regimi,
+  onClose,
+}: {
+  azienda: Azienda;
+  regimi: RegimeFiscaleOpzione[];
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [d, setD] = useState<Azienda>(azienda);
   const [inCorso, setInCorso] = useState(false);
@@ -304,6 +315,21 @@ function ModificaAzienda({ azienda, onClose }: { azienda: Azienda; onClose: () =
                 />
               </Campo>
             ))}
+
+            <Campo
+              etichetta="Regime fiscale (per il calcolo tasse)"
+              nota="Diverso dal campo testuale sopra: alimenta il calcolatore di Dashboard → Tasse, non la stampa del PDF."
+            >
+              <Select
+                value={d.regimeFiscaleId ?? ""}
+                onChange={(e) => setD({ ...d, regimeFiscaleId: e.target.value || null })}
+              >
+                <option value="">Nessuno (esclusa dal calcolo)</option>
+                {regimi.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nome}</option>
+                ))}
+              </Select>
+            </Campo>
 
             {errore && (
               <div className="rounded border border-[var(--neg)] bg-[var(--neg-soft)] px-2 py-1.5 text-xs text-neg">

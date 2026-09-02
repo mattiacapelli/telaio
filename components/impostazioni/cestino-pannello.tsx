@@ -24,6 +24,7 @@ const ENTITA: { chiave: Entita; etichetta: string }[] = [
   { chiave: "prodotto", etichetta: "Prodotti" },
   { chiave: "pianoProdotto", etichetta: "Piani prodotto" },
   { chiave: "licenzaProdotto", etichetta: "Licenze" },
+  { chiave: "regimeFiscale", etichetta: "Regimi fiscali" },
 ];
 
 type Riga = { id: string; nome: string; dettaglio?: string; eliminataIl: string };

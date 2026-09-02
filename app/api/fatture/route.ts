@@ -15,6 +15,7 @@ const Riga = z.object({
 
 const NuovaFattura = z.object({
   clienteId: z.string().min(1, "cliente obbligatorio"),
+  aziendaId: z.string().optional().nullable(),
   righe: z.array(Riga).min(1, "serve almeno una riga"),
   scadeIl: z.string().optional().nullable(),
 });
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
     data: {
       numero: await prossimoNumeroFattura(),
       clienteId: d.clienteId,
+      aziendaId: d.aziendaId || null,
       stato: "DA_EMETTERE",
       imponibile,
       scadeIl: scadenza,

@@ -42,6 +42,7 @@ const DASHBOARD_SOTTO = [
   { href: "/dashboard/preventivi", label: "Preventivi" },
   { href: "/dashboard/ticket", label: "Ticket" },
   { href: "/dashboard/prodotti", label: "Prodotti" },
+  { href: "/dashboard/tasse", label: "Tasse" },
 ] as const;
 
 const OPERATIVO = [

@@ -1009,6 +1009,33 @@ model Impostazioni {
   updatedAt           DateTime          @updatedAt
 }
 
+/// Regole di tassazione di una ragione sociale: coefficiente di redditività,
+/// aliquota dell'imposta sostitutiva, aliquota INPS Gestione Separata.
+/// Oggi si implementa solo il calcolo per il forfettario, ma lo schema resta
+/// generico: altri regimi (ordinario, ecc.) potranno riusare la stessa forma.
+model RegimeFiscale {
+  id   String @id @default(cuid())
+  nome String
+  /// Quota dei ricavi incassati riconosciuta come reddito. Es. 78 = 78%.
+  coefficienteRedditivita Decimal @db.Decimal(5, 2)
+  /// Aliquota dell'imposta sostitutiva sul reddito imponibile fiscale.
+  /// 15 di norma, 5 nei primi 5 anni di attività.
+  aliquotaSostitutiva Decimal @db.Decimal(5, 2)
+  /// Aliquota Gestione Separata INPS sul reddito lordo forfettario.
+  aliquotaInps Decimal @db.Decimal(5, 2)
+  /// Soglia minima di reddito su cui calcolare comunque i contributi;
+  /// facoltativa perché non tutte le gestioni previdenziali ne hanno una.
+  minimaleInps Decimal? @db.Decimal(12, 2)
+  predefinito  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  eliminataIl  DateTime?
+
+  aziende Azienda[]
+
+  @@index([eliminataIl])
+}
+
 /// Una ragione sociale da cui lo studio può emettere documenti.
 ///
 /// Più di una riga è normale: chi ha uno studio associato o più partite
@@ -1024,6 +1051,10 @@ model Azienda {
   /// Es. "Regime forfettario", "Regime ordinario". Libero perché le diciture
   /// fiscali corrette cambiano da caso a caso e non vanno indovinate.
   regimeFiscale  String?
+  /// Regime strutturato che alimenta il calcolatore fiscale — non lo stesso
+  /// campo di regimeFiscale sopra, che resta testo libero per il PDF.
+  regimeFiscaleId  String?
+  regimeFiscaleRel RegimeFiscale? @relation(fields: [regimeFiscaleId], references: [id], onDelete: SetNull)
   indirizzo      String?
   citta          String?
   cap            String?

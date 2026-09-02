@@ -1,11 +1,14 @@
+import Link from "next/link";
 import { getFatture } from "@/lib/queries";
 import { titoloPagina } from "@/lib/titolo";
+import { prisma } from "@/lib/prisma";
 import { VistaDoppia } from "@/components/vista-doppia";
 import { Badge } from "@/components/ui/badge";
 import { GeneraDaOre, NuovaFattura } from "@/components/nuova-fattura";
 import { Vuoto } from "@/components/ui-legacy";
 import { Chip } from "@/components/chip";
 import { EliminaRecord } from "@/components/elimina-record";
+import { RegistraIncasso } from "@/components/registra-incasso";
 import { Receipt, Building2, Euro, Calendar, Tag } from "lucide-react";
 import { eur, data, daGiorni } from "@/lib/format";
 import { getClientiPerSelezione } from "@/lib/queries";
@@ -24,16 +27,22 @@ const COLONNE = [
 ];
 
 export default async function FatturePage() {
-  const [fatture, clienti] = await Promise.all([
+  const [fatture, clienti, aziende, conti] = await Promise.all([
     getFatture(),
     getClientiPerSelezione(),
+    prisma.azienda.findMany({ orderBy: { ragioneSociale: "asc" }, select: { id: true, ragioneSociale: true } }),
+    prisma.contoIncasso.findMany({
+      where: { eliminataIl: null },
+      orderBy: [{ predefinito: "desc" }, { ordine: "asc" }, { nome: "asc" }],
+      select: { id: true, nome: true, predefinito: true },
+    }),
   ]);
   if (fatture.length === 0) {
     return (
       <div className="tl-in">
         <div className="mb-3 flex items-center justify-end gap-2">
           <GeneraDaOre />
-          <NuovaFattura clienti={clienti} />
+          <NuovaFattura clienti={clienti} aziende={aziende} />
         </div>
         <Vuoto titolo="Nessuna fattura" nota="Genera la prima fattura dalle ore registrate." />
       </div>
@@ -47,6 +56,8 @@ export default async function FatturePage() {
 
   const elementi = fatture.map((f) => {
     const ritardo = f.stato === "SCADUTA" && f.scadeIl ? daGiorni(f.scadeIl) : null;
+    const residuo = f.imponibile - f.incassato;
+    const daIncassare = (f.stato === "EMESSA" || f.stato === "SCADUTA") && residuo > 0.01;
     return {
       id: f.id,
       stato: f.stato,
@@ -54,7 +65,9 @@ export default async function FatturePage() {
       contenuto: (
         <>
           <div className="flex items-center gap-2">
-            <span className="text-md font-medium">{f.numero}</span>
+            <Link href={`/fatture/${f.id}`} className="text-md font-medium hover:underline">
+              {f.numero}
+            </Link>
             <div className="flex-1" />
             <span className="text-md font-semibold">{eur(f.imponibile)}</span>
           </div>
@@ -75,6 +88,15 @@ export default async function FatturePage() {
               <span>incassato {eur(f.incassato)}</span>
             )}
           </div>
+          {daIncassare && (
+            <div className="mt-2 flex justify-end">
+              <RegistraIncasso
+                fatture={[{ id: f.id, numero: f.numero, cliente: f.cliente, residuo }]}
+                conti={conti}
+                fatturaFissa={{ id: f.id, numero: f.numero, cliente: f.cliente, residuo }}
+              />
+            </div>
+          )}
           {f.stato === "DA_EMETTERE" && (
             <div className="mt-2 flex justify-end">
               <EliminaRecord entita="fattura" id={f.id} nome={f.numero} />
@@ -102,7 +124,7 @@ export default async function FatturePage() {
         azioni={
           <>
             <GeneraDaOre />
-            <NuovaFattura clienti={clienti} />
+            <NuovaFattura clienti={clienti} aziende={aziende} />
           </>
         }
         colonneTabella={[
@@ -115,6 +137,7 @@ export default async function FatturePage() {
         ]}
         righe={fatture.map((x) => ({
           id: x.id,
+          href: `/fatture/${x.id}`,
           celle: [
             <span key="c1" className="font-medium">{x.numero}</span>,
             <span key="c2" className="flex min-w-0 items-center gap-1.5 text-muted">
