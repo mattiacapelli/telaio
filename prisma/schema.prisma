@@ -674,6 +674,10 @@ model Contratto {
   rinnovoAutomatico   Boolean              @default(false)
   /// Preavviso di disdetta, in giorni.
   preavvisoGiorni     Int                  @default(30)
+  /// Giorno del mese (1-28) in cui lo scheduler genera da sé la fattura del
+  /// canone corrente. NULL = nessuna fatturazione automatica, resta manuale
+  /// tramite il bottone "Fattura canone".
+  giornoFatturazione  Int?
   /// Testi del documento, copiati dai modelli alla creazione.
   premessa            String?
   oggetto             String?

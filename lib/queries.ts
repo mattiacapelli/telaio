@@ -1042,6 +1042,7 @@ export async function getContrattoCompleto(id: string) {
     scadeIl: c.scadeIl,
     rinnovoAutomatico: c.rinnovoAutomatico,
     preavvisoGiorni: c.preavvisoGiorni,
+    giornoFatturazione: c.giornoFatturazione,
     note: c.note,
     giorniAllaScadenza: giorniAllaScadenza(c.scadeIl),
     cliente: {

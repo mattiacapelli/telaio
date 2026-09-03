@@ -8,6 +8,7 @@ import { Chip, coloreDa } from "@/components/chip";
 import { SezioneCampi, CampoRecord, Schede } from "@/components/record/pannello";
 import { DocumentiProgetto } from "@/components/documenti-progetto";
 import { AzioniContratto } from "@/components/azioni-contratto";
+import { ModificaContratto } from "@/components/modifica-contratto";
 import { ProdottiContratto } from "@/components/prodotti-contratto";
 import { eur, eurCent, ore, data, dataEstesa } from "@/lib/format";
 import { TIPI, STATI, PERIODICITA } from "@/lib/contratti";
@@ -60,7 +61,23 @@ export default async function ContrattoPage({
             {esaurito && <Badge tono="attenzione">monte esaurito</Badge>}
             {inScadenza && <Badge tono="attenzione">in scadenza</Badge>}
           </div>
-          <div className="mt-2">
+          <div className="mt-2 flex flex-col items-center gap-1.5">
+            <ModificaContratto
+              contratto={{
+                id: c.id,
+                titolo: c.titolo,
+                canone: c.canone,
+                periodicita: c.periodicita,
+                monteOre: c.monteOre,
+                tariffaExtra: c.tariffaExtra,
+                tipo: c.tipo,
+                scadeIl: c.scadeIl ? c.scadeIl.toISOString().slice(0, 10) : null,
+                rinnovoAutomatico: c.rinnovoAutomatico,
+                preavvisoGiorni: c.preavvisoGiorni,
+                giornoFatturazione: c.giornoFatturazione,
+                note: c.note,
+              }}
+            />
             <AzioniContratto
               contratto={{ id: c.id, stato: c.stato, tipo: c.tipo, numero: c.numero }}
             />
@@ -101,6 +118,9 @@ export default async function ContrattoPage({
           )}
           <CampoRecord icona={<Euro size={12} />} etichetta="Ore extra" vuoto="Tariffa cliente">
             {c.tariffaExtra !== null && eurCent(c.tariffaExtra)}
+          </CampoRecord>
+          <CampoRecord icona={<Receipt size={12} />} etichetta="Fatturazione" vuoto="Manuale">
+            {c.giornoFatturazione !== null && `giorno ${c.giornoFatturazione} di ogni mese`}
           </CampoRecord>
         </SezioneCampi>
 

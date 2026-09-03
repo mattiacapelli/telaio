@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { redis } from "./redis";
 import { esegui } from "./workflow/motore";
 import type { SchemaWorkflow } from "./workflow/tipi";
-import { periodoDi, giorniAllaScadenza, MESI_PERIODO } from "./contratti";
+import { periodoDi, giorniAllaScadenza, MESI_PERIODO, generaFatturaCanone } from "./contratti";
 import { n } from "./format";
 
 /**
@@ -23,6 +23,7 @@ export type EsitoScheduler = {
   contrattiScaduti: number;
   contrattiRinnovati: number;
   avvisiCreati: number;
+  fattureGenerate: number;
   workflowEseguiti: number;
 };
 
@@ -182,6 +183,44 @@ async function creaAvvisi() {
 }
 
 /**
+ * Fatturazione ricorrente automatica.
+ *
+ * Un contratto con giornoFatturazione impostato genera da sé la fattura del
+ * canone quando il giorno del mese coincide: l'idempotenza è garantita dal
+ * vincolo unico su PeriodoContratto, non serve marcare nulla a parte.
+ * La fattura resta DA_EMETTERE: la emette il professionista, mai lo scheduler.
+ */
+async function generaFattureRicorrenti() {
+  const oggi = new Date();
+  const giorno = oggi.getDate();
+
+  const daFatturare = await prisma.contratto.findMany({
+    where: { stato: "ATTIVO", giornoFatturazione: giorno, eliminataIl: null },
+  });
+
+  let generate = 0;
+  for (const c of daFatturare) {
+    const esito = await generaFatturaCanone(c.id, oggi);
+    // GIA_FATTURATO è l'esito atteso a ogni passata successiva dello stesso
+    // giorno/periodo: non è un errore, semplicemente non c'è nulla da
+    // generare due volte.
+    if (!esito.ok) continue;
+
+    await prisma.notifica.create({
+      data: {
+        titolo: `Fattura generata per ${c.numero}`,
+        testo: `${c.titolo} · ${esito.numero} · da controllare ed emettere.`,
+        link: `/contratti/${c.id}`,
+        livello: "info",
+      },
+    });
+    generate++;
+  }
+
+  return generate;
+}
+
+/**
  * Evita di ripetere lo stesso avviso ogni giorno.
  *
  * La chiave scade dopo 30 giorni: se la condizione persiste oltre, l'avviso
@@ -251,6 +290,7 @@ export async function eseguiScheduler(forza = false): Promise<EsitoScheduler> {
     contrattiScaduti: 0,
     contrattiRinnovati: 0,
     avvisiCreati: 0,
+    fattureGenerate: 0,
     workflowEseguiti: 0,
   };
 
@@ -264,6 +304,7 @@ export async function eseguiScheduler(forza = false): Promise<EsitoScheduler> {
   try {
     const contratti = await gestisciContratti();
     const avvisi = await creaAvvisi();
+    const fatture = await generaFattureRicorrenti();
     const workflow = await eseguiWorkflowPianificati();
 
     try {
@@ -277,6 +318,7 @@ export async function eseguiScheduler(forza = false): Promise<EsitoScheduler> {
       contrattiScaduti: contratti.scaduti,
       contrattiRinnovati: contratti.rinnovati,
       avvisiCreati: avvisi,
+      fattureGenerate: fatture,
       workflowEseguiti: workflow,
     };
   } finally {

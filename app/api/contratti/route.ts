@@ -25,6 +25,7 @@ const Nuovo = z.object({
   scadeIl: z.string().optional().nullable(),
   rinnovoAutomatico: z.boolean().default(false),
   preavvisoGiorni: z.coerce.number().int().nonnegative().default(30),
+  giornoFatturazione: z.coerce.number().int().min(1).max(28).optional().nullable(),
   note: z.string().optional().nullable(),
   aziendaId: z.string().optional().nullable(),
   prodotti: z
@@ -108,6 +109,7 @@ export async function POST(req: Request) {
       scadeIl: d.scadeIl ? new Date(d.scadeIl) : null,
       rinnovoAutomatico: d.rinnovoAutomatico,
       preavvisoGiorni: d.preavvisoGiorni,
+      giornoFatturazione: d.giornoFatturazione ?? null,
       note: d.note || null,
       aziendaId: d.aziendaId || null,
     },

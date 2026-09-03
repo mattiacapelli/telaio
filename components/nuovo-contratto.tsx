@@ -8,6 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input, Select, Campo } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TitoloConProdotti } from "@/components/titolo-con-prodotti";
+import { PERIODICITA } from "@/lib/contratti";
+
+/** Intestazione di sezione: separa visivamente Generale / Economia / Durata. */
+export function IntestazioneSezione({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-1 border-t border-border pt-3 text-xs font-semibold uppercase tracking-wide text-faint first:mt-0 first:border-0 first:pt-0">
+      {children}
+    </div>
+  );
+}
 
 export function NuovoContratto({
   clienti,
@@ -37,6 +47,7 @@ export function NuovoContratto({
     periodicita: "MENSILE",
     monteOre: "",
     tariffaExtra: "",
+    giornoFatturazione: "",
     inizioIl: oggi,
     scadeIl: "",
     rinnovoAutomatico: true,
@@ -73,6 +84,7 @@ export function NuovoContratto({
         canone: d.canone || 0,
         monteOre: d.monteOre === "" ? null : d.monteOre,
         tariffaExtra: d.tariffaExtra === "" ? null : d.tariffaExtra,
+        giornoFatturazione: d.giornoFatturazione === "" ? null : d.giornoFatturazione,
         scadeIl: d.scadeIl || null,
         note: d.note || null,
         aziendaId: d.aziendaId || null,
@@ -105,7 +117,7 @@ export function NuovoContratto({
       <DialogContent
         titolo="Nuovo contratto"
         descrizione="Il numero viene assegnato al salvataggio."
-        className="max-w-xl"
+        className="max-w-2xl"
       >
         <form onSubmit={salva} className="flex min-h-0 flex-col">
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
@@ -143,6 +155,8 @@ export function NuovoContratto({
                 </Campo>
               ))}
 
+            <IntestazioneSezione>Generale</IntestazioneSezione>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo etichetta="Cliente">
                 <Select value={d.clienteId} onChange={(e) => set("clienteId", e.target.value)} required>
@@ -171,6 +185,8 @@ export function NuovoContratto({
                 </Select>
               </Campo>
             )}
+
+            <IntestazioneSezione>Economia</IntestazioneSezione>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo etichetta="Canone (EUR)">
@@ -214,6 +230,35 @@ export function NuovoContratto({
               </div>
             )}
 
+            <Campo
+              etichetta="Giorno di fatturazione"
+              nota="Vuoto = nessuna fattura automatica, resta manuale col bottone «Fattura canone»"
+            >
+              <Select
+                value={d.giornoFatturazione}
+                onChange={(e) => set("giornoFatturazione", e.target.value)}
+              >
+                <option value="">Nessuna (manuale)</option>
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </Select>
+            </Campo>
+
+            <div className="flex items-center justify-between rounded border border-border bg-surface2 px-3 py-2 text-md">
+              <span className="text-muted">Riepilogo canone</span>
+              <span className="font-semibold">
+                {d.canone ? Number(d.canone).toLocaleString("it-IT", { style: "currency", currency: "EUR" }) : "—"}
+                {" "}
+                <span className="font-normal text-muted">/ {PERIODICITA[d.periodicita].toLowerCase()}</span>
+                {assistenza && d.monteOre && (
+                  <span className="font-normal text-muted"> · {d.monteOre} h incluse</span>
+                )}
+              </span>
+            </div>
+
+            <IntestazioneSezione>Durata</IntestazioneSezione>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo etichetta="Inizio">
                 <Input type="date" value={d.inizioIl} onChange={(e) => set("inizioIl", e.target.value)} required />
@@ -229,14 +274,17 @@ export function NuovoContratto({
                   className="text-right"
                 />
               </Campo>
-              <label className="flex h-[32px] items-end gap-1.5 pb-1 text-md text-muted">
-                <input
-                  type="checkbox"
-                  checked={d.rinnovoAutomatico}
-                  onChange={(e) => set("rinnovoAutomatico", e.target.checked)}
-                />
-                Rinnovo automatico
-              </label>
+              <div className="flex flex-col justify-end gap-1">
+                <span className="text-md text-muted">&nbsp;</span>
+                <label className="flex h-[32px] items-center gap-1.5 text-md text-muted">
+                  <input
+                    type="checkbox"
+                    checked={d.rinnovoAutomatico}
+                    onChange={(e) => set("rinnovoAutomatico", e.target.checked)}
+                  />
+                  Rinnovo automatico
+                </label>
+              </div>
             </div>
 
             {aziende.length > 1 && (
