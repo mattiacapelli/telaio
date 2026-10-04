@@ -13,7 +13,7 @@ cp .env.example .env      # se non l'hai già
 npm install
 npm run db:up             # postgres + redis in Docker
 npx prisma migrate dev    # crea lo schema
-npm run db:seed           # dati di esempio (Studio Ferrero)
+npm run db:seed           # crea l'utente iniziale (nessun dato demo)
 npm run dev               # http://localhost:3000
 ```
 
@@ -276,7 +276,7 @@ Se Redis non è raggiungibile l'app continua a funzionare leggendo da Postgres.
 | `npm run dev` | server di sviluppo |
 | `npm run db:up` / `db:down` | database in Docker |
 | `npm run db:migrate` | crea/applica una migrazione |
-| `npm run db:seed` | popola con i dati di esempio |
+| `npm run db:seed` | crea l'utente iniziale (nessun dato demo) |
 | `npm run db:reset` | ricrea da zero e ripopola |
 | `npm run db:studio` | Prisma Studio |
 
