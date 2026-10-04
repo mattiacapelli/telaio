@@ -5,7 +5,7 @@ import type { EventoCalendario } from "@/lib/queries";
 import { TINTA_EVENTO, ETICHETTA_TIPO } from "./tinte";
 
 const GIORNO_MS = 86400000;
-const ORDINE_TIPI: EventoCalendario["tipo"][] = ["progetto", "contratto", "milestone", "attivita", "fattura"];
+const ORDINE_TIPI: EventoCalendario["tipo"][] = ["progetto", "contratto", "fatturazione", "milestone", "attivita", "fattura"];
 
 function giorniDa(inizioRange: Date, data: Date) {
   return Math.round((data.getTime() - inizioRange.getTime()) / GIORNO_MS);

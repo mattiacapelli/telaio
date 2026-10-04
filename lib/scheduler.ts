@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { redis } from "./redis";
 import { esegui } from "./workflow/motore";
 import type { SchemaWorkflow } from "./workflow/tipi";
-import { periodoDi, giorniAllaScadenza, MESI_PERIODO, generaFatturaCanone } from "./contratti";
+import { periodoDi, giorniAllaScadenza, MESI_PERIODO, generaFatturaCanone, prossimaEmissionePrevista } from "./contratti";
 import { n } from "./format";
 
 /**
@@ -192,18 +192,23 @@ async function creaAvvisi() {
  */
 async function generaFattureRicorrenti() {
   const oggi = new Date();
-  const giorno = oggi.getDate();
 
-  const daFatturare = await prisma.contratto.findMany({
-    where: { stato: "ATTIVO", giornoFatturazione: giorno, eliminataIl: null },
+  // Non più "giorno del mese == giornoFatturazione": quel confronto ignorava
+  // la periodicità. Ora si prendono tutti i candidati con fatturazione
+  // automatica attiva e si genera solo quando la prossima emissione attesa
+  // (calcolata sull'ultima fattura reale, mai su un calendario teorico) è
+  // arrivata o superata.
+  const candidati = await prisma.contratto.findMany({
+    where: { stato: "ATTIVO", giornoFatturazione: { not: null }, eliminataIl: null },
   });
 
   let generate = 0;
-  for (const c of daFatturare) {
+  for (const c of candidati) {
+    const prossima = await prossimaEmissionePrevista(c.id);
+    if (!prossima || oggi < prossima) continue;
+
     const esito = await generaFatturaCanone(c.id, oggi);
-    // GIA_FATTURATO è l'esito atteso a ogni passata successiva dello stesso
-    // giorno/periodo: non è un errore, semplicemente non c'è nulla da
-    // generare due volte.
+    // GIA_FATTURATO o altro esito negativo: nulla da fare, non è un errore.
     if (!esito.ok) continue;
 
     await prisma.notifica.create({

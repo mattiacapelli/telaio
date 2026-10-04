@@ -4,6 +4,7 @@ import { n } from "./format";
 import { etichettaRevisione } from "./revisioni";
 import { calcolaFiscale, type CalcoloFiscale, type RegimeCalcolo } from "./tasse";
 import { assicuraRegimeForfettarioDefault } from "./regimi-fiscali";
+import { getProssimeEmissioni } from "./contratti";
 
 const TTL = 30; // secondi: i dati cambiano spesso, la cache serve a smorzare i picchi
 
@@ -1248,7 +1249,7 @@ export async function getMilestoneAperte() {
 }
 
 export type EventoCalendario = {
-  tipo: "progetto" | "attivita" | "milestone" | "contratto" | "fattura";
+  tipo: "progetto" | "attivita" | "milestone" | "contratto" | "fattura" | "fatturazione";
   id: string;
   titolo: string;
   inizio: Date;
@@ -1257,15 +1258,16 @@ export type EventoCalendario = {
   link: string;
 };
 
-/** Eventi unificati per la vista Calendario/Gantt: progetti, attività, milestone, contratti, fatture da incassare. */
+/** Eventi unificati per la vista Calendario/Gantt: progetti, attività, milestone, contratti, fatture da incassare, prossime emissioni previste. */
 export async function getCalendario() {
   return cached("calendario", TTL, async () => {
-    const [progetti, attivita, milestone, contratti, fattureDaIncassare] = await Promise.all([
+    const [progetti, attivita, milestone, contratti, fattureDaIncassare, prossimeEmissioni] = await Promise.all([
       getProgetti(),
       getAttivita(),
       getMilestoneAperte(),
       getContratti(),
       getFattureDaIncassare(),
+      getProssimeEmissioni(),
     ]);
 
     const eventi: EventoCalendario[] = [];
@@ -1331,6 +1333,18 @@ export async function getCalendario() {
         fine: null,
         contesto: f.cliente,
         link: `/fatture`,
+      });
+    }
+
+    for (const p of prossimeEmissioni) {
+      eventi.push({
+        tipo: "fatturazione",
+        id: p.contrattoId,
+        titolo: `Prossima fattura · ${p.numero} · ${p.titolo}`,
+        inizio: p.quando,
+        fine: null,
+        contesto: p.cliente,
+        link: `/contratti/${p.contrattoId}`,
       });
     }
 

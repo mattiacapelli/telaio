@@ -213,6 +213,82 @@ export async function generaFatturaCanone(
   return { ok: true, id: fattura.id, numero: fattura.numero, imponibile };
 }
 
+/**
+ * Prossima emissione attesa da dati già caricati (nessuna query): usata dalla
+ * proiezione calendario per evitare N+1 query su tutti i contratti insieme.
+ * Se il contratto non è mai stato fatturato, la base è la fine del primo
+ * periodo teorico (inizioIl + periodicità), non inizioIl stesso — altrimenti
+ * sembrerebbe "da fatturare subito" anche il primo giorno del contratto.
+ */
+export function prossimaEmissioneDaDati(
+  contratto: { inizioIl: Date; periodicita: string },
+  ultimoPeriodoFatturato: { fineIl: Date } | null,
+): Date {
+  if (ultimoPeriodoFatturato) return ultimoPeriodoFatturato.fineIl;
+  return periodoDi(contratto.inizioIl, contratto.periodicita, contratto.inizioIl).fine;
+}
+
+/**
+ * Prossima emissione attesa per un contratto, calcolata sull'ultima fattura
+ * REALMENTE emessa (non su un calendario teorico ancorato a inizioIl): se
+ * generi fuori sequenza, la prossima riparte da lì. Una query per contratto
+ * va bene qui: lo scheduler gira una volta al giorno su pochi contratti
+ * attivi, diverso dal caso della proiezione calendario (vedi sotto).
+ */
+export async function prossimaEmissionePrevista(contrattoId: string): Promise<Date | null> {
+  const c = await prisma.contratto.findUnique({
+    where: { id: contrattoId },
+    select: { inizioIl: true, periodicita: true, giornoFatturazione: true },
+  });
+  if (!c || c.giornoFatturazione === null) return null;
+
+  const ultimo = await prisma.periodoContratto.findFirst({
+    where: { contrattoId, fatturaId: { not: null } },
+    orderBy: { inizioIl: "desc" },
+  });
+
+  return prossimaEmissioneDaDati(c, ultimo);
+}
+
+export type ProssimaEmissione = {
+  contrattoId: string;
+  numero: string;
+  titolo: string;
+  cliente: string;
+  quando: Date;
+};
+
+/**
+ * Prossima emissione attesa per TUTTI i contratti attivi con fatturazione
+ * automatica, in due query (non una per contratto): usata dalla proiezione
+ * nel calendario, che gira per ogni caricamento di pagina — qui l'N+1 conta.
+ */
+export async function getProssimeEmissioni(): Promise<ProssimaEmissione[]> {
+  const contratti = await prisma.contratto.findMany({
+    where: { stato: "ATTIVO", giornoFatturazione: { not: null }, eliminataIl: null },
+    include: { cliente: true },
+  });
+  if (contratti.length === 0) return [];
+
+  const periodi = await prisma.periodoContratto.findMany({
+    where: { contrattoId: { in: contratti.map((c) => c.id) }, fatturaId: { not: null } },
+    orderBy: { inizioIl: "desc" },
+  });
+  // Ordinati per inizioIl desc: il primo incontrato per ogni contrattoId è il più recente.
+  const ultimoPerContratto = new Map<string, { fineIl: Date }>();
+  for (const p of periodi) {
+    if (!ultimoPerContratto.has(p.contrattoId)) ultimoPerContratto.set(p.contrattoId, p);
+  }
+
+  return contratti.map((c) => ({
+    contrattoId: c.id,
+    numero: c.numero,
+    titolo: c.titolo,
+    cliente: c.cliente.ragioneSociale,
+    quando: prossimaEmissioneDaDati(c, ultimoPerContratto.get(c.id) ?? null),
+  }));
+}
+
 /** Giorni alla scadenza; null se il contratto non scade. */
 export function giorniAllaScadenza(scadeIl: Date | null) {
   if (!scadeIl) return null;

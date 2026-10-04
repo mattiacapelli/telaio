@@ -11,6 +11,7 @@ export const TINTA_EVENTO: Record<EventoCalendario["tipo"], Tinta> = {
   milestone: "pink",
   contratto: "purple",
   fattura: "turquoise",
+  fatturazione: "sky",
 };
 
 export const ETICHETTA_TIPO: Record<EventoCalendario["tipo"], string> = {
@@ -19,4 +20,5 @@ export const ETICHETTA_TIPO: Record<EventoCalendario["tipo"], string> = {
   milestone: "Milestone",
   contratto: "Contratti",
   fattura: "Fatture",
+  fatturazione: "Prossime fatture",
 };
