@@ -529,6 +529,39 @@ textarea.in {
 .opt:hover {
   transform: translateY(-2px);
 }
+.stepn {
+  font: 500 12px / 1 var(--font-sans);
+  letter-spacing: 0.1em;
+  color: #6b675c;
+}
+.pl {
+  display: block;
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 400;
+}
+.tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: 500 16px / 1 var(--font-sans);
+  color: #3a372f;
+  cursor: pointer;
+}
+.tab.on {
+  border-bottom-color: #17150f;
+  color: #17150f;
+  font-weight: 600;
+}
+.tab b {
+  font: 500 12px / 1 var(--font-sans);
+  color: #6b675c;
+}
 .rowlink {
   transition: background 0.2s;
 }

@@ -4,16 +4,15 @@ import {
   calcolaTotali,
   formatAliquota,
   formatEuro,
+  formatEuroCompatto,
   moduliCompatibili,
   prezzoVisualizzato,
   type RegoleFiscali,
   totaliConfiguratore,
 } from "@telaio/core";
 import { useActionState, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Field, Input, Select } from "@/components/ui/field";
 import { initialState } from "@/components/ui/form-modal";
-import { cn } from "@/lib/utils";
+import { st } from "@/lib/utils";
 import { creaPreventivoAction } from "./actions";
 
 export interface VoceCfg {
@@ -34,7 +33,7 @@ export interface ListinoCfg {
   moduli: (VoceCfg & { baseIds: string[] })[];
 }
 
-function Importo({
+function Prezzo({
   cent,
   regole,
   suffisso = "",
@@ -43,18 +42,22 @@ function Importo({
   regole: RegoleFiscali;
   suffisso?: string;
 }) {
-  if (cent === 0) return <span className="text-muted">—</span>;
+  if (cent === 0) return null;
   const p = prezzoVisualizzato(cent, regole);
   return (
-    <span className="tabular-nums">
-      {formatEuro(p.nettoCent)}
+    <>
+      {formatEuroCompatto(p.nettoCent)}
       {suffisso}
-      {p.lordoCent !== null && (
-        <span className="block text-xs text-muted">{formatEuro(p.lordoCent)} con IVA</span>
-      )}
-    </span>
+      {p.lordoCent !== null && <span className="pl">{formatEuroCompatto(p.lordoCent)} ivato</span>}
+    </>
   );
 }
+
+const ON = "background:#17150f;color:#f4f3f0;border:1px solid #17150f";
+const OFF = "background:rgba(255,255,255,.55);color:#17150f;border:1px solid rgba(23,21,15,.16)";
+const INK_LABEL = "font:500 13px/1.2 Inter,sans-serif;color:rgba(244,243,240,.8)";
+const INK_IN =
+  "height:46px;padding:0 14px;border-radius:14px;border:1px solid rgba(244,243,240,.22);background:rgba(244,243,240,.08);color:#f4f3f0;font:400 15px Inter,sans-serif";
 
 export function Configuratore({
   listini,
@@ -82,6 +85,7 @@ export function Configuratore({
         : [],
     [listino, baseId],
   );
+  const descModulo = (id: string) => listino?.moduli.find((x) => x.id === id)?.descrizione;
   const scelti = compatibili.filter((m) => moduloIds.includes(m.id));
   const regole = listino?.regole;
   const voci = base ? [base, ...scelti] : [];
@@ -100,218 +104,414 @@ export function Configuratore({
 
   if (listini.length === 0) {
     return (
-      <p className="glass-card p-6 text-sm text-muted">
+      <p className="card" style={st("margin:0;font-size:14px;color:#6b675c")}>
         Non ci sono listini: creane uno in Impostazioni → Listini e moduli.
       </p>
     );
   }
 
+  const nVoci = voci.length;
+  const riepilogo = () =>
+    [
+      `Offerta · ${listino?.ragioneSociale ?? ""}`,
+      ...voci.map((v) => `- ${v.nome}`),
+      `Una tantum netto: ${formatEuro(tot.unaTantumCent)}`,
+      doc ? `Totale una tantum: ${formatEuro(doc.totaleCent)}` : "",
+      tot.canoneAnnuoCent ? `Canone annuo netto: ${formatEuro(tot.canoneAnnuoCent)}` : "",
+      tot.canoneMensileCent ? `Canone mensile netto: ${formatEuro(tot.canoneMensileCent)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
   return (
-    <form action={azione} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form action={azione} style={st("display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start")}>
       <input type="hidden" name="ragioneSocialeId" value={listino?.ragioneSocialeId ?? ""} />
       <input type="hidden" name="baseId" value={baseId} />
       {moduloIds.map((m) => (
         <input key={m} type="hidden" name="moduloIds" value={m} />
       ))}
 
-      <div className="flex flex-col gap-8">
-        <section className="flex flex-col gap-4">
-          <p className="eyebrow">Passo 1 — Listino e cliente</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Listino">
-              <Select
-                value={listinoId}
-                onChange={(e) => {
-                  setListinoId(e.target.value);
-                  setBaseId("");
-                  setModuloIds([]);
-                }}
-              >
-                {listini.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.nome} · {l.ragioneSociale}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Cliente (da Twenty)" hint="Puoi assegnarlo anche dopo">
-              <Select name="clienteTwentyId" defaultValue={clienteIniziale ?? ""}>
-                <option value="">Da assegnare</option>
-                {clienti.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+      <div style={st("flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px")}>
+        <div className="card" style={st("display:flex;flex-direction:column;gap:16px")}>
+          <div style={st("display:flex;align-items:baseline;gap:14px")}>
+            <span className="stepn">01</span>
+            <h2 className="h2">Base</h2>
+            <span style={st("font-size:13px;color:#6b675c")}>una sola scelta</span>
           </div>
-          <Field label="Oggetto del preventivo" hint="Se vuoto usa il nome della base">
-            <Input name="oggetto" />
-          </Field>
-        </section>
-
-        <section className="flex flex-col gap-4">
-          <p className="eyebrow">Passo 2 — Base</p>
           {listino && listino.basi.length === 0 && (
-            <p className="text-sm text-muted">Questo listino non ha ancora basi.</p>
+            <p style={st("margin:0;font-size:14px;color:#6b675c")}>
+              Questo listino non ha ancora basi.
+            </p>
           )}
-          <div role="radiogroup" aria-label="Base" className="grid gap-3 sm:grid-cols-2">
+          <div
+            role="radiogroup"
+            aria-label="Base"
+            style={st(
+              "display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px",
+            )}
+          >
             {listino?.basi.map((b) => (
               <button
                 key={b.id}
                 type="button"
                 role="radio"
                 aria-checked={b.id === baseId}
+                className="opt"
                 onClick={() => scegliBase(b.id)}
-                className={cn(
-                  "glass-card min-h-11 p-5 text-left transition-shadow",
-                  b.id === baseId && "outline-2 outline-ink",
-                )}
+                style={st(b.id === baseId ? ON : OFF)}
               >
-                <p className="font-display text-lg font-semibold">{b.nome}</p>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted">
-                  <span>
-                    Una tantum
-                    <br />
-                    <span className="text-sm text-ink">
-                      {regole && <Importo cent={b.unaTantumCent} regole={regole} />}
-                    </span>
+                <span
+                  style={st(
+                    "display:flex;justify-content:space-between;align-items:center;width:100%;gap:10px",
+                  )}
+                >
+                  <span className="d" style={st("font-size:17px;font-weight:600")}>
+                    {b.nome}
                   </span>
-                  <span>
-                    Anno
-                    <br />
-                    <span className="text-sm text-ink">
-                      {regole && <Importo cent={b.canoneAnnuoCent} regole={regole} />}
-                    </span>
+                  <span
+                    style={st(
+                      "width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center",
+                    )}
+                  >
+                    <span
+                      style={{
+                        width: 9,
+                        height: 9,
+                        borderRadius: "50%",
+                        background: "currentColor",
+                        opacity: b.id === baseId ? 1 : 0,
+                      }}
+                    />
                   </span>
-                  <span>
-                    Mese
-                    <br />
-                    <span className="text-sm text-ink">
-                      {regole && <Importo cent={b.canoneMensileCent} regole={regole} />}
-                    </span>
+                </span>
+                {b.descrizione && (
+                  <span style={st("font-size:13px;opacity:.8;line-height:1.5")}>
+                    {b.descrizione}
                   </span>
-                </div>
+                )}
+                {regole && (
+                  <span className="num" style={st("font-size:13px;font-weight:500")}>
+                    <Prezzo cent={b.unaTantumCent} regole={regole} />
+                    {b.canoneAnnuoCent > 0 && (
+                      <>
+                        {" "}
+                        + <Prezzo cent={b.canoneAnnuoCent} regole={regole} suffisso="/anno" />
+                      </>
+                    )}
+                    {b.canoneMensileCent > 0 && (
+                      <>
+                        {" "}
+                        + <Prezzo cent={b.canoneMensileCent} regole={regole} suffisso="/mese" />
+                      </>
+                    )}
+                  </span>
+                )}
               </button>
             ))}
           </div>
-        </section>
+        </div>
 
-        <section className="flex flex-col gap-4">
-          <p className="eyebrow">Passo 3 — Moduli compatibili</p>
+        <div className="card" style={st("display:flex;flex-direction:column;gap:16px")}>
+          <div style={st("display:flex;align-items:baseline;gap:14px")}>
+            <span className="stepn">02</span>
+            <h2 className="h2">Moduli</h2>
+            <span style={st("font-size:13px;color:#6b675c")}>scelta multipla</span>
+          </div>
           {!base ? (
-            <p className="text-sm text-muted">
+            <p style={st("margin:0;font-size:14px;color:#6b675c")}>
               Scegli una base: vedrai solo i moduli che la supportano.
             </p>
           ) : compatibili.length === 0 ? (
-            <p className="text-sm text-muted">Nessun modulo è assegnato a questa base.</p>
+            <p style={st("margin:0;font-size:14px;color:#6b675c")}>
+              Nessun modulo è assegnato a questa base.
+            </p>
           ) : (
-            <ul className="grid gap-3">
+            <div
+              style={st(
+                "display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px",
+              )}
+            >
               {compatibili.map((m) => {
                 const sel = moduloIds.includes(m.id);
                 return (
-                  <li key={m.id}>
-                    <label
-                      className={cn(
-                        "glass-card flex min-h-11 cursor-pointer items-center gap-4 p-4",
-                        sel && "outline-2 outline-ink",
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="opt"
+                    aria-pressed={sel}
+                    onClick={() =>
+                      setModuloIds((p) => (sel ? p.filter((x) => x !== m.id) : [...p, m.id]))
+                    }
+                    style={st(sel ? ON : OFF)}
+                  >
+                    <span
+                      style={st(
+                        "display:flex;justify-content:space-between;align-items:center;width:100%;gap:10px",
                       )}
                     >
-                      <input
-                        type="checkbox"
-                        checked={sel}
-                        onChange={() =>
-                          setModuloIds((p) => (sel ? p.filter((x) => x !== m.id) : [...p, m.id]))
-                        }
-                        className="size-5 accent-[var(--ink)]"
-                      />
-                      <span className="flex-1 font-medium">{m.nome}</span>
-                      <span className="grid grid-cols-3 gap-4 text-right text-sm">
-                        {regole && (
+                      <span className="d" style={st("font-size:17px;font-weight:600")}>
+                        {m.nome}
+                      </span>
+                      <span
+                        style={st(
+                          "width:20px;height:20px;border-radius:6px;border:1.5px solid currentColor;display:grid;place-items:center;font-size:13px;line-height:1",
+                        )}
+                      >
+                        {sel ? "✓" : ""}
+                      </span>
+                    </span>
+                    {descModulo(m.id) && (
+                      <span style={st("font-size:13px;opacity:.8;line-height:1.5")}>
+                        {descModulo(m.id)}
+                      </span>
+                    )}
+                    {regole && (
+                      <span className="num" style={st("font-size:13px;font-weight:500")}>
+                        <Prezzo cent={m.unaTantumCent} regole={regole} />
+                        {m.canoneAnnuoCent > 0 && (
                           <>
-                            <Importo cent={m.unaTantumCent} regole={regole} />
-                            <Importo cent={m.canoneAnnuoCent} regole={regole} suffisso="/a" />
-                            <Importo cent={m.canoneMensileCent} regole={regole} suffisso="/m" />
+                            {" "}
+                            + <Prezzo cent={m.canoneAnnuoCent} regole={regole} suffisso="/anno" />
+                          </>
+                        )}
+                        {m.canoneMensileCent > 0 && (
+                          <>
+                            {" "}
+                            + <Prezzo cent={m.canoneMensileCent} regole={regole} suffisso="/mese" />
                           </>
                         )}
                       </span>
-                    </label>
-                  </li>
+                    )}
+                  </button>
                 );
               })}
-            </ul>
+            </div>
           )}
-        </section>
+        </div>
       </div>
 
-      <aside className="ink-panel h-fit p-6 lg:sticky lg:top-8" aria-live="polite">
-        <p className="eyebrow !text-grey-2">Riepilogo</p>
-        <p className="mt-2 font-display text-xl font-semibold">{base?.nome ?? "Nessuna base"}</p>
-        {scelti.length > 0 && (
-          <p className="text-sm text-grey-2">+ {scelti.map((m) => m.nome).join(", ")}</p>
-        )}
-        <dl className="mt-5 flex flex-col gap-2 text-sm tabular-nums">
-          <div className="flex justify-between">
-            <dt>Una tantum (netto)</dt>
-            <dd>{formatEuro(tot.unaTantumCent)}</dd>
+      <div
+        className="ink"
+        style={st("flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:18px")}
+        aria-live="polite"
+      >
+        <div style={st("display:flex;justify-content:space-between;align-items:center;gap:12px")}>
+          <span
+            style={st(
+              "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7)",
+            )}
+          >
+            La tua offerta
+          </span>
+          <span className="num" style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
+            {nVoci} voc{nVoci === 1 ? "e" : "i"}
+          </span>
+        </div>
+        <ul
+          style={st(
+            "list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid rgba(244,243,240,.16)",
+          )}
+        >
+          {voci.length === 0 && (
+            <li style={st("padding:11px 0;font-size:14px;color:rgba(244,243,240,.7)")}>
+              Scegli una base per iniziare.
+            </li>
+          )}
+          {voci.map((v) => (
+            <li
+              key={v.id}
+              style={st(
+                "display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid rgba(244,243,240,.1);font-size:14px",
+              )}
+            >
+              <span style={st("color:rgba(244,243,240,.92)")}>{v.nome}</span>
+              <span className="num" style={st("color:rgba(244,243,240,.75);text-align:right")}>
+                {formatEuroCompatto(v.unaTantumCent || v.canoneAnnuoCent || v.canoneMensileCent)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div style={st("display:flex;flex-direction:column")}>
+          <div className="row" style={{ color: "rgba(244,243,240,.8)" }}>
+            <span>Una tantum netto</span>
+            <span className="num">{formatEuro(tot.unaTantumCent)}</span>
           </div>
           {doc && regole?.ivaAttiva && (
-            <div className="flex justify-between">
-              <dt>IVA {formatAliquota(regole.aliquotaIvaBp)}</dt>
-              <dd>{formatEuro(doc.ivaCent)}</dd>
+            <div className="row" style={{ color: "rgba(244,243,240,.8)" }}>
+              <span>IVA {formatAliquota(regole.aliquotaIvaBp)}</span>
+              <span className="num">{formatEuro(doc.ivaCent)}</span>
             </div>
           )}
           {doc && doc.bolloCent > 0 && (
-            <div className="flex justify-between">
-              <dt>Bollo</dt>
-              <dd>{formatEuro(doc.bolloCent)}</dd>
+            <div className="row" style={{ color: "rgba(244,243,240,.8)" }}>
+              <span>Marca da bollo</span>
+              <span className="num">{formatEuro(doc.bolloCent)}</span>
             </div>
           )}
-          <div className="flex items-baseline justify-between border-t border-white/20 pt-3">
-            <dt>Totale una tantum</dt>
-            <dd className="money text-3xl font-semibold">{formatEuro(doc?.totaleCent ?? 0)}</dd>
+          <div className="row" style={{ color: "#f4f3f0", fontWeight: 600 }}>
+            <span>Totale una tantum</span>
+            <span className="num">{formatEuro(doc?.totaleCent ?? 0)}</span>
           </div>
-          {regole && !regole.ivaAttiva && regole.diciturSenzaIva && (
-            <p className="text-xs text-grey-2">{regole.diciturSenzaIva}</p>
+          {(["Canone annuo", tot.canoneAnnuoCent] as const)[1] > 0 && (
+            <div className="row" style={{ color: "rgba(244,243,240,.8)" }}>
+              <span>Canone annuo netto</span>
+              <span className="num">{formatEuro(tot.canoneAnnuoCent)}</span>
+            </div>
           )}
-        </dl>
-        <dl className="mt-5 flex flex-col gap-2 border-t border-white/20 pt-4 text-sm tabular-nums">
-          {(
-            [
-              ["Canone annuo", tot.canoneAnnuoCent],
-              ["Canone mensile", tot.canoneMensileCent],
-            ] as const
-          ).map(([k, v]) => {
-            const p = regole ? prezzoVisualizzato(v, regole) : null;
-            return (
-              <div key={k} className="flex justify-between">
-                <dt>{k}</dt>
-                <dd className="text-right">
-                  {formatEuro(v)}
-                  {p?.lordoCent != null && (
-                    <span className="block text-xs text-grey-2">
-                      {formatEuro(p.lordoCent)} con IVA
-                    </span>
-                  )}
-                </dd>
-              </div>
-            );
-          })}
-        </dl>
+          {tot.canoneMensileCent > 0 && (
+            <div className="row" style={{ color: "rgba(244,243,240,.8)" }}>
+              <span>Canone mensile netto</span>
+              <span className="num">{formatEuro(tot.canoneMensileCent)}</span>
+            </div>
+          )}
+        </div>
+        <div
+          style={st(
+            "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;border-top:1px solid rgba(244,243,240,.16);padding-top:18px",
+          )}
+        >
+          <div style={st("display:flex;flex-direction:column;gap:6px")}>
+            <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>Primo anno netto</span>
+            <b
+              className="d num"
+              style={st(
+                "font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1;color:#f4f3f0",
+              )}
+            >
+              {formatEuro(tot.unaTantumCent + tot.canoneAnnuoCent + tot.canoneMensileCent * 12)}
+            </b>
+          </div>
+          {doc && regole?.ivaAttiva && (
+            <div style={st("display:flex;flex-direction:column;gap:6px")}>
+              <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
+                Primo anno IVA inclusa
+              </span>
+              <b
+                className="d num"
+                style={st(
+                  "font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1;color:#f4f3f0",
+                )}
+              >
+                {formatEuro(
+                  doc.totaleCent +
+                    calcolaTotali(
+                      [
+                        {
+                          quantita: 1,
+                          prezzoUnitarioCent: tot.canoneAnnuoCent + tot.canoneMensileCent * 12,
+                        },
+                      ],
+                      regole,
+                    ).totaleCent,
+                )}
+              </b>
+            </div>
+          )}
+        </div>
+        {regole && !regole.ivaAttiva && regole.diciturSenzaIva && (
+          <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
+            {regole.diciturSenzaIva}
+          </span>
+        )}
+        <div
+          style={st(
+            "display:flex;flex-direction:column;gap:10px;border-top:1px solid rgba(244,243,240,.16);padding-top:18px",
+          )}
+        >
+          <label htmlFor="cfg-cli" style={st(INK_LABEL)}>
+            Per il cliente
+          </label>
+          <select
+            id="cfg-cli"
+            name="clienteTwentyId"
+            defaultValue={clienteIniziale ?? ""}
+            style={st(INK_IN)}
+          >
+            <option value="">Da assegnare</option>
+            {clienti.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="cfg-em" style={st(INK_LABEL)}>
+            Emesso da · listino
+          </label>
+          <select
+            id="cfg-em"
+            value={listinoId}
+            onChange={(e) => {
+              setListinoId(e.target.value);
+              setBaseId("");
+              setModuloIds([]);
+            }}
+            style={st(INK_IN)}
+          >
+            {listini.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.ragioneSociale} · {l.nome} ·{" "}
+                {l.regole.ivaAttiva ? `IVA ${formatAliquota(l.regole.aliquotaIvaBp)}` : "senza IVA"}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="cfg-og" style={st(INK_LABEL)}>
+            Oggetto (facoltativo)
+          </label>
+          <input
+            id="cfg-og"
+            name="oggetto"
+            placeholder="Se vuoto usa il nome della base"
+            style={st(INK_IN)}
+          />
+        </div>
         {stato.message && (
-          <p role="alert" className="mt-4 rounded-2xl bg-orange/30 px-4 py-3 text-sm">
+          <p
+            role="alert"
+            style={st(
+              "margin:0;padding:12px 16px;border-radius:14px;background:rgba(180,83,42,.35);font-size:14px",
+            )}
+          >
             {stato.message}
           </p>
         )}
-        <Button
+        <button
           type="submit"
-          className="mt-6 w-full bg-paper text-ink hover:bg-white"
           disabled={!base || pending}
+          style={{
+            display: "inline-flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 8,
+            minHeight: 50,
+            borderRadius: 999,
+            background: "#f4f3f0",
+            color: "#17150f",
+            font: "500 15px/1 Inter,sans-serif",
+            border: 0,
+            cursor: "pointer",
+            opacity: !base || pending ? 0.5 : 1,
+          }}
         >
-          {pending ? "Creazione…" : "Crea preventivo"}
-        </Button>
-        <p className="mt-2 text-center text-xs text-grey-2">Nasce come bozza, senza numero.</p>
-      </aside>
+          {pending ? "Creazione…" : "Crea preventivo"} <span aria-hidden="true">→</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigator.clipboard?.writeText(riepilogo())}
+          disabled={!base}
+          style={{
+            minHeight: 44,
+            borderRadius: 999,
+            border: "1px solid rgba(244,243,240,.28)",
+            background: "none",
+            color: "rgba(244,243,240,.9)",
+            font: "500 14px/1 Inter,sans-serif",
+            cursor: "pointer",
+            opacity: base ? 1 : 0.5,
+          }}
+        >
+          Copia riepilogo per WhatsApp / email
+        </button>
+      </div>
     </form>
   );
 }

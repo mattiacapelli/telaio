@@ -10,8 +10,10 @@ import {
   ragioniSociali,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
-import { PageHeader } from "@/components/ui/page-header";
+import Link from "next/link";
+import { TopBar } from "@/components/shell/topbar";
 import { regoleDa } from "@/lib/regole";
+import { st } from "@/lib/utils";
 import { Configuratore, type ListinoCfg } from "./configuratore";
 
 export const metadata = { title: "Configuratore" };
@@ -74,12 +76,32 @@ export default async function ConfiguratorePage({
 
   return (
     <>
-      <PageHeader
-        numero="04"
-        sezione="Commerciale"
-        titolo="Configuratore"
-        descrizione="Scegli la base: ti propongo solo i moduli compatibili e calcolo i totali."
-      />
+      <TopBar>
+        <Link href="/preventivi" className="bp sm">
+          Tutti i preventivi <span aria-hidden="true">→</span>
+        </Link>
+      </TopBar>
+      <section
+        style={st(
+          "display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;align-items:end",
+        )}
+      >
+        <div style={st("display:flex;flex-direction:column;gap:14px")}>
+          <span className="eb">04 — Configuratore rapido</span>
+          <h1
+            className="d"
+            style={st(
+              "margin:0;font-weight:500;font-size:clamp(2.4rem,4.4vw,3.8rem);line-height:1.04;letter-spacing:-.032em;max-width:14ch",
+            )}
+          >
+            Componi l&apos;offerta mentre sei al telefono.
+          </h1>
+        </div>
+        <p style={st("margin:0;max-width:46ch;font-size:16px;line-height:1.7;color:#3a372f")}>
+          Scegli la base: ti propongo solo i moduli compatibili. Prezzi e canoni arrivano dal
+          listino, il totale si aggiorna subito.
+        </p>
+      </section>
       <Configuratore
         listini={cfg}
         clienti={clienti.map((c) => ({ id: c.id, nome: c.nome }))}
