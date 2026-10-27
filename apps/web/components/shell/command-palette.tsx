@@ -17,7 +17,7 @@ interface Risultato {
 
 const AZIONI_RAPIDE = [
   { titolo: "Nuovo preventivo", href: "/configuratore" },
-  { titolo: "Nuova fattura", href: "/fatture/nuova" },
+  { titolo: "Nuova fattura", href: "/fatture" },
   { titolo: "Azioni in attesa di conferma", href: "/azioni-in-attesa" },
 ];
 

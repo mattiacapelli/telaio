@@ -3,6 +3,7 @@ import {
   and,
   asc,
   assegnaNumero,
+  clientiRef,
   type Database,
   eq,
   fatturaRighe,
@@ -89,6 +90,80 @@ export async function creaFatturaDaPreventivo(
         quantita: r.quantita,
         prezzoUnitarioCent: r.prezzoUnitarioCent,
         scontoBp: r.scontoBp,
+        importoCent: importoRiga(r),
+      })),
+    );
+    return f;
+  });
+}
+
+export interface NuovaFatturaLibera {
+  ragioneSocialeId: string;
+  /** cliente già presente in anagrafica; in alternativa `occasionale` */
+  clienteRefId: string | null;
+  occasionale: {
+    nome: string;
+    partitaIva: string | null;
+    codiceFiscale: string | null;
+    indirizzo: string | null;
+  } | null;
+  note: string | null;
+  righe: { descrizione: string; quantita: number; prezzoUnitarioCent: number; scontoBp: number }[];
+}
+
+/**
+ * Bozza di fattura non legata a un preventivo. Il cliente è uno dell'anagrafica oppure
+ * occasionale/privato: in quel caso i dati vivono solo nello snapshot della fattura.
+ */
+export async function creaFatturaLibera(
+  db: Database,
+  dati: NuovaFatturaLibera,
+): Promise<{ id: string }> {
+  if (dati.righe.length === 0) throw new Error("Aggiungi almeno una riga");
+  if (!dati.clienteRefId && !dati.occasionale) throw new Error("Indica il cliente");
+  return db.transaction(async (tx) => {
+    const [rs] = await tx
+      .select()
+      .from(ragioniSociali)
+      .where(and(eq(ragioniSociali.id, dati.ragioneSocialeId), isNull(ragioniSociali.deletedAt)));
+    if (!rs) throw new Error("Ragione sociale non trovata");
+
+    let cliente: Record<string, unknown> = { ...dati.occasionale };
+    if (dati.clienteRefId) {
+      const [c] = await tx.select().from(clientiRef).where(eq(clientiRef.id, dati.clienteRefId));
+      if (!c) throw new Error("Cliente non trovato");
+      cliente = {
+        nome: c.nome,
+        partitaIva: c.partitaIva,
+        codiceFiscale: c.codiceFiscale,
+        pec: c.pec,
+        codiceSdi: c.codiceSdi,
+      };
+    }
+
+    const regole = regoleDa(rs);
+    const [f] = await tx
+      .insert(fatture)
+      .values({
+        ragioneSocialeId: rs.id,
+        clienteRefId: dati.clienteRefId,
+        origine: "libera",
+        anno: new Date().getFullYear(),
+        note: dati.note,
+        snapshot: {
+          emittente: { id: rs.id, nome: rs.nome },
+          cliente,
+          regole: { ...regole },
+        },
+        ...totaliFattura(dati.righe, regole),
+      })
+      .returning({ id: fatture.id });
+    if (!f) throw new Error("Creazione fattura fallita");
+    await tx.insert(fatturaRighe).values(
+      dati.righe.map((r, i) => ({
+        fatturaId: f.id,
+        posizione: i,
+        ...r,
         importoCent: importoRiga(r),
       })),
     );

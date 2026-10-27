@@ -1,6 +1,7 @@
 import { formatEuro } from "@telaio/core";
 import { clientiRef, desc, eq, fatture, getDb, isNull, ragioniSociali } from "@telaio/db";
 import Link from "next/link";
+import { FatturaLiberaModal } from "@/components/domain/fattura-libera-modal";
 import { Card, EmptyState } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tag } from "@/components/ui/tag";
@@ -11,7 +12,19 @@ export const metadata = { title: "Fatture" };
 export const dynamic = "force-dynamic";
 
 export default async function FatturePage() {
-  const lista = await getDb()
+  const db = getDb();
+  const [clienti, emittenti] = await Promise.all([
+    db
+      .select({ id: clientiRef.id, nome: clientiRef.nome })
+      .from(clientiRef)
+      .where(isNull(clientiRef.deletedAt))
+      .orderBy(clientiRef.nome),
+    db
+      .select({ id: ragioniSociali.id, nome: ragioniSociali.nome })
+      .from(ragioniSociali)
+      .where(isNull(ragioniSociali.deletedAt)),
+  ]);
+  const lista = await db
     .select({ f: fatture, emittente: ragioniSociali.nome, cliente: clientiRef.nome })
     .from(fatture)
     .innerJoin(ragioniSociali, eq(ragioniSociali.id, fatture.ragioneSocialeId))
@@ -26,7 +39,8 @@ export default async function FatturePage() {
         numero="06"
         sezione="Amministrazione"
         titolo="Fatture"
-        descrizione="Si creano da un preventivo accettato. L'invio elettronico passa da un intermediario (da collegare)."
+        descrizione="Da un preventivo accettato oppure libere. L'invio elettronico passa da un intermediario (da collegare)."
+        azione={<FatturaLiberaModal clienti={clienti} emittenti={emittenti} />}
       />
       {lista.length === 0 ? (
         <EmptyState title="Nessuna fattura">

@@ -42,7 +42,7 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
 export const AZIONI_PRINCIPALI: Record<string, { label: string; href: string }> = {
   "/preventivi": { label: "Nuovo preventivo", href: "/configuratore" },
   "/configuratore": { label: "Nuovo preventivo", href: "/configuratore" },
-  "/fatture": { label: "Nuova fattura", href: "/fatture/nuova" },
+  "/fatture": { label: "Nuova fattura", href: "/fatture" },
   "/incassi": { label: "Registra incasso", href: "/incassi" },
   "/abbonamenti": { label: "Nuovo abbonamento", href: "/abbonamenti" },
 };
