@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Amministrazione"
       titolo="Nuova fattura"
       descrizione="Da preventivo, da rata oppure libera."
-      vuoto={{ titolo: "Creazione fattura in arrivo", testo: "Potrai scegliere un cliente Twenty, un cliente occasionale o un privato." }}
+      vuoto={{
+        titolo: "Creazione fattura in arrivo",
+        testo: "Potrai scegliere un cliente Twenty, un cliente occasionale o un privato.",
+      }}
     />
   );
 }

@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Commerciale"
       titolo="Nuovo preventivo"
       descrizione="Parti dal configuratore per scegliere base e moduli."
-      vuoto={{ titolo: "Usa il configuratore", testo: "La creazione manuale di un preventivo con righe libere arriverà dopo." }}
+      vuoto={{
+        titolo: "Usa il configuratore",
+        testo: "La creazione manuale di un preventivo con righe libere arriverà dopo.",
+      }}
     />
   );
 }

@@ -14,7 +14,9 @@ export function SidebarNav() {
           <p className="eyebrow mb-2 px-3">{gruppo.titolo}</p>
           <ul className="flex flex-col gap-0.5">
             {gruppo.voci.map((voce) => {
-              const attiva = pathname === voce.href || pathname.startsWith(`${voce.href}/`) ||
+              const attiva =
+                pathname === voce.href ||
+                pathname.startsWith(`${voce.href}/`) ||
                 (voce.href.startsWith("/impostazioni") && pathname.startsWith("/impostazioni"));
               return (
                 <li key={voce.href}>

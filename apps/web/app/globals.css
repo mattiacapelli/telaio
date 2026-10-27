@@ -45,8 +45,7 @@ body {
   min-height: 100dvh;
   background:
     radial-gradient(900px 500px at 85% -10%, rgb(43 94 167 / 0.07), transparent 60%),
-    radial-gradient(700px 420px at -5% 105%, rgb(180 83 42 / 0.06), transparent 60%),
-    var(--paper);
+    radial-gradient(700px 420px at -5% 105%, rgb(180 83 42 / 0.06), transparent 60%), var(--paper);
 }
 
 :focus-visible {
@@ -54,14 +53,15 @@ body {
   outline-offset: 2px;
 }
 
+@utility glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
 @layer components {
-  .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(18px) saturate(1.2);
-    -webkit-backdrop-filter: blur(18px) saturate(1.2);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-  }
   .glass-card {
     @apply glass;
     border-radius: var(--radius-card);

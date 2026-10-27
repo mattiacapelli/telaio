@@ -1,9 +1,20 @@
 "use server";
 
-import { formatoValido } from "@telaio/core";
-import { and, apiKeys, eq, getDb, impostazioni, listinoBasi, listinoModuli, listini, moduloBasi, ragioniSociali } from "@telaio/db";
-import { revalidatePath } from "next/cache";
 import { createHash, randomBytes } from "node:crypto";
+import { formatoValido } from "@telaio/core";
+import {
+  and,
+  apiKeys,
+  eq,
+  getDb,
+  impostazioni,
+  listini,
+  listinoBasi,
+  listinoModuli,
+  moduloBasi,
+  ragioniSociali,
+} from "@telaio/db";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui/form-modal";
 import { audit } from "@/lib/audit";
@@ -41,10 +52,23 @@ export async function salvaRagioneSociale(_: ActionState, form: FormData): Promi
   const db = getDb();
   if (id) {
     await db.update(ragioniSociali).set(valori).where(eq(ragioniSociali.id, id));
-    await audit(db, { userId: user.id, azione: "ragione_sociale.modificata", entita: "ragioni_sociali", entitaId: id });
+    await audit(db, {
+      userId: user.id,
+      azione: "ragione_sociale.modificata",
+      entita: "ragioni_sociali",
+      entitaId: id,
+    });
   } else {
-    const [nuova] = await db.insert(ragioniSociali).values(valori).returning({ id: ragioniSociali.id });
-    await audit(db, { userId: user.id, azione: "ragione_sociale.creata", entita: "ragioni_sociali", entitaId: nuova?.id });
+    const [nuova] = await db
+      .insert(ragioniSociali)
+      .values(valori)
+      .returning({ id: ragioniSociali.id });
+    await audit(db, {
+      userId: user.id,
+      azione: "ragione_sociale.creata",
+      entita: "ragioni_sociali",
+      entitaId: nuova?.id,
+    });
   }
   refresh();
   return ok;
@@ -55,7 +79,12 @@ export async function archiviaRagioneSociale(_: ActionState, form: FormData): Pr
   const id = String(form.get("id") ?? "");
   const db = getDb();
   await db.update(ragioniSociali).set({ deletedAt: new Date() }).where(eq(ragioniSociali.id, id));
-  await audit(db, { userId: user.id, azione: "ragione_sociale.archiviata", entita: "ragioni_sociali", entitaId: id });
+  await audit(db, {
+    userId: user.id,
+    azione: "ragione_sociale.archiviata",
+    entita: "ragioni_sociali",
+    entitaId: id,
+  });
   refresh();
   return ok;
 }
@@ -73,9 +102,20 @@ const regoleSchema = z
     contoPredefinitoId: testoOpt,
   })
   .superRefine((v, ctx) => {
-    if (v.ivaAttiva && v.aliquota === null) ctx.addIssue({ code: "custom", path: ["aliquota"], message: "Indica l'aliquota" });
-    if (!v.ivaAttiva && !v.naturaSenzaIva) ctx.addIssue({ code: "custom", path: ["naturaSenzaIva"], message: "Indica la natura (es. N2.2, N4)" });
-    if (!v.ivaAttiva && !v.diciturSenzaIva) ctx.addIssue({ code: "custom", path: ["diciturSenzaIva"], message: "Indica la dicitura di legge" });
+    if (v.ivaAttiva && v.aliquota === null)
+      ctx.addIssue({ code: "custom", path: ["aliquota"], message: "Indica l'aliquota" });
+    if (!v.ivaAttiva && !v.naturaSenzaIva)
+      ctx.addIssue({
+        code: "custom",
+        path: ["naturaSenzaIva"],
+        message: "Indica la natura (es. N2.2, N4)",
+      });
+    if (!v.ivaAttiva && !v.diciturSenzaIva)
+      ctx.addIssue({
+        code: "custom",
+        path: ["diciturSenzaIva"],
+        message: "Indica la dicitura di legge",
+      });
   });
 
 export async function salvaRegoleFiscali(_: ActionState, form: FormData): Promise<ActionState> {
@@ -97,7 +137,12 @@ export async function salvaRegoleFiscali(_: ActionState, form: FormData): Promis
       contoPredefinitoId: v.contoPredefinitoId,
     })
     .where(eq(ragioniSociali.id, v.id));
-  await audit(db, { userId: user.id, azione: "regole_fiscali.modificate", entita: "ragioni_sociali", entitaId: v.id });
+  await audit(db, {
+    userId: user.id,
+    azione: "regole_fiscali.modificate",
+    entita: "ragioni_sociali",
+    entitaId: v.id,
+  });
   refresh();
   return ok;
 }
@@ -107,13 +152,22 @@ export async function salvaRegoleFiscali(_: ActionState, form: FormData): Promis
 export async function salvaListino(_: ActionState, form: FormData): Promise<ActionState> {
   await requireSession();
   const r = leggi(
-    z.object({ id: z.string().optional(), ragioneSocialeId: z.uuid("Scegli la ragione sociale"), nome: z.string().trim().min(1, "Il nome è obbligatorio"), descrizione: testoOpt }),
+    z.object({
+      id: z.string().optional(),
+      ragioneSocialeId: z.uuid("Scegli la ragione sociale"),
+      nome: z.string().trim().min(1, "Il nome è obbligatorio"),
+      descrizione: testoOpt,
+    }),
     form,
   );
   if (!r.ok) return r.state;
   const { id, ...valori } = r.data;
   const db = getDb();
-  if (id) await db.update(listini).set({ nome: valori.nome, descrizione: valori.descrizione }).where(eq(listini.id, id));
+  if (id)
+    await db
+      .update(listini)
+      .set({ nome: valori.nome, descrizione: valori.descrizione })
+      .where(eq(listini.id, id));
   else await db.insert(listini).values(valori);
   refresh();
   return ok;
@@ -151,14 +205,23 @@ export async function salvaModulo(_: ActionState, form: FormData): Promise<Actio
   await db.transaction(async (tx) => {
     let moduloId = id;
     if (id) await tx.update(listinoModuli).set(valori).where(eq(listinoModuli.id, id));
-    else moduloId = (await tx.insert(listinoModuli).values(valori).returning({ id: listinoModuli.id }))[0]?.id;
+    else
+      moduloId = (
+        await tx.insert(listinoModuli).values(valori).returning({ id: listinoModuli.id })
+      )[0]?.id;
     if (!moduloId) throw new Error("Salvataggio modulo fallito");
     if (id || baseIds.length > 0) {
       await tx.delete(moduloBasi).where(eq(moduloBasi.moduloId, moduloId));
       // Solo basi dello stesso listino
-      const valide = await tx.select({ id: listinoBasi.id }).from(listinoBasi).where(eq(listinoBasi.listinoId, valori.listinoId));
+      const valide = await tx
+        .select({ id: listinoBasi.id })
+        .from(listinoBasi)
+        .where(eq(listinoBasi.listinoId, valori.listinoId));
       const ammesse = baseIds.filter((b) => valide.some((x) => x.id === b));
-      if (ammesse.length > 0) await tx.insert(moduloBasi).values(ammesse.map((baseId) => ({ moduloId: moduloId as string, baseId })));
+      if (ammesse.length > 0)
+        await tx
+          .insert(moduloBasi)
+          .values(ammesse.map((baseId) => ({ moduloId: moduloId as string, baseId })));
     }
   });
   refresh();
@@ -179,8 +242,14 @@ export async function toggleAssegnazione(form: FormData): Promise<void> {
   const moduloId = String(form.get("moduloId"));
   const baseId = String(form.get("baseId"));
   const db = getDb();
-  const [esiste] = await db.select().from(moduloBasi).where(and(eq(moduloBasi.moduloId, moduloId), eq(moduloBasi.baseId, baseId)));
-  if (esiste) await db.delete(moduloBasi).where(and(eq(moduloBasi.moduloId, moduloId), eq(moduloBasi.baseId, baseId)));
+  const [esiste] = await db
+    .select()
+    .from(moduloBasi)
+    .where(and(eq(moduloBasi.moduloId, moduloId), eq(moduloBasi.baseId, baseId)));
+  if (esiste)
+    await db
+      .delete(moduloBasi)
+      .where(and(eq(moduloBasi.moduloId, moduloId), eq(moduloBasi.baseId, baseId)));
   else await db.insert(moduloBasi).values({ moduloId, baseId });
   refresh();
 }
@@ -192,7 +261,10 @@ export async function impostaStrumentoMcp(form: FormData): Promise<void> {
   const nome = String(form.get("nome"));
   const attivo = form.get("attivo") === "true";
   const db = getDb();
-  const [corrente] = await db.select().from(impostazioni).where(eq(impostazioni.chiave, "mcp.strumenti"));
+  const [corrente] = await db
+    .select()
+    .from(impostazioni)
+    .where(eq(impostazioni.chiave, "mcp.strumenti"));
   const valore = { ...((corrente?.valore as Record<string, boolean>) ?? {}), [nome]: attivo };
   await db
     .insert(impostazioni)
@@ -237,7 +309,11 @@ export async function revocaChiaveApi(form: FormData): Promise<void> {
   const id = String(form.get("id"));
   const db = getDb();
   await db.update(apiKeys).set({ revokedAt: new Date() }).where(eq(apiKeys.id, id));
-  await audit(db, { userId: user.id, azione: "api_key.revocata", entita: "api_keys", entitaId: id });
+  await audit(db, {
+    userId: user.id,
+    azione: "api_key.revocata",
+    entita: "api_keys",
+    entitaId: id,
+  });
   refresh();
 }
-

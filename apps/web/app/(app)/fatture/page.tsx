@@ -9,7 +9,11 @@ export default function Page() {
       sezione="Amministrazione"
       titolo="Fatture"
       descrizione="Fatture emesse da preventivo, da rata o libere."
-      vuoto={{ titolo: "Nessuna fattura", testo: "Le fatture compariranno qui. La fatturazione elettronica passa da un intermediario: l'interfaccia del servizio è già predisposta." }}
+      vuoto={{
+        titolo: "Nessuna fattura",
+        testo:
+          "Le fatture compariranno qui. La fatturazione elettronica passa da un intermediario: l'interfaccia del servizio è già predisposta.",
+      }}
     />
   );
 }

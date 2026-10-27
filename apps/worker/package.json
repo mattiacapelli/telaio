@@ -1,0 +1,24 @@
+{
+  "name": "@telaio/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/index.ts",
+    "job": "tsx --env-file=../../.env src/run-once.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@telaio/core": "workspace:*",
+    "@telaio/db": "workspace:*",
+    "@telaio/twenty": "workspace:*",
+    "bullmq": "^6.5.0",
+    "ioredis": "^6.0.0",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3"
+  }
+}

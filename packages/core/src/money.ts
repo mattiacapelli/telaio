@@ -12,7 +12,11 @@ export function percentuale(importoCent: number, bp: number): number {
   return roundDiv(importoCent * bp, 10000);
 }
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const eur = new Intl.NumberFormat("it-IT", {
+  style: "currency",
+  currency: "EUR",
+  useGrouping: "always",
+});
 
 export function formatEuro(cent: number): string {
   return eur.format(cent / 100);

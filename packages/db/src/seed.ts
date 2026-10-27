@@ -6,9 +6,9 @@ import {
   accounts,
   clientiRef,
   conti,
+  listini,
   listinoBasi,
   listinoModuli,
-  listini,
   moduloBasi,
   ragioniSociali,
   users,
@@ -100,7 +100,11 @@ async function seedRagioniSociali() {
     [assoc, "C/C Capelli Formazione"],
   ] as const) {
     const conto = contiCreati.find((c) => c.nome === nome);
-    if (conto) await db.update(ragioniSociali).set({ contoPredefinitoId: conto.id }).where(eq(ragioniSociali.id, rs.id));
+    if (conto)
+      await db
+        .update(ragioniSociali)
+        .set({ contoPredefinitoId: conto.id })
+        .where(eq(ragioniSociali.id, rs.id));
   }
 
   // Listino "Sviluppo Web Custom": prezzi netti in centesimi
@@ -116,8 +120,22 @@ async function seedRagioniSociali() {
   const basi = await db
     .insert(listinoBasi)
     .values([
-      { listinoId: listino.id, nome: "Sito Web", unaTantumCent: 55000, canoneAnnuoCent: 2500, canoneMensileCent: 0, ordine: 1 },
-      { listinoId: listino.id, nome: "CMS custom", unaTantumCent: 100000, canoneAnnuoCent: 45000, canoneMensileCent: 4500, ordine: 2 },
+      {
+        listinoId: listino.id,
+        nome: "Sito Web",
+        unaTantumCent: 55000,
+        canoneAnnuoCent: 2500,
+        canoneMensileCent: 0,
+        ordine: 1,
+      },
+      {
+        listinoId: listino.id,
+        nome: "CMS custom",
+        unaTantumCent: 100000,
+        canoneAnnuoCent: 45000,
+        canoneMensileCent: 4500,
+        ordine: 2,
+      },
     ])
     .returning();
   const sito = basi.find((b) => b.nome === "Sito Web");
@@ -143,7 +161,10 @@ async function seedRagioniSociali() {
         ordine: i + 1,
       })
       .returning();
-    if (creato) await db.insert(moduloBasi).values(m.basi.map((b) => ({ moduloId: creato.id, baseId: b.id })));
+    if (creato)
+      await db
+        .insert(moduloBasi)
+        .values(m.basi.map((b) => ({ moduloId: creato.id, baseId: b.id })));
   }
 
   console.log("Ragioni sociali, conti e listini creati");
@@ -153,8 +174,19 @@ async function seedClientiDemo() {
   const [esiste] = await db.select({ id: clientiRef.id }).from(clientiRef).limit(1);
   if (esiste) return;
   await db.insert(clientiRef).values([
-    { twentyCompanyId: "demo-1", nome: "Trattoria Da Marco", partitaIva: "01234567890", codiceSdi: "KRRH6B9" },
-    { twentyCompanyId: "demo-2", nome: "Comune di Esempio", codiceFiscale: "80012345678", pa: true, codiceSdi: "UFABC1" },
+    {
+      twentyCompanyId: "demo-1",
+      nome: "Trattoria Da Marco",
+      partitaIva: "01234567890",
+      codiceSdi: "KRRH6B9",
+    },
+    {
+      twentyCompanyId: "demo-2",
+      nome: "Comune di Esempio",
+      codiceFiscale: "80012345678",
+      pa: true,
+      codiceSdi: "UFABC1",
+    },
   ]);
 }
 

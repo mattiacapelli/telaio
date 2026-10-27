@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { createContext, useActionState, useContext, useEffect, useState } from "react";
 import { Button, type ButtonProps } from "./button";
 
 export interface ActionState {
@@ -12,6 +12,11 @@ export interface ActionState {
 }
 
 export const initialState: ActionState = { ok: false };
+
+const FormStateContext = createContext<ActionState>(initialState);
+
+/** Esito dell'ultimo invio della modale che contiene il componente. */
+export const useFormState = () => useContext(FormStateContext);
 
 /**
  * Tutti i form di Telaio si aprono in modale. La Server Action riceve (prev, FormData)
@@ -34,12 +39,11 @@ export function FormModal({
   description?: string;
   submitLabel?: string;
   action: (prev: ActionState, data: FormData) => Promise<ActionState>;
-  children: React.ReactNode | ((state: ActionState) => React.ReactNode);
+  children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(action, initialState);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: chiudiamo solo quando arriva un nuovo esito positivo
   useEffect(() => {
     if (state.ok) setOpen(false);
   }, [state]);
@@ -68,7 +72,7 @@ export function FormModal({
             </Dialog.Close>
           </div>
           <form action={formAction} className="flex flex-col gap-4">
-            {typeof children === "function" ? children(state) : children}
+            <FormStateContext.Provider value={state}>{children}</FormStateContext.Provider>
             {state.message && !state.ok && (
               <p role="alert" className="rounded-2xl bg-orange/10 px-4 py-3 text-sm text-orange-2">
                 {state.message}

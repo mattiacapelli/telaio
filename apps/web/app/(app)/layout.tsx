@@ -15,8 +15,19 @@ function saluto(ora: number) {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   const adesso = new Date();
-  const ora = Number(new Intl.DateTimeFormat("it-IT", { hour: "numeric", hour12: false, timeZone: "Europe/Rome" }).format(adesso));
-  const data = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Rome" }).format(adesso);
+  const ora = Number(
+    new Intl.DateTimeFormat("it-IT", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: "Europe/Rome",
+    }).format(adesso),
+  );
+  const data = new Intl.DateTimeFormat("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Rome",
+  }).format(adesso);
 
   return (
     <div className="min-[860px]:grid min-[860px]:grid-cols-[272px_1fr]">

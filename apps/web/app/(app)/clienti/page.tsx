@@ -8,7 +8,11 @@ import { Tag } from "@/components/ui/tag";
 export const metadata = { title: "Clienti" };
 export const dynamic = "force-dynamic";
 
-export default async function ClientiPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function ClientiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const { q } = await searchParams;
   const twenty = twentyDaEnv();
   let errore: string | null = null;
@@ -24,12 +28,22 @@ export default async function ClientiPage({ searchParams }: { searchParams: Prom
         sezione="Commerciale"
         titolo="Clienti"
         descrizione="Le anagrafiche arrivano da Twenty CRM e non vengono duplicate."
-        azione={twenty.finto ? <Tag tone="orange">Dati finti · imposta TWENTY_API_URL</Tag> : <Tag tone="blue">Twenty collegato</Tag>}
+        azione={
+          twenty.finto ? (
+            <Tag tone="orange">Dati finti · imposta TWENTY_API_URL</Tag>
+          ) : (
+            <Tag tone="blue">Twenty collegato</Tag>
+          )
+        }
       />
       <form className="mb-6 max-w-md" role="search">
         <Input name="q" defaultValue={q} placeholder="Cerca per nome…" aria-label="Cerca clienti" />
       </form>
-      {errore && <p role="alert" className="mb-4 rounded-2xl bg-orange/10 px-4 py-3 text-sm text-orange-2">Twenty non risponde: {errore}</p>}
+      {errore && (
+        <p role="alert" className="mb-4 rounded-2xl bg-orange/10 px-4 py-3 text-sm text-orange-2">
+          Twenty non risponde: {errore}
+        </p>
+      )}
       {clienti.length === 0 ? (
         <EmptyState title="Nessun cliente trovato">Prova un altro termine di ricerca.</EmptyState>
       ) : (
@@ -47,13 +61,20 @@ export default async function ClientiPage({ searchParams }: { searchParams: Prom
               {clienti.map((c) => (
                 <tr key={c.id} className="border-t border-grey-2/60">
                   <td className="px-4 py-3">
-                    <Link href={`/clienti/${c.id}`} className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline">
+                    <Link
+                      href={`/clienti/${c.id}`}
+                      className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+                    >
                       {c.nome}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 tabular-nums text-ink-2">{c.partitaIva ?? c.codiceFiscale ?? "—"}</td>
+                  <td className="px-4 py-3 tabular-nums text-ink-2">
+                    {c.partitaIva ?? c.codiceFiscale ?? "—"}
+                  </td>
                   <td className="px-4 py-3 text-ink-2">{c.citta ?? "—"}</td>
-                  <td className="px-4 py-3">{c.pa ? <Tag tone="blue">PA</Tag> : <Tag>Privato / impresa</Tag>}</td>
+                  <td className="px-4 py-3">
+                    {c.pa ? <Tag tone="blue">PA</Tag> : <Tag>Privato / impresa</Tag>}
+                  </td>
                 </tr>
               ))}
             </tbody>

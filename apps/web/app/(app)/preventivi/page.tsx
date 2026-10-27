@@ -22,7 +22,12 @@ export default async function PreventiviPage() {
 
   return (
     <>
-      <PageHeader numero="02" sezione="Commerciale" titolo="Preventivi" descrizione="Bozze, inviati, accettati. Si creano dal configuratore." />
+      <PageHeader
+        numero="02"
+        sezione="Commerciale"
+        titolo="Preventivi"
+        descrizione="Bozze, inviati, accettati. Si creano dal configuratore."
+      />
       {righe.length === 0 ? (
         <EmptyState
           title="Nessun preventivo"
@@ -52,15 +57,24 @@ export default async function PreventiviPage() {
                 return (
                   <tr key={p.id} className="border-t border-grey-2/60">
                     <td className="px-4 py-3">
-                      <Link href={`/preventivi/${p.id}`} className="inline-flex min-h-11 flex-col justify-center font-medium underline-offset-4 hover:underline">
+                      <Link
+                        href={`/preventivi/${p.id}`}
+                        className="inline-flex min-h-11 flex-col justify-center font-medium underline-offset-4 hover:underline"
+                      >
                         {p.oggetto}
-                        <span className="text-xs font-normal text-muted">{p.numero ?? "Senza numero"}</span>
+                        <span className="text-xs font-normal text-muted">
+                          {p.numero ?? "Senza numero"}
+                        </span>
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-ink-2">{cliente ?? "Da assegnare"}</td>
                     <td className="px-4 py-3 text-ink-2">{emittente}</td>
-                    <td className="px-4 py-3"><Tag tone={stato?.tone}>{stato?.label ?? p.stato}</Tag></td>
-                    <td className="money px-4 py-3 text-right tabular-nums">{formatEuro(p.totaleCent)}</td>
+                    <td className="px-4 py-3">
+                      <Tag tone={stato?.tone}>{stato?.label ?? p.stato}</Tag>
+                    </td>
+                    <td className="money px-4 py-3 text-right tabular-nums">
+                      {formatEuro(p.totaleCent)}
+                    </td>
                   </tr>
                 );
               })}

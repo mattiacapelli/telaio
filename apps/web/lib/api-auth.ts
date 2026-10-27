@@ -15,13 +15,25 @@ export async function autenticaChiave(
   opzioni: { scope: "api" | "mcp"; scrittura?: boolean },
 ): Promise<{ ok: true; chiave: ChiaveApi } | { ok: false; risposta: Response }> {
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!bearer) return { ok: false, risposta: errore(401, "Chiave API mancante", { "WWW-Authenticate": "Bearer" }) };
+  if (!bearer)
+    return {
+      ok: false,
+      risposta: errore(401, "Chiave API mancante", { "WWW-Authenticate": "Bearer" }),
+    };
 
   const hash = createHash("sha256").update(bearer).digest("hex");
   const db = getDb();
-  const [chiave] = await db.select().from(apiKeys).where(and(eq(apiKeys.hash, hash), isNull(apiKeys.revokedAt)));
-  if (!chiave) return { ok: false, risposta: errore(401, "Chiave API non valida", { "WWW-Authenticate": "Bearer" }) };
-  if (!chiave.scopes.includes(opzioni.scope)) return { ok: false, risposta: errore(403, `La chiave non ha l'ambito ${opzioni.scope}`) };
+  const [chiave] = await db
+    .select()
+    .from(apiKeys)
+    .where(and(eq(apiKeys.hash, hash), isNull(apiKeys.revokedAt)));
+  if (!chiave)
+    return {
+      ok: false,
+      risposta: errore(401, "Chiave API non valida", { "WWW-Authenticate": "Bearer" }),
+    };
+  if (!chiave.scopes.includes(opzioni.scope))
+    return { ok: false, risposta: errore(403, `La chiave non ha l'ambito ${opzioni.scope}`) };
   if (opzioni.scrittura && chiave.permessi !== "lettura_scrittura") {
     return { ok: false, risposta: errore(403, "La chiave è di sola lettura") };
   }
@@ -33,7 +45,8 @@ export async function autenticaChiave(
     const k = `rl:${chiave.id}:${finestra}`;
     const n = await redis.incr(k);
     if (n === 1) await redis.expire(k, 70);
-    if (n > LIMITE_PER_MINUTO) return { ok: false, risposta: errore(429, "Troppe richieste", { "Retry-After": "60" }) };
+    if (n > LIMITE_PER_MINUTO)
+      return { ok: false, risposta: errore(429, "Troppe richieste", { "Retry-After": "60" }) };
   } catch {}
 
   await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, chiave.id));

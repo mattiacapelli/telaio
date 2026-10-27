@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Analisi"
       titolo="Cash flow"
       descrizione="Previsione di cassa a 6 mesi."
-      vuoto={{ titolo: "Previsione non ancora disponibile", testo: "Servono rate, abbonamenti e movimenti per costruire la previsione." }}
+      vuoto={{
+        titolo: "Previsione non ancora disponibile",
+        testo: "Servono rate, abbonamenti e movimenti per costruire la previsione.",
+      }}
     />
   );
 }

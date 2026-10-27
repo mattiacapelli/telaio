@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Amministrazione"
       titolo="Scadenzario"
       descrizione="Rate da incassare, scadute e solleciti programmati."
-      vuoto={{ titolo: "Nessuna rata in scadenza", testo: "Le rate generate dagli abbonamenti e dai preventivi accettati compariranno qui." }}
+      vuoto={{
+        titolo: "Nessuna rata in scadenza",
+        testo: "Le rate generate dagli abbonamenti e dai preventivi accettati compariranno qui.",
+      }}
     />
   );
 }

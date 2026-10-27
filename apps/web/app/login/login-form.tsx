@@ -17,7 +17,9 @@ export function LoginForm() {
     setPending(true);
     try {
       if (richiede2fa) {
-        const { error } = await authClient.twoFactor.verifyTotp({ code: String(formData.get("codice")) });
+        const { error } = await authClient.twoFactor.verifyTotp({
+          code: String(formData.get("codice")),
+        });
         if (error) return setErrore("Codice non valido");
         return router.replace("/");
       }
@@ -26,7 +28,8 @@ export function LoginForm() {
         password: String(formData.get("password")),
       });
       if (error) return setErrore("Email o password non corretti");
-      if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) return setRichiede2fa(true);
+      if (data && "twoFactorRedirect" in data && data.twoFactorRedirect)
+        return setRichiede2fa(true);
       router.replace("/");
     } finally {
       setPending(false);
@@ -44,7 +47,13 @@ export function LoginForm() {
     <form action={accedi} className="mt-8 flex flex-col gap-4">
       {richiede2fa ? (
         <Field label="Codice di verifica (TOTP)">
-          <Input name="codice" inputMode="numeric" autoComplete="one-time-code" required autoFocus />
+          <Input
+            name="codice"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+            autoFocus
+          />
         </Field>
       ) : (
         <>
@@ -52,7 +61,12 @@ export function LoginForm() {
             <Input name="email" type="email" autoComplete="username webauthn" required autoFocus />
           </Field>
           <Field label="Password">
-            <Input name="password" type="password" autoComplete="current-password webauthn" required />
+            <Input
+              name="password"
+              type="password"
+              autoComplete="current-password webauthn"
+              required
+            />
           </Field>
         </>
       )}

@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Amministrazione"
       titolo="Incassi"
       descrizione="Incassi su bonifico, contanti e carta, legati a una rata, a una fattura o liberi."
-      vuoto={{ titolo: "Nessun incasso registrato", testo: "Registra il primo incasso per aggiornare scadenzario e prima nota." }}
+      vuoto={{
+        titolo: "Nessun incasso registrato",
+        testo: "Registra il primo incasso per aggiornare scadenzario e prima nota.",
+      }}
     />
   );
 }

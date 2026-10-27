@@ -3,8 +3,8 @@
 import { getDb } from "@telaio/db";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/components/ui/form-modal";
-import { creaPreventivoDaListino, creaPreventivoSchema } from "@/lib/dominio/preventivi";
 import { audit } from "@/lib/audit";
+import { creaPreventivoDaListino, creaPreventivoSchema } from "@/lib/dominio/preventivi";
 import { requireSession } from "@/lib/session";
 
 export async function creaPreventivoAction(_: ActionState, form: FormData): Promise<ActionState> {
@@ -18,13 +18,20 @@ export async function creaPreventivoAction(_: ActionState, form: FormData): Prom
     oggetto: String(form.get("oggetto") ?? "") || undefined,
     note: String(form.get("note") ?? "") || undefined,
   });
-  if (!parsed.success) return { ok: false, message: "Scegli una base prima di creare il preventivo" };
+  if (!parsed.success)
+    return { ok: false, message: "Scegli una base prima di creare il preventivo" };
 
   let id: string;
   try {
     const db = getDb();
     ({ id } = await creaPreventivoDaListino(db, parsed.data));
-    await audit(db, { userId: user.id, azione: "preventivo.creato", entita: "preventivi", entitaId: id, dettagli: { origine: "configuratore" } });
+    await audit(db, {
+      userId: user.id,
+      azione: "preventivo.creato",
+      entita: "preventivi",
+      entitaId: id,
+      dettagli: { origine: "configuratore" },
+    });
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Creazione non riuscita" };
   }

@@ -19,3 +19,13 @@ Una riga ciascuna: scelta — perché.
 - Nessuna libreria per le date — `Date.UTC` su stringhe `YYYY-MM-DD` basta per la generazione rate.
 - Docker: solo Postgres, Redis, Mailpit — il prompt era troncato alla lista delle immagini; ho usato quelle di `~/Sviluppo/CLAUDE.md` necessarie ora. MinIO si aggiunge quando serve lo storage dei PDF.
 - Un solo Dockerfile per web e worker (in seguito) — convenzione di `~/Sviluppo/CLAUDE.md`.
+- Navigazione: Dashboard raggiunta dal logo/saluto; Commerciale 01–05 include «Azioni in attesa» — così Incassi è 07 come nell'esempio del prompt.
+- Totale di un preventivo = solo le righe una tantum; i canoni annui/mensili restano righe a parte e si sommano per tipo — mescolarli in un unico imponibile non avrebbe senso fiscale.
+- Tabella `impostazioni` (chiave/valore) extra — serve per attivare/disattivare gli strumenti MCP.
+- `proxy.ts` (Next 16, ex middleware) fa solo un controllo ottimistico del cookie; l'autorizzazione vera è `requireSession()` in ogni pagina e Server Action.
+- `/api/v1` e `/mcp` sono esclusi dal proxy: usano chiavi API (Bearer, hash SHA-256, prefisso `tlk_`), non la sessione.
+- Conferma di una `pending_action` con UPDATE condizionato su `stato = 'in_attesa'` — una doppia conferma non esegue due volte.
+- Form in modale: `FormModal` con `useActionState`; gli errori per campo arrivano ai `Field` tramite context, così i campi possono restare Server Component.
+- Il `.env` sta nella radice: `next.config.ts` lo carica con `process.loadEnvFile`, gli script di db e worker con `--env-file`.
+- Importi formattati con separatore delle migliaia sempre attivo (`useGrouping: "always"`): `Intl` per `it-IT` lo omette sui numeri a 4 cifre.
+- Colore `--grey-1` (#969184) solo per bordi e decorazioni: sul fondo carta non raggiunge il contrasto AA per il testo, che usa `--muted`.

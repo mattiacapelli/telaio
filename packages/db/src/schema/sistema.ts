@@ -1,10 +1,26 @@
-import { boolean, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { ragioniSociali } from "./anagrafiche";
 import { users } from "./auth";
 import { id, timestamps } from "./helpers";
 
 export const permessoApiEnum = pgEnum("permesso_api", ["lettura", "lettura_scrittura"]);
-export const statoPendingEnum = pgEnum("stato_pending", ["in_attesa", "confermata", "rifiutata", "fallita"]);
+export const statoPendingEnum = pgEnum("stato_pending", [
+  "in_attesa",
+  "confermata",
+  "rifiutata",
+  "fallita",
+]);
 export const statoDeliveryEnum = pgEnum("stato_delivery", ["in_attesa", "consegnato", "fallito"]);
 
 export const apiKeys = pgTable("api_keys", {

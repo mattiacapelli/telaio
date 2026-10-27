@@ -33,7 +33,10 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
       { numero: "13", titolo: "Report", href: "/report" },
     ],
   },
-  { titolo: "Sistema", voci: [{ numero: "14", titolo: "Impostazioni", href: "/impostazioni/ragioni-sociali" }] },
+  {
+    titolo: "Sistema",
+    voci: [{ numero: "14", titolo: "Impostazioni", href: "/impostazioni/ragioni-sociali" }],
+  },
 ];
 
 export const AZIONI_PRINCIPALI: Record<string, { label: string; href: string }> = {

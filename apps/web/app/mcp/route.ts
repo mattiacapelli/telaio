@@ -9,7 +9,10 @@ async function gestisci(request: Request) {
   const auth = await autenticaChiave(request, { scope: "mcp" });
   if (!auth.ok) return auth.risposta;
   const server = await creaServerMcp(auth.chiave);
-  const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
   await server.connect(transport);
   return transport.handleRequest(request);
 }

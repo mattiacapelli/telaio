@@ -10,9 +10,9 @@ import {
   percentuale,
   prezzoVisualizzato,
   puoTransirePreventivo,
+  type RegoleFiscali,
   roundDiv,
   totaliConfiguratore,
-  type RegoleFiscali,
   type VoceListino,
 } from "./index";
 
@@ -55,7 +55,12 @@ describe("arrotondamenti", () => {
 describe("IVA attiva", () => {
   it("22% su 1000", () => {
     const t = calcolaTotali(riga(1000), conIva);
-    expect(t).toMatchObject({ imponibileCent: 100000, ivaCent: 22000, totaleCent: 122000, bolloCent: 0 });
+    expect(t).toMatchObject({
+      imponibileCent: 100000,
+      ivaCent: 22000,
+      totaleCent: 122000,
+      bolloCent: 0,
+    });
     expect(t.nettoDaPagareCent).toBe(122000);
   });
   it("aliquote diverse", () => {
@@ -91,7 +96,9 @@ describe("IVA disattiva e bollo", () => {
   });
   it("nessun bollo a 77,47 esatti, sì a 77,48", () => {
     expect(calcolaTotali([{ quantita: 1, prezzoUnitarioCent: 7747 }], senzaIva).bolloCent).toBe(0);
-    expect(calcolaTotali([{ quantita: 1, prezzoUnitarioCent: 7748 }], senzaIva).bolloCent).toBe(200);
+    expect(calcolaTotali([{ quantita: 1, prezzoUnitarioCent: 7748 }], senzaIva).bolloCent).toBe(
+      200,
+    );
   });
   it("nessun bollo se non automatico", () => {
     expect(calcolaTotali(riga(1000), { ...senzaIva, bolloAutomatico: false }).bolloCent).toBe(0);
@@ -187,10 +194,40 @@ describe("preventivo e configuratore", () => {
     expect(puoTransirePreventivo("accettato", "bozza")).toBe(false);
   });
   const voci: VoceListino[] = [
-    { id: "sito", tipo: "base", nome: "Sito Web", unaTantumCent: 55000, canoneAnnuoCent: 2500, canoneMensileCent: 0 },
-    { id: "cms", tipo: "base", nome: "CMS custom", unaTantumCent: 100000, canoneAnnuoCent: 45000, canoneMensileCent: 4500 },
-    { id: "mccms", tipo: "modulo", nome: "MC CMS", unaTantumCent: 45000, canoneAnnuoCent: 25000, canoneMensileCent: 2500, baseIds: ["sito"] },
-    { id: "domotica", tipo: "modulo", nome: "Domotica", unaTantumCent: 80000, canoneAnnuoCent: 35000, canoneMensileCent: 3500, baseIds: ["cms"] },
+    {
+      id: "sito",
+      tipo: "base",
+      nome: "Sito Web",
+      unaTantumCent: 55000,
+      canoneAnnuoCent: 2500,
+      canoneMensileCent: 0,
+    },
+    {
+      id: "cms",
+      tipo: "base",
+      nome: "CMS custom",
+      unaTantumCent: 100000,
+      canoneAnnuoCent: 45000,
+      canoneMensileCent: 4500,
+    },
+    {
+      id: "mccms",
+      tipo: "modulo",
+      nome: "MC CMS",
+      unaTantumCent: 45000,
+      canoneAnnuoCent: 25000,
+      canoneMensileCent: 2500,
+      baseIds: ["sito"],
+    },
+    {
+      id: "domotica",
+      tipo: "modulo",
+      nome: "Domotica",
+      unaTantumCent: 80000,
+      canoneAnnuoCent: 35000,
+      canoneMensileCent: 3500,
+      baseIds: ["cms"],
+    },
   ];
   it("solo moduli compatibili", () => {
     expect(moduliCompatibili("sito", voci).map((m) => m.id)).toEqual(["mccms"]);

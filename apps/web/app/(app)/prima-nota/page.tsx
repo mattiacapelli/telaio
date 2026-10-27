@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Amministrazione"
       titolo="Prima nota"
       descrizione="Entrate, uscite e giroconti. Nessun collegamento ai conti bancari reali."
-      vuoto={{ titolo: "Nessun movimento", testo: "Registra entrate, uscite e giroconti tra i tuoi conti." }}
+      vuoto={{
+        titolo: "Nessun movimento",
+        testo: "Registra entrate, uscite e giroconti tra i tuoi conti.",
+      }}
     />
   );
 }

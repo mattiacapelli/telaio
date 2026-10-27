@@ -47,5 +47,10 @@ export interface TwentyClient {
   /** Scrittura ammessa 1: fase dell'opportunità */
   aggiornaFaseOpportunita(id: string, fase: string): Promise<void>;
   /** Scrittura ammessa 2: allegato PDF nella timeline (da implementare) */
-  allegaPdf(opts: { companyId?: string; opportunityId?: string; nomeFile: string; contenuto: Uint8Array }): Promise<void>;
+  allegaPdf(opts: {
+    companyId?: string;
+    opportunityId?: string;
+    nomeFile: string;
+    contenuto: Uint8Array;
+  }): Promise<void>;
 }

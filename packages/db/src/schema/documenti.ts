@@ -1,4 +1,14 @@
-import { date, index, integer, jsonb, pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  date,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { clientiRef, ragioniSociali } from "./anagrafiche";
 import { deletedAt, id, timestamps } from "./helpers";
 

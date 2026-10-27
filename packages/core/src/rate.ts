@@ -54,12 +54,19 @@ export function generaRate(opzioni: OpzioniRate): RataGenerata[] {
   for (let i = 0; i < massimo; i++) {
     const scadenza = aggiungiMesi(opzioni.inizio, i * passo);
     if (scadenza > opzioni.fino) break;
-    rate.push({ scadenza, importoCent: opzioni.importoCent, numero: (opzioni.numeroIniziale ?? 1) + i });
+    rate.push({
+      scadenza,
+      importoCent: opzioni.importoCent,
+      numero: (opzioni.numeroIniziale ?? 1) + i,
+    });
   }
   return rate;
 }
 
 /** Importo della rata per un canone annuo dato, secondo la periodicità. */
-export function importoRataDaCanoneAnnuo(canoneAnnuoCent: number, periodicita: Periodicita): number {
+export function importoRataDaCanoneAnnuo(
+  canoneAnnuoCent: number,
+  periodicita: Periodicita,
+): number {
   return Math.round((canoneAnnuoCent * MESI_PER_PERIODICITA[periodicita]) / 12);
 }

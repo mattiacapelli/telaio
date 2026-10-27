@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Amministrazione"
       titolo="Abbonamenti"
       descrizione="Canoni mensili, trimestrali, semestrali o annuali che generano rate."
-      vuoto={{ titolo: "Nessun abbonamento attivo", testo: "Il worker genera le rate in anticipo a partire dagli abbonamenti." }}
+      vuoto={{
+        titolo: "Nessun abbonamento attivo",
+        testo: "Il worker genera le rate in anticipo a partire dagli abbonamenti.",
+      }}
     />
   );
 }

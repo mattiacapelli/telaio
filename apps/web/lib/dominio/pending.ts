@@ -1,4 +1,4 @@
-import { type Database, and, eq, pendingActions } from "@telaio/db";
+import { and, type Database, eq, pendingActions } from "@telaio/db";
 import { audit } from "../audit";
 import { creaPreventivoDaListino, creaPreventivoSchema } from "./preventivi";
 
@@ -7,7 +7,8 @@ import { creaPreventivoDaListino, creaPreventivoSchema } from "./preventivi";
  * dopo la conferma esplicita dell'admin: l'AI non scrive mai direttamente nel DB.
  */
 const ESECUTORI: Record<string, (db: Database, payload: unknown) => Promise<unknown>> = {
-  crea_preventivo: async (db, payload) => creaPreventivoDaListino(db, creaPreventivoSchema.parse(payload)),
+  crea_preventivo: async (db, payload) =>
+    creaPreventivoDaListino(db, creaPreventivoSchema.parse(payload)),
 };
 
 export async function proponiAzione(
@@ -16,7 +17,12 @@ export async function proponiAzione(
 ) {
   const [riga] = await db
     .insert(pendingActions)
-    .values({ tipo: azione.tipo, payload: azione.payload, apiKeyId: azione.apiKeyId, origine: azione.origine ?? "mcp" })
+    .values({
+      tipo: azione.tipo,
+      payload: azione.payload,
+      apiKeyId: azione.apiKeyId,
+      origine: azione.origine ?? "mcp",
+    })
     .returning({ id: pendingActions.id });
   return riga;
 }
@@ -34,12 +40,23 @@ export async function confermaAzione(db: Database, id: string, userId: string) {
     const esecutore = ESECUTORI[azione.tipo];
     if (!esecutore) throw new Error(`Tipo di azione non ancora supportato: ${azione.tipo}`);
     const risultato = await esecutore(db, azione.payload);
-    await db.update(pendingActions).set({ risultato: risultato as object }).where(eq(pendingActions.id, id));
-    await audit(db, { userId, azione: `pending.${azione.tipo}.confermata`, entita: "pending_actions", entitaId: id });
+    await db
+      .update(pendingActions)
+      .set({ risultato: risultato as object })
+      .where(eq(pendingActions.id, id));
+    await audit(db, {
+      userId,
+      azione: `pending.${azione.tipo}.confermata`,
+      entita: "pending_actions",
+      entitaId: id,
+    });
     return { ok: true as const, risultato };
   } catch (e) {
     const messaggio = e instanceof Error ? e.message : "Errore sconosciuto";
-    await db.update(pendingActions).set({ stato: "fallita", errore: messaggio }).where(eq(pendingActions.id, id));
+    await db
+      .update(pendingActions)
+      .set({ stato: "fallita", errore: messaggio })
+      .where(eq(pendingActions.id, id));
     return { ok: false as const, errore: messaggio };
   }
 }

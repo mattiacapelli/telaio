@@ -18,7 +18,9 @@ export function PageHeader({
           {numero ? `${numero} — ` : ""}
           {sezione}
         </p>
-        <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight sm:text-5xl">{titolo}</h1>
+        <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+          {titolo}
+        </h1>
         {descrizione && <p className="mt-2 max-w-2xl text-muted">{descrizione}</p>}
       </div>
       {azione}

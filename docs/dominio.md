@@ -18,14 +18,14 @@
 
 ## Regole fiscali (per ragione sociale)
 
-| Campo | Significato |
-|---|---|
-| `iva_attiva` | se falso: nessuna IVA, vale la dicitura |
-| `aliquota_iva_bp` | es. 2200 |
-| `natura_senza_iva` + `dicitura_senza_iva` | es. `N2.2`, `N4`, con testo di legge |
-| `bollo_automatico` | solo senza IVA: € 2,00 se imponibile > € 77,47 |
-| `ritenuta_bp` | ritenuta d'acconto sull'imponibile (opzionale) |
-| `split_payment` | IVA versata dal cliente PA direttamente all'erario |
+| Campo                                     | Significato                                        |
+| ----------------------------------------- | -------------------------------------------------- |
+| `iva_attiva`                              | se falso: nessuna IVA, vale la dicitura            |
+| `aliquota_iva_bp`                         | es. 2200                                           |
+| `natura_senza_iva` + `dicitura_senza_iva` | es. `N2.2`, `N4`, con testo di legge               |
+| `bollo_automatico`                        | solo senza IVA: € 2,00 se imponibile > € 77,47     |
+| `ritenuta_bp`                             | ritenuta d'acconto sull'imponibile (opzionale)     |
+| `split_payment`                           | IVA versata dal cliente PA direttamente all'erario |
 
 Calcolo (`calcolaTotali`):
 
@@ -40,13 +40,13 @@ netto_da_pagare = totale − ritenuta − (split_payment ? iva : 0)
 
 Esempi su **€ 1.000,00** (100000 cent):
 
-| Caso | Imponibile | IVA | Bollo | Totale | Ritenuta | Da pagare |
-|---|---|---|---|---|---|---|
-| IVA 22 % | 1.000,00 | 220,00 | – | 1.220,00 | – | 1.220,00 |
-| IVA 22 % + split PA | 1.000,00 | 220,00 | – | 1.220,00 | – | 1.000,00 |
-| Senza IVA (N2.2), bollo | 1.000,00 | – | 2,00 | 1.002,00 | – | 1.002,00 |
-| Senza IVA, € 70,00 | 70,00 | – | – | 70,00 | – | 70,00 |
-| IVA 22 % + ritenuta 20 % | 1.000,00 | 220,00 | – | 1.220,00 | 200,00 | 1.020,00 |
+| Caso                     | Imponibile | IVA    | Bollo | Totale   | Ritenuta | Da pagare |
+| ------------------------ | ---------- | ------ | ----- | -------- | -------- | --------- |
+| IVA 22 %                 | 1.000,00   | 220,00 | –     | 1.220,00 | –        | 1.220,00  |
+| IVA 22 % + split PA      | 1.000,00   | 220,00 | –     | 1.220,00 | –        | 1.000,00  |
+| Senza IVA (N2.2), bollo  | 1.000,00   | –      | 2,00  | 1.002,00 | –        | 1.002,00  |
+| Senza IVA, € 70,00       | 70,00      | –      | –     | 70,00    | –        | 70,00     |
+| IVA 22 % + ritenuta 20 % | 1.000,00   | 220,00 | –     | 1.220,00 | 200,00   | 1.020,00  |
 
 Regola di visualizzazione: con IVA attiva ogni prezzo si mostra **netto e lordo**; senza IVA un solo prezzo con la dicitura.
 

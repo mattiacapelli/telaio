@@ -17,13 +17,13 @@ telaio/
 
 ## Responsabilità
 
-| Pacchetto | Fa | Non fa |
-|---|---|---|
-| `core` | Funzioni pure su interi (centesimi, punti base). Nessun I/O. | Non conosce DB, Next, Zod dei form. |
-| `db` | Tabelle, relazioni, migrazioni, seed, assegnazione atomica dei numeri. | Non contiene regole fiscali (le chiama da `core`). |
-| `twenty` | Legge Company/People/Opportunity; scrive fase opportunità e allegati. Dati finti senza `TWENTY_API_URL`. | Non scrive su Postgres. |
-| `web` | Auth, layout, pagine, Server Actions, API REST, server MCP, palette ⌘K. | Non esegue job lunghi: li accoda. |
-| `worker` | Esegue i job BullMQ, schedulati con job repeatable. | Non serve HTTP. |
+| Pacchetto | Fa                                                                                                       | Non fa                                             |
+| --------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `core`    | Funzioni pure su interi (centesimi, punti base). Nessun I/O.                                             | Non conosce DB, Next, Zod dei form.                |
+| `db`      | Tabelle, relazioni, migrazioni, seed, assegnazione atomica dei numeri.                                   | Non contiene regole fiscali (le chiama da `core`). |
+| `twenty`  | Legge Company/People/Opportunity; scrive fase opportunità e allegati. Dati finti senza `TWENTY_API_URL`. | Non scrive su Postgres.                            |
+| `web`     | Auth, layout, pagine, Server Actions, API REST, server MCP, palette ⌘K.                                  | Non esegue job lunghi: li accoda.                  |
+| `worker`  | Esegue i job BullMQ, schedulati con job repeatable.                                                      | Non serve HTTP.                                    |
 
 Dipendenze ammesse: `web` e `worker` → `db`, `core`, `twenty`. `core` non dipende da nessuno.
 

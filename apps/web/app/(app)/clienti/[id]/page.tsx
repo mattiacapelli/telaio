@@ -34,7 +34,9 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         numero="01"
         sezione="Clienti"
         titolo={cliente.nome}
-        descrizione={cliente.pa ? "Pubblica amministrazione: split payment applicabile." : undefined}
+        descrizione={
+          cliente.pa ? "Pubblica amministrazione: split payment applicabile." : undefined
+        }
         azione={
           <Button asChild>
             <Link href={`/configuratore?cliente=${cliente.id}`}>Nuovo preventivo</Link>
@@ -60,7 +62,9 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
             {persone.map((p) => (
               <li key={p.id}>
                 <p className="font-medium">{p.nome}</p>
-                <p className="text-muted">{[p.ruolo, p.email, p.telefono].filter(Boolean).join(" · ")}</p>
+                <p className="text-muted">
+                  {[p.ruolo, p.email, p.telefono].filter(Boolean).join(" · ")}
+                </p>
               </li>
             ))}
           </ul>
@@ -73,7 +77,9 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">{o.nome}</span>
                 <span className="flex items-center gap-3">
-                  {o.importoCent !== null && <span className="money tabular-nums">{formatEuro(o.importoCent)}</span>}
+                  {o.importoCent !== null && (
+                    <span className="money tabular-nums">{formatEuro(o.importoCent)}</span>
+                  )}
                   <Tag tone="blue">{o.fase ?? "—"}</Tag>
                 </span>
               </li>

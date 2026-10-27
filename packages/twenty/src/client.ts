@@ -10,7 +10,10 @@ export interface OpzioniTwenty {
   campi?: Partial<Record<"partitaIva" | "codiceFiscale" | "pec" | "codiceSdi" | "pa", string>>;
 }
 
-const testo = z.string().nullish().transform((v) => (v ? v : null));
+const testo = z
+  .string()
+  .nullish()
+  .transform((v) => (v ? v : null));
 const link = z.object({ primaryLinkUrl: z.string().nullish() }).nullish();
 
 const companyRaw = z
@@ -58,7 +61,11 @@ export function creaTwentyClient(opzioni: OpzioniTwenty = {}): TwentyClient {
     ...opzioni.campi,
   };
 
-  async function richiesta<T>(percorso: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
+  async function richiesta<T>(
+    percorso: string,
+    schema: z.ZodType<T>,
+    init?: RequestInit,
+  ): Promise<T> {
     const res = await fetch(`${base}/rest${percorso}`, {
       ...init,
       headers: {
@@ -91,12 +98,18 @@ export function creaTwentyClient(opzioni: OpzioniTwenty = {}): TwentyClient {
     finto: false,
     async elencaClienti({ testo, limite = 50 } = {}) {
       const filtro = testo ? `&filter=${encodeURIComponent(`name[ilike]:"%${testo}%"`)}` : "";
-      const r = await richiesta(`/companies?limit=${limite}${filtro}`, lista("companies", companyRaw));
+      const r = await richiesta(
+        `/companies?limit=${limite}${filtro}`,
+        lista("companies", companyRaw),
+      );
       return r.data.map(mappaCliente);
     },
     async dettaglioCliente(id) {
       try {
-        const r = await richiesta(`/companies/${id}`, z.object({ data: z.object({ company: companyRaw }) }));
+        const r = await richiesta(
+          `/companies/${id}`,
+          z.object({ data: z.object({ company: companyRaw }) }),
+        );
         return mappaCliente(r.data.company);
       } catch {
         return null;
@@ -114,18 +127,24 @@ export function creaTwentyClient(opzioni: OpzioniTwenty = {}): TwentyClient {
       }));
     },
     async elencaOpportunita(companyId): Promise<Opportunita[]> {
-      const filtro = companyId ? `?filter=${encodeURIComponent(`companyId[eq]:"${companyId}"`)}` : "";
+      const filtro = companyId
+        ? `?filter=${encodeURIComponent(`companyId[eq]:"${companyId}"`)}`
+        : "";
       const r = await richiesta(`/opportunities${filtro}`, lista("opportunities", opportunityRaw));
       return r.data.map((o) => ({
         id: o.id,
         nome: o.name ?? "(senza nome)",
         fase: o.stage,
-        importoCent: o.amount?.amountMicros != null ? Math.round(Number(o.amount.amountMicros) / 10000) : null,
+        importoCent:
+          o.amount?.amountMicros != null ? Math.round(Number(o.amount.amountMicros) / 10000) : null,
         companyId: o.companyId,
       }));
     },
     async aggiornaFaseOpportunita(id, fase) {
-      await richiesta(`/opportunities/${id}`, z.unknown(), { method: "PATCH", body: JSON.stringify({ stage: fase }) });
+      await richiesta(`/opportunities/${id}`, z.unknown(), {
+        method: "PATCH",
+        body: JSON.stringify({ stage: fase }),
+      });
     },
     async allegaPdf() {
       // Da implementare: upload del file + creazione dell'allegato collegato a company/opportunity.

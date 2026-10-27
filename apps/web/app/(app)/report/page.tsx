@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Analisi"
       titolo="Report"
       descrizione="Report ed export per il commercialista."
-      vuoto={{ titolo: "Nessun report generato", testo: "Qui troverai gli export mensili e annuali per il commercialista." }}
+      vuoto={{
+        titolo: "Nessun report generato",
+        testo: "Qui troverai gli export mensili e annuali per il commercialista.",
+      }}
     />
   );
 }

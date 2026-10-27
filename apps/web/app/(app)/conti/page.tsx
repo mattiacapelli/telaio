@@ -9,7 +9,10 @@ export default function Page() {
       sezione="Amministrazione"
       titolo="Conti"
       descrizione="Conti correnti, cassa contanti e carte, con saldo iniziale."
-      vuoto={{ titolo: "Nessun conto da mostrare", testo: "I conti del seed compariranno qui con i loro saldi." }}
+      vuoto={{
+        titolo: "Nessun conto da mostrare",
+        testo: "I conti del seed compariranno qui con i loro saldi.",
+      }}
     />
   );
 }

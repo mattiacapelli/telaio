@@ -1,4 +1,14 @@
-import { type AnyPgColumn, boolean, index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  type AnyPgColumn,
+  boolean,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { deletedAt, id, timestamps } from "./helpers";
 
 export const tipoContoEnum = pgEnum("tipo_conto", ["bonifico", "contante", "carta"]);

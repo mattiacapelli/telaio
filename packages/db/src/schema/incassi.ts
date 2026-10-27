@@ -1,13 +1,38 @@
-import { date, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  date,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { clientiRef, conti, ragioniSociali } from "./anagrafiche";
 import { fatture, preventivi } from "./documenti";
 import { deletedAt, id, timestamps } from "./helpers";
 
-export const periodicitaEnum = pgEnum("periodicita", ["mensile", "trimestrale", "semestrale", "annuale"]);
+export const periodicitaEnum = pgEnum("periodicita", [
+  "mensile",
+  "trimestrale",
+  "semestrale",
+  "annuale",
+]);
 export const statoAbbonamentoEnum = pgEnum("stato_abbonamento", ["attivo", "sospeso", "cessato"]);
-export const statoRataEnum = pgEnum("stato_rata", ["da_incassare", "parziale", "incassata", "scaduta", "annullata"]);
+export const statoRataEnum = pgEnum("stato_rata", [
+  "da_incassare",
+  "parziale",
+  "incassata",
+  "scaduta",
+  "annullata",
+]);
 export const tipoMovimentoEnum = pgEnum("tipo_movimento", ["entrata", "uscita", "giroconto"]);
-export const statoSollecitoEnum = pgEnum("stato_sollecito", ["programmato", "inviato", "annullato"]);
+export const statoSollecitoEnum = pgEnum("stato_sollecito", [
+  "programmato",
+  "inviato",
+  "annullato",
+]);
 
 export const abbonamenti = pgTable("abbonamenti", {
   id: id(),
