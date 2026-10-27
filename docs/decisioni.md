@@ -35,3 +35,5 @@ Una riga ciascuna: scelta — perché.
 - Rata creata all'emissione della fattura — così fattura, scadenzario, incassi e solleciti ruotano tutti intorno alla stessa entità.
 - Scadenza fattura a 30 giorni di default — parametro di `emettiFattura`, da rendere configurabile per ragione sociale.
 - Una fattura per preventivo — evita doppie fatturazioni; la fatturazione a tranche arriverà con le fatture libere.
+- Generazione rate spostata in `@telaio/db` — la usano sia il worker (ogni notte) sia il web alla creazione/riattivazione di un abbonamento, così le rate compaiono subito senza duplicare la logica.
+- Sospendere o cessare un abbonamento annulla le rate future ancora da incassare — riattivando tornano da incassare e si rigenerano le mancanti; le rate già incassate o scadute non si toccano.
