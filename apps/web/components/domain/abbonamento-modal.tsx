@@ -11,7 +11,8 @@ interface Opt {
 export function AbbonamentoModal({ clienti, emittenti }: { clienti: Opt[]; emittenti: Opt[] }) {
   return (
     <FormModal
-      trigger="Nuovo abbonamento"
+      trigger="Nuovo abbonamento +"
+      triggerSize="sm"
       title="Nuovo abbonamento"
       description="Genera le rate sullo scadenzario per i prossimi 12 mesi."
       action={creaAbbonamentoAction}
