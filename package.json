@@ -1,0 +1,23 @@
+{
+  "name": "telaio",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "db:generate": "pnpm --filter @telaio/db generate",
+    "db:migrate": "pnpm --filter @telaio/db migrate",
+    "db:seed": "pnpm --filter @telaio/db seed",
+    "test:e2e": "pnpm --filter @telaio/web test:e2e"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "turbo": "^2.11.10",
+    "typescript": "~5.9.3"
+  }
+}
