@@ -47,7 +47,7 @@ Accesso: l'utente creato dal seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, d
 
 ```
 apps/web        Next.js: UI, Server Actions, /api/v1, /mcp
-apps/worker     BullMQ: genera-rate (attivo), solleciti, sync-twenty, webhook, backup (stub)
+apps/worker     BullMQ: genera-rate e solleciti (attivi; i solleciti sono bozze da confermare), sync-twenty, webhook, backup (stub)
 packages/core   logica di dominio pura: IVA, bollo, ritenuta, split, rate, numerazioni
 packages/db     schema Drizzle, migrazioni, seed
 packages/twenty client REST tipizzato per Twenty

@@ -9,3 +9,16 @@ export const STATO_PREVENTIVO: Record<
   rifiutato: { label: "Rifiutato", tone: "ink" },
   scaduto: { label: "Scaduto", tone: "orange" },
 };
+
+export const STATO_FATTURA: Record<
+  string,
+  { label: string; tone: "neutral" | "blue" | "orange" | "ink" | "green" }
+> = {
+  bozza: { label: "Bozza", tone: "neutral" },
+  emessa: { label: "Emessa", tone: "blue" },
+  inviata_sdi: { label: "Inviata a SDI", tone: "blue" },
+  consegnata: { label: "Consegnata", tone: "blue" },
+  scartata: { label: "Scartata", tone: "orange" },
+  parzialmente_pagata: { label: "Parzialmente pagata", tone: "orange" },
+  pagata: { label: "Pagata", tone: "green" },
+};

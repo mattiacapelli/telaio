@@ -29,3 +29,9 @@ Una riga ciascuna: scelta — perché.
 - Il `.env` sta nella radice: `next.config.ts` lo carica con `process.loadEnvFile`, gli script di db e worker con `--env-file`.
 - Importi formattati con separatore delle migliaia sempre attivo (`useGrouping: "always"`): `Intl` per `it-IT` lo omette sui numeri a 4 cifre.
 - Colore `--grey-1` (#969184) solo per bordi e decorazioni: sul fondo carta non raggiunge il contrasto AA per il testo, che usa `--muted`.
+- Solleciti sempre con conferma dell'utente — scelta esplicita di Mattia: il worker propone bozze (`da_confermare`), mai invii automatici; sostituisce i «solleciti automatici programmati» del prompt iniziale.
+- Stato `da_confermare` aggiunto all'enum `stato_sollecito` — i valori esistenti restano per compatibilità; `ADD VALUE` non si può usare nella stessa transazione, quindi il default della colonna resta e gli insert impostano lo stato esplicitamente.
+- `nodemailer` per l'invio dei solleciti — serve un client SMTP e non ce n'era uno nello stack; in sviluppo parla con Mailpit.
+- Rata creata all'emissione della fattura — così fattura, scadenzario, incassi e solleciti ruotano tutti intorno alla stessa entità.
+- Scadenza fattura a 30 giorni di default — parametro di `emettiFattura`, da rendere configurabile per ragione sociale.
+- Una fattura per preventivo — evita doppie fatturazioni; la fatturazione a tranche arriverà con le fatture libere.

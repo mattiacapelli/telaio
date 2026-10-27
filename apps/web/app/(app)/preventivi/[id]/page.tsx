@@ -1,13 +1,30 @@
-import { formatAliquota, formatEuro, type RegoleFiscali } from "@telaio/core";
+import {
+  formatAliquota,
+  formatEuro,
+  type RegoleFiscali,
+  type StatoPreventivo,
+  transizioniPreventivo,
+} from "@telaio/core";
 import { asc, eq, getDb, preventivi, preventivoRighe } from "@telaio/db";
 import { notFound } from "next/navigation";
+import { creaFatturaDaPreventivoAction } from "@/app/(app)/fatture/actions";
 import { Prezzo } from "@/components/domain/prezzo";
+import { Button } from "@/components/ui/button";
 import { Card, InkPanel } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tag } from "@/components/ui/tag";
 import { STATO_PREVENTIVO } from "@/lib/stati";
+import { cambiaStatoPreventivoAction } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+const AZIONE_STATO: Record<string, string> = {
+  inviato: "Segna come inviato",
+  in_revisione: "Metti in revisione",
+  accettato: "Segna come accettato",
+  rifiutato: "Segna come rifiutato",
+  scaduto: "Segna come scaduto",
+};
 
 const TIPO = {
   una_tantum: "Una tantum",
@@ -42,6 +59,26 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
         descrizione={`${(p.snapshot.emittente as { nome?: string }).nome ?? ""} · ${cliente ?? "cliente da assegnare"}`}
         azione={<Tag tone={stato?.tone}>{stato?.label ?? p.stato}</Tag>}
       />
+      <div className="mb-6 flex flex-wrap gap-3">
+        {transizioniPreventivo(p.stato as StatoPreventivo).map((nuovo) => (
+          <form key={nuovo} action={cambiaStatoPreventivoAction}>
+            <input type="hidden" name="id" value={p.id} />
+            <input type="hidden" name="stato" value={nuovo} />
+            <Button
+              type="submit"
+              variant={nuovo === "rifiutato" || nuovo === "scaduto" ? "ghost" : "primary"}
+            >
+              {AZIONE_STATO[nuovo]}
+            </Button>
+          </form>
+        ))}
+        {p.stato === "accettato" && (
+          <form action={creaFatturaDaPreventivoAction}>
+            <input type="hidden" name="preventivoId" value={p.id} />
+            <Button type="submit">Crea fattura</Button>
+          </form>
+        )}
+      </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <Card className="overflow-x-auto p-2 sm:p-3">
           <table className="w-full min-w-[520px] text-sm">

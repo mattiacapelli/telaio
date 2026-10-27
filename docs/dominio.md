@@ -67,3 +67,25 @@ Per ragione sociale, tipo documento e anno, formato configurabile con `{AAAA}`, 
 ## Congelamento
 
 All'emissione (`inviato` per i preventivi, `emessa` per le fatture) si salva `snapshot` = emittente + cliente + regole IVA + totali. Le modifiche successive alle impostazioni non toccano i documenti emessi.
+
+## Solleciti: sempre con conferma
+
+Nessun sollecito parte da solo. Il worker (job `solleciti`, ogni mattina) **propone** una bozza per ogni rata scaduta e non incassata; l'invio avviene solo quando l'utente la rivede in Scadenzario, sceglie il destinatario e preme «Invia sollecito».
+
+```
+rata scaduta ──worker──► sollecito  da_confermare ──utente──► inviato   (email)
+                                         │
+                                         └──utente──► annullato
+```
+
+- Livelli 1–3 con tono crescente (promemoria → secondo sollecito → ultimo sollecito); dopo il terzo inviato non se ne propongono altri.
+- Si propone un nuovo sollecito solo se non ce n'è uno in attesa e sono passati almeno 7 giorni dall'ultimo inviato.
+- Il destinatario viene suggerito (prima persona con email su Twenty, altrimenti la PEC del cliente) ma l'utente può cambiarlo.
+- L'invio è «prenotato» con un UPDATE condizionato su `stato = 'da_confermare'`: una doppia conferma non invia due email. Se l'SMTP fallisce la bozza torna in attesa.
+
+## Incassi, prima nota e fatture
+
+- Un **incasso** crea nella stessa transazione un movimento di prima nota (entrata) sul conto scelto, poi riallinea la rata (`parziale` / `incassata`) e la fattura (`parzialmente_pagata` / `pagata`) collegate. Può essere libero.
+- **Saldo conto** = saldo iniziale + entrate − uscite − giroconti in uscita + giroconti in entrata.
+- **Fattura da preventivo**: solo da un preventivo `accettato`, con le sole righe una tantum; una fattura per preventivo. All'**emissione** assegna il numero, congela emittente e regole del momento, ricalcola i totali e crea la rata (scadenza a 30 giorni) che compare nello scadenzario.
+- **Preventivo**: all'invio (bozza → inviato) assegna il numero e congela emittente, regole e totali.
