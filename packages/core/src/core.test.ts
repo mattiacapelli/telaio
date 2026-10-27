@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   aggiungiMesi,
+  bozzaSollecito,
   calcolaTotali,
   formattaNumero,
   generaRate,
+  giorniDiRitardo,
   importoRataDaCanoneAnnuo,
   moduliCompatibili,
   parseEuro,
@@ -12,6 +14,7 @@ import {
   puoTransirePreventivo,
   type RegoleFiscali,
   roundDiv,
+  serveSollecito,
   totaliConfiguratore,
   type VoceListino,
 } from "./index";
@@ -242,5 +245,45 @@ describe("preventivo e configuratore", () => {
       canoneAnnuoCent: 27500,
       canoneMensileCent: 2500,
     });
+  });
+});
+
+describe("solleciti", () => {
+  const base = {
+    cliente: "Trattoria Da Marco",
+    emittente: "Mattia Capelli",
+    descrizioneRata: "Hosting — rata 3",
+    importoCent: 6100,
+    scadenza: "2026-10-15",
+    oggi: "2026-10-27",
+  };
+  it("ritardo in giorni", () => {
+    expect(giorniDiRitardo("2026-10-15", "2026-10-27")).toBe(12);
+    expect(giorniDiRitardo("2026-10-27", "2026-10-15")).toBe(0);
+  });
+  it("tono crescente con il livello", () => {
+    expect(bozzaSollecito({ ...base, livello: 1 }).oggetto).toMatch(/Promemoria/);
+    expect(bozzaSollecito({ ...base, livello: 2 }).oggetto).toMatch(/Secondo/);
+    expect(bozzaSollecito({ ...base, livello: 3 }).oggetto).toMatch(/Ultimo/);
+    expect(bozzaSollecito({ ...base, livello: 9 }).oggetto).toMatch(/Ultimo/);
+  });
+  it("il corpo riporta importo, data e ritardo", () => {
+    const { corpo } = bozzaSollecito({ ...base, livello: 1 });
+    expect(corpo).toContain("61,00");
+    expect(corpo).toContain("15/10/2026");
+    expect(corpo).toContain("12 giorni");
+    expect(corpo).toContain("Gentile Trattoria Da Marco");
+  });
+  it("quando serve un nuovo sollecito", () => {
+    const oggi = "2026-10-27";
+    expect(serveSollecito({ inviati: 0, daConfermare: 0, ultimoInvioIso: null, oggi })).toBe(true);
+    expect(serveSollecito({ inviati: 0, daConfermare: 1, ultimoInvioIso: null, oggi })).toBe(false);
+    expect(serveSollecito({ inviati: 3, daConfermare: 0, ultimoInvioIso: null, oggi })).toBe(false);
+    expect(
+      serveSollecito({ inviati: 1, daConfermare: 0, ultimoInvioIso: "2026-10-24T10:00:00Z", oggi }),
+    ).toBe(false);
+    expect(
+      serveSollecito({ inviati: 1, daConfermare: 0, ultimoInvioIso: "2026-10-20T10:00:00Z", oggi }),
+    ).toBe(true);
   });
 });

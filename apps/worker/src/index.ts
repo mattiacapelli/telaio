@@ -2,6 +2,7 @@ import { createDb } from "@telaio/db";
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { generaRateAbbonamenti } from "./jobs/genera-rate";
+import { proponiSolleciti } from "./jobs/proponi-solleciti";
 import { nonImplementato } from "./jobs/stub";
 
 const NOME_CODA = "telaio";
@@ -10,7 +11,7 @@ const connection = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", 
 });
 const { db } = createDb();
 
-// Job ricorrenti (cron in fuso Europe/Rome). Solo `genera-rate` è implementato.
+// Job ricorrenti (cron in fuso Europe/Rome). Implementati: `genera-rate` e `solleciti` (che propone bozze, non invia).
 const SCHEDULE = [
   { nome: "genera-rate", cron: "0 3 * * *" },
   { nome: "solleciti", cron: "0 9 * * *" },
@@ -28,6 +29,7 @@ const worker = new Worker(
   NOME_CODA,
   async (job) => {
     if (job.name === "genera-rate") return generaRateAbbonamenti(db);
+    if (job.name === "solleciti") return proponiSolleciti(db);
     return nonImplementato(job.name);
   },
   { connection },

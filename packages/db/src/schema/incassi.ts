@@ -32,6 +32,7 @@ export const statoSollecitoEnum = pgEnum("stato_sollecito", [
   "programmato",
   "inviato",
   "annullato",
+  "da_confermare",
 ]);
 
 export const abbonamenti = pgTable("abbonamenti", {
@@ -127,7 +128,9 @@ export const solleciti = pgTable("solleciti", {
   livello: integer("livello").notNull().default(1),
   programmatoIl: timestamp("programmato_il", { withTimezone: true }).notNull(),
   inviatoIl: timestamp("inviato_il", { withTimezone: true }),
+  /** `da_confermare`: bozza proposta dal worker, mai inviata senza conferma dell'admin */
   stato: statoSollecitoEnum("stato").notNull().default("programmato"),
+  destinatario: text("destinatario"),
   oggetto: text("oggetto"),
   corpo: text("corpo"),
   ...timestamps,
