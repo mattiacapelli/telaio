@@ -1,36 +1,61 @@
-import { formatEuro, giorniDiRitardo } from "@telaio/core";
+import { formatEuro, GIORNI_TRA_SOLLECITI, giorniDiRitardo, LIVELLO_MASSIMO } from "@telaio/core";
 import {
+  and,
   asc,
   clientiRef,
   conti,
   eq,
   getDb,
+  gte,
   inArray,
   isNull,
   ragioniSociali,
   rate,
   solleciti,
+  sql,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
+import Link from "next/link";
 import { IncassoModal } from "@/components/domain/incasso-modal";
-import { Button } from "@/components/ui/button";
-import { Card, EmptyState } from "@/components/ui/card";
+import { TopBar } from "@/components/shell/topbar";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { FormModal } from "@/components/ui/form-modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tag } from "@/components/ui/tag";
 import { formatData, oggi } from "@/lib/date";
+import { st } from "@/lib/utils";
 import { inviaSollecitoAction, scartaSollecitoAction } from "./actions";
 
 export const metadata = { title: "Scadenzario" };
 export const dynamic = "force-dynamic";
 
-export default async function ScadenzarioPage() {
+const LIVELLI = [
+  ["Primo sollecito", "Email · dopo la scadenza"],
+  ["Secondo sollecito", `Email · ${GIORNI_TRA_SOLLECITI} giorni dopo il primo`],
+  ["Avviso formale", "Email · tono deciso, ultimo livello"],
+];
+
+export default async function ScadenzarioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ f?: string }>;
+}) {
+  const { f = "tutte" } = await searchParams;
   const db = getDb();
   const dataOggi = oggi();
-  const [lista, bozze, contiAttivi] = await Promise.all([
+  const inizioMese = `${dataOggi.slice(0, 7)}-01`;
+  const [lista, bozze, contiAttivi, inviati] = await Promise.all([
     db
-      .select({ r: rate, cliente: clientiRef.nome, emittente: ragioniSociali.nome })
+      .select({
+        r: rate,
+        cliente: clientiRef.nome,
+        emittente: ragioniSociali.nome,
+        incassato: sql<number>`coalesce((select sum(i.importo_cent) from incassi i where i.rata_id = ${rate.id} and i.deleted_at is null),0)::int`,
+        nSoll: sql<number>`(select count(*)::int from solleciti s where s.rata_id = ${rate.id} and s.stato = 'inviato')`,
+        bozza: sql<
+          string | null
+        >`(select s.id from solleciti s where s.rata_id = ${rate.id} and s.stato = 'da_confermare' limit 1)`,
+      })
       .from(rate)
       .innerJoin(ragioniSociali, eq(ragioniSociali.id, rate.ragioneSocialeId))
       .leftJoin(clientiRef, eq(clientiRef.id, rate.clienteRefId))
@@ -51,9 +76,17 @@ export default async function ScadenzarioPage() {
       .where(eq(solleciti.stato, "da_confermare"))
       .orderBy(asc(rate.scadenza)),
     db.select({ id: conti.id, nome: conti.nome }).from(conti).where(isNull(conti.deletedAt)),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(solleciti)
+      .where(
+        and(
+          eq(solleciti.stato, "inviato"),
+          gte(solleciti.inviatoIl, new Date(`${inizioMese}T00:00:00Z`)),
+        ),
+      ),
   ]);
 
-  // Destinatario suggerito: prima persona con email su Twenty, altrimenti la PEC del cliente.
   const twenty = twentyDaEnv();
   const suggerimenti = new Map<string, string>();
   for (const { s, pec, twentyId } of bozze) {
@@ -63,180 +96,355 @@ export default async function ScadenzarioPage() {
     suggerimenti.set(s.id, persona?.email ?? pec ?? "");
   }
 
+  const residuo = (x: (typeof lista)[number]) => Math.max(0, x.r.importoCent - x.incassato);
   const scadute = lista.filter(({ r }) => r.scadenza < dataOggi);
-  const inScadenza = lista.filter(({ r }) => r.scadenza >= dataOggi);
-  const totale = (xs: typeof lista) => xs.reduce((s, { r }) => s + r.importoCent, 0);
+  const fra30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const prossime = lista.filter(({ r }) => r.scadenza >= dataOggi && r.scadenza <= fra30);
+  const somma = (xs: typeof lista) => xs.reduce((s, x) => s + residuo(x), 0);
+  const maxRitardo = scadute.reduce(
+    (m, { r }) => Math.max(m, giorniDiRitardo(r.scadenza, dataOggi)),
+    0,
+  );
+  const mostrate = f === "scadute" ? scadute : f === "prossime" ? prossime : lista;
+  const filtri = [
+    ["tutte", "Tutte", lista.length],
+    ["scadute", "Scadute", scadute.length],
+    ["prossime", "Prossimi 30 gg", prossime.length],
+  ] as const;
+  const anteprima = bozze[0];
+
+  const kpi = [
+    {
+      e: "Da incassare",
+      v: formatEuro(somma(lista)),
+      s: `${lista.length} rat${lista.length === 1 ? "a" : "e"}`,
+    },
+    {
+      e: "Scaduto",
+      v: formatEuro(somma(scadute)),
+      s: scadute.length
+        ? `${scadute.length} rat${scadute.length === 1 ? "a" : "e"} · ${maxRitardo} giorni`
+        : "nessuna rata scaduta",
+      warn: true,
+    },
+    {
+      e: "Prossimi 30 giorni",
+      v: formatEuro(somma(prossime)),
+      s: `${prossime.length} rat${prossime.length === 1 ? "a" : "e"}`,
+    },
+    { e: "Solleciti inviati", v: String(inviati[0]?.n ?? 0), s: "questo mese" },
+  ];
 
   return (
     <>
+      <TopBar links={[{ label: "Incassi", href: "/incassi" }]}>
+        <Link href="/cash-flow" className="bp sm">
+          Cash flow <span aria-hidden="true">→</span>
+        </Link>
+      </TopBar>
+
       <PageHeader
         numero="08"
-        sezione="Amministrazione"
-        titolo="Scadenzario"
-        descrizione="Rate da incassare e scadute. I solleciti li prepara il sistema, li invii tu."
+        sezione="Scadenzario e solleciti"
+        titolo="Da incassare"
+        descrizione="Rate dei preventivi accettati e canoni in scadenza. I solleciti li prepara il sistema con il mittente e l'IBAN della ragione sociale giusta; li invii tu, dopo averli riletti."
       />
 
-      <section className="mb-10">
-        <h2 className="mb-1 font-display text-2xl font-semibold">Solleciti da confermare</h2>
-        <p className="mb-4 text-sm text-muted">
-          Nessun sollecito parte da solo: rivedi testo e destinatario, poi conferma.
-        </p>
-        {bozze.length === 0 ? (
-          <EmptyState title="Nessun sollecito in attesa">
-            Le bozze per le rate scadute compaiono qui dopo il controllo giornaliero.
-          </EmptyState>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {bozze.map(({ s, r, cliente }) => (
-              <Card key={s.id} className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <p className="font-medium">
-                    {cliente ?? "Cliente"} · {r.descrizione}
-                  </p>
-                  <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-                    <Tag tone="orange">
-                      {giorniDiRitardo(r.scadenza, dataOggi)} giorni di ritardo
-                    </Tag>
-                    <Tag>Livello {s.livello}</Tag>
-                    <span className="tabular-nums">{formatEuro(r.importoCent)}</span>
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <FormModal
-                    trigger="Rivedi e invia"
-                    triggerSize="sm"
-                    title="Rivedi il sollecito"
-                    description="L'email parte solo quando premi «Invia sollecito»."
-                    submitLabel="Invia sollecito"
-                    action={inviaSollecitoAction}
+      <section
+        className="card"
+        style={st(
+          "padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))",
+        )}
+      >
+        {kpi.map((k, i) => (
+          <div
+            key={k.e}
+            style={{
+              padding: "24px 26px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              borderRight: i < kpi.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
+            }}
+          >
+            <span
+              className="eb"
+              style={k.warn && k.v !== formatEuro(0) ? { color: "#8f3f1d" } : undefined}
+            >
+              {k.e}
+            </span>
+            <b
+              className="d num"
+              style={st("font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1")}
+            >
+              {k.v}
+            </b>
+            <span className="num" style={st("font-size:13px;color:#3a372f")}>
+              {k.s}
+            </span>
+          </div>
+        ))}
+      </section>
+
+      {bozze.length > 0 && (
+        <section className="ink" style={st("display:flex;flex-direction:column;gap:6px")}>
+          <div
+            style={st(
+              "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px",
+            )}
+          >
+            <span className="d" style={st("font-size:22px;font-weight:500;letter-spacing:-.015em")}>
+              Solleciti da confermare
+            </span>
+            <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
+              Nessun sollecito parte da solo: rivedi testo e destinatario, poi conferma.
+            </span>
+          </div>
+          {bozze.map(({ s, r, cliente }) => (
+            <div
+              key={s.id}
+              className="todo"
+              style={{ flexWrap: "wrap", justifyContent: "space-between" }}
+            >
+              <div style={st("display:flex;flex-direction:column;gap:4px")}>
+                <span style={{ fontWeight: 600 }}>
+                  {cliente ?? "Cliente"} · {r.descrizione}
+                </span>
+                <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
+                  {giorniDiRitardo(r.scadenza, dataOggi)} giorni di ritardo · livello {s.livello} ·{" "}
+                  {formatEuro(r.importoCent)}
+                </span>
+              </div>
+              <div style={st("display:flex;gap:8px;align-items:center")}>
+                <FormModal
+                  trigger="Rivedi e invia"
+                  triggerVariant="glass"
+                  triggerSize="sm"
+                  title="Rivedi il sollecito"
+                  description="L'email parte solo quando premi «Invia sollecito»."
+                  submitLabel="Invia sollecito"
+                  action={inviaSollecitoAction}
+                >
+                  <input type="hidden" name="id" value={s.id} />
+                  <Field
+                    label="Destinatario"
+                    name="destinatario"
+                    hint={
+                      suggerimenti.get(s.id)
+                        ? undefined
+                        : "Nessun indirizzo trovato su Twenty: inseriscilo a mano"
+                    }
                   >
-                    <input type="hidden" name="id" value={s.id} />
-                    <Field
-                      label="Destinatario"
+                    <Input
                       name="destinatario"
-                      hint={
-                        suggerimenti.get(s.id)
-                          ? undefined
-                          : "Nessun indirizzo trovato su Twenty: inseriscilo a mano"
-                      }
-                    >
-                      <Input
-                        name="destinatario"
-                        type="email"
-                        required
-                        defaultValue={suggerimenti.get(s.id)}
-                      />
-                    </Field>
-                    <Field label="Oggetto" name="oggetto">
-                      <Input name="oggetto" required defaultValue={s.oggetto ?? ""} />
-                    </Field>
-                    <Field label="Testo" name="corpo">
-                      <Textarea
-                        name="corpo"
-                        required
-                        defaultValue={s.corpo ?? ""}
-                        className="min-h-56"
-                      />
-                    </Field>
-                  </FormModal>
-                  <form action={scartaSollecitoAction}>
-                    <input type="hidden" name="id" value={s.id} />
-                    <Button type="submit" variant="ghost" size="sm">
-                      Scarta
-                    </Button>
-                  </form>
-                </div>
-              </Card>
+                      type="email"
+                      required
+                      defaultValue={suggerimenti.get(s.id)}
+                    />
+                  </Field>
+                  <Field label="Oggetto" name="oggetto">
+                    <Input name="oggetto" required defaultValue={s.oggetto ?? ""} />
+                  </Field>
+                  <Field label="Testo" name="corpo">
+                    <Textarea
+                      name="corpo"
+                      required
+                      defaultValue={s.corpo ?? ""}
+                      style={{ minHeight: 224 }}
+                    />
+                  </Field>
+                </FormModal>
+                <form action={scartaSollecitoAction}>
+                  <input type="hidden" name="id" value={s.id} />
+                  <button
+                    type="submit"
+                    style={st(
+                      "min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(244,243,240,.28);background:none;color:rgba(244,243,240,.9);font:500 13px/1 Inter,sans-serif;cursor:pointer",
+                    )}
+                  >
+                    Scarta
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section className="card" style={st("display:flex;flex-direction:column;gap:18px")}>
+        <div
+          style={st(
+            "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px",
+          )}
+        >
+          <h2 className="h2">Rate e scadenze</h2>
+          <div role="group" aria-label="Filtra" style={st("display:flex;flex-wrap:wrap;gap:8px")}>
+            {filtri.map(([id, label, n]) => (
+              <Link
+                key={id}
+                href={`/scadenzario?f=${id}`}
+                className={`chip${f === id ? " on" : ""}`}
+              >
+                {label} <b>{n}</b>
+              </Link>
             ))}
+          </div>
+        </div>
+        {mostrate.length === 0 ? (
+          <p style={st("margin:0;padding:12px 0;color:#3a372f")}>Nessuna rata con questi filtri.</p>
+        ) : (
+          <div className="tw">
+            <table className="tbl" style={{ minWidth: 900 }}>
+              <thead>
+                <tr>
+                  <th>Scadenza</th>
+                  <th>Cliente · rata</th>
+                  <th>Emittente</th>
+                  <th className="r">Importo</th>
+                  <th>Solleciti</th>
+                  <th>Prossima azione</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mostrate.map((x) => {
+                  const { r, cliente, emittente, nSoll, bozza } = x;
+                  const scaduta = r.scadenza < dataOggi;
+                  const rit = giorniDiRitardo(r.scadenza, dataOggi);
+                  return (
+                    <tr key={r.id}>
+                      <td className="num">
+                        <span style={{ color: scaduta ? "#8f3f1d" : "#17150f", fontWeight: 600 }}>
+                          {formatData(r.scadenza)}
+                        </span>
+                        <span className="sub">
+                          {scaduta
+                            ? `scaduta da ${rit} giorni`
+                            : r.stato === "parziale"
+                              ? "pagata in parte"
+                              : "da incassare"}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={st("font-weight:500;color:#17150f")}>{cliente ?? "—"}</span>
+                        <span className="sub">{r.descrizione}</span>
+                      </td>
+                      <td>{emittente}</td>
+                      <td className="r num" style={st("font-weight:600;color:#17150f")}>
+                        {formatEuro(residuo(x))}
+                        {x.incassato > 0 && (
+                          <span className="sub">su {formatEuro(r.importoCent)}</span>
+                        )}
+                      </td>
+                      <td>
+                        {nSoll > 0 ? (
+                          <Tag tone="orange">
+                            {nSoll} inviat{nSoll === 1 ? "o" : "i"}
+                          </Tag>
+                        ) : (
+                          <span style={{ color: "#6b675c" }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        {bozza ? (
+                          <Tag tone="orange">Bozza da confermare</Tag>
+                        ) : (
+                          <IncassoModal
+                            conti={contiAttivi}
+                            rataId={r.id}
+                            importoCent={residuo(x)}
+                            descrizione={r.descrizione}
+                            trigger="Registra incasso"
+                            triggerVariant="glass"
+                            triggerSize="sm"
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
 
-      <Sezione
-        titolo="Scadute"
-        righe={scadute}
-        totale={totale(scadute)}
-        conti={contiAttivi}
-        dataOggi={dataOggi}
-        vuoto="Nessuna rata scaduta."
-      />
-      <Sezione
-        titolo="In scadenza"
-        righe={inScadenza}
-        totale={totale(inScadenza)}
-        conti={contiAttivi}
-        dataOggi={dataOggi}
-        vuoto="Nessuna rata futura."
-      />
-    </>
-  );
-}
+      <section style={st("display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start")}>
+        <div
+          className="card"
+          style={st("flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px")}
+        >
+          <div
+            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
+          >
+            <h2 className="h2">Cadenza dei solleciti</h2>
+            <span style={st("font-size:12px;color:#6b675c")}>sempre con tua conferma</span>
+          </div>
+          <div
+            style={st("display:flex;flex-direction:column;border-top:1px solid rgba(23,21,15,.14)")}
+          >
+            {LIVELLI.slice(0, LIVELLO_MASSIMO).map(([t, d], i) => (
+              <div
+                key={t}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "14px 0",
+                  borderBottom: i < LIVELLI.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
+                }}
+              >
+                <span
+                  className="num"
+                  style={st("flex:none;width:64px;font-size:12px;color:#6b675c")}
+                >
+                  Livello {i + 1}
+                </span>
+                <div style={st("display:flex;flex-direction:column;gap:2px;flex:1")}>
+                  <span style={st("font-weight:600;font-size:15px")}>{t}</span>
+                  <span style={st("font-size:13px;color:#3a372f")}>{d}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={st("margin:0;font-size:13px;line-height:1.6;color:#3a372f")}>
+            Il sistema prepara la bozza ogni mattina per le rate scadute; non ne propone un'altra
+            finché ce n'è una in attesa e aspetta {GIORNI_TRA_SOLLECITI} giorni dall&apos;ultimo
+            inviato. I solleciti si fermano appena l&apos;incasso viene registrato.
+          </p>
+        </div>
 
-function Sezione({
-  titolo,
-  righe,
-  totale,
-  conti: contiOpt,
-  dataOggi,
-  vuoto,
-}: {
-  titolo: string;
-  righe: { r: typeof rate.$inferSelect; cliente: string | null; emittente: string }[];
-  totale: number;
-  conti: { id: string; nome: string }[];
-  dataOggi: string;
-  vuoto: string;
-}) {
-  return (
-    <section className="mb-10">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-2xl font-semibold">{titolo}</h2>
-        <p className="money text-lg tabular-nums">{formatEuro(totale)}</p>
-      </div>
-      {righe.length === 0 ? (
-        <p className="glass-card p-5 text-sm text-muted">{vuoto}</p>
-      ) : (
-        <Card className="overflow-x-auto p-2 sm:p-3">
-          <table className="w-full min-w-[720px] text-sm">
-            <tbody>
-              {righe.map(({ r, cliente, emittente }) => (
-                <tr key={r.id} className="border-t border-grey-2/60 first:border-t-0">
-                  <td className="px-4 py-3 tabular-nums">{formatData(r.scadenza)}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{r.descrizione}</p>
-                    <p className="text-xs text-muted">
-                      {cliente ?? "—"} · {emittente}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.scadenza < dataOggi ? (
-                      <Tag tone="orange">Scaduta</Tag>
-                    ) : r.stato === "parziale" ? (
-                      <Tag tone="blue">Parziale</Tag>
-                    ) : (
-                      <Tag>Da incassare</Tag>
-                    )}
-                  </td>
-                  <td className="money px-4 py-3 text-right tabular-nums">
-                    {formatEuro(r.importoCent)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <IncassoModal
-                      conti={contiOpt}
-                      rataId={r.id}
-                      importoCent={r.importoCent}
-                      descrizione={r.descrizione}
-                      trigger="Incasso"
-                      triggerVariant="ghost"
-                      triggerSize="sm"
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-    </section>
+        <div
+          className="ink"
+          style={st("flex:1.4 1 420px;min-width:0;display:flex;flex-direction:column;gap:16px")}
+        >
+          <div style={st("display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px")}>
+            <span
+              style={st(
+                "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7)",
+              )}
+            >
+              Anteprima · {anteprima ? `livello ${anteprima.s.livello}` : "ultima bozza"}
+            </span>
+          </div>
+          <div
+            style={st(
+              "background:#f4f3f0;color:#17150f;border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.6",
+            )}
+          >
+            {anteprima ? (
+              <>
+                <b>Oggetto: {anteprima.s.oggetto}</b>
+                <div style={{ whiteSpace: "pre-wrap" }}>{anteprima.s.corpo}</div>
+              </>
+            ) : (
+              <span style={{ color: "#6b675c" }}>
+                Quando una rata scade, la bozza del sollecito compare qui per essere riletta e
+                confermata.
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
