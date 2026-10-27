@@ -17,6 +17,8 @@ export async function creaPreventivoAction(_: ActionState, form: FormData): Prom
     moduloIds: form.getAll("moduloIds"),
     oggetto: String(form.get("oggetto") ?? "") || undefined,
     note: String(form.get("note") ?? "") || undefined,
+    scontoUnaTantumBp: Number(form.get("scontoBp") ?? 0) || 0,
+    validitaGiorni: Number(form.get("validitaGiorni") ?? 0) || undefined,
   });
   if (!parsed.success)
     return { ok: false, message: "Scegli una base prima di creare il preventivo" };

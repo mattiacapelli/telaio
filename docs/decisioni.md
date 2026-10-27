@@ -45,3 +45,4 @@ Una riga ciascuna: scelta — perché.
 - Stato cliente (Cliente/Prospect) derivato dai dati locali: «Cliente» se ha fatture emesse o abbonamenti, altrimenti «Prospect». Partner ed ex clienti non sono derivabili da Twenty.
 - Cash flow: incassi certi = rate non incassate, uscite = media dei tre mesi precedenti di prima nota, preventivi in attesa pesati al 50%.
 - `/incasso-rapido`: registrazione di un incasso da telefono, fuori dalla shell dell'app.
+- Editor del preventivo (/preventivi/nuovo): emittente, cliente, validità, voci da listino, sconto sull'una tantum (5/10/15%) e riepilogo; salva una bozza senza numero. «Preventivo rapido» resta il configuratore.

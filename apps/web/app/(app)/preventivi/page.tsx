@@ -104,7 +104,7 @@ export default async function PreventiviPage({
   return (
     <>
       <TopBar links={[{ label: "Configuratore", href: "/configuratore" }]}>
-        <Link href="/configuratore" className="bp sm">
+        <Link href="/preventivi/nuovo" className="bp sm">
           Nuovo preventivo <span aria-hidden="true">→</span>
         </Link>
       </TopBar>
@@ -116,7 +116,10 @@ export default async function PreventiviPage({
         descrizione="Ogni preventivo parte da un listino, è emesso da una delle tue ragioni sociali e aggiorna l'opportunità in Twenty quando cambia stato."
         azione={
           <div style={st("display:flex;flex-wrap:wrap;gap:8px")}>
-            <Link href="/configuratore" className="bp sm">
+            <Link href="/configuratore" className="bg sm">
+              Preventivo rapido
+            </Link>
+            <Link href="/preventivi/nuovo" className="bp sm">
               Nuovo da listino <span aria-hidden="true">→</span>
             </Link>
           </div>

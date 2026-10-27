@@ -16,7 +16,14 @@ import {
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
 import { z } from "zod";
+import { oggi } from "../date";
 import { regoleDa } from "../regole";
+
+function aggiungiGiorni(data: string, giorni: number): string {
+  const d = new Date(`${data}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + giorni);
+  return d.toISOString().slice(0, 10);
+}
 
 export const creaPreventivoSchema = z.object({
   ragioneSocialeId: z.uuid(),
@@ -26,6 +33,10 @@ export const creaPreventivoSchema = z.object({
   moduloIds: z.array(z.uuid()).default([]),
   oggetto: z.string().trim().min(1).optional(),
   note: z.string().trim().optional(),
+  /** sconto sulle sole righe una tantum, in punti base (1000 = 10%) */
+  scontoUnaTantumBp: z.number().int().min(0).max(10000).default(0),
+  /** giorni di validità dall'emissione; vuoto = nessuna scadenza */
+  validitaGiorni: z.number().int().min(1).max(365).optional(),
 });
 export type CreaPreventivoInput = z.infer<typeof creaPreventivoSchema>;
 
@@ -160,13 +171,16 @@ export async function creaPreventivoDaListino(
 
   const regole: RegoleFiscali = regoleDa(rs);
   const righeVoci = [base.b, ...moduli].flatMap((v) => righeDaVoce(v));
-  const righe = righeVoci.map((r, i) => ({
-    ...r,
-    posizione: i,
-    quantita: 1,
-    scontoBp: 0,
-    importoCent: importoRiga({ quantita: 1, prezzoUnitarioCent: r.prezzoUnitarioCent }),
-  }));
+  const righe = righeVoci.map((r, i) => {
+    const scontoBp = r.tipo === "una_tantum" ? dati.scontoUnaTantumBp : 0;
+    return {
+      ...r,
+      posizione: i,
+      quantita: 1,
+      scontoBp,
+      importoCent: importoRiga({ quantita: 1, prezzoUnitarioCent: r.prezzoUnitarioCent, scontoBp }),
+    };
+  });
   const totali = calcolaTotali(
     righe.filter((r) => r.tipo === "una_tantum"),
     regole,
@@ -183,6 +197,7 @@ export async function creaPreventivoDaListino(
         oggetto:
           dati.oggetto ?? `${base.b.nome}${moduli.length ? ` + ${moduli.length} moduli` : ""}`,
         note: dati.note || null,
+        validoFino: dati.validitaGiorni ? aggiungiGiorni(oggi(), dati.validitaGiorni) : null,
         snapshot: {
           emittente: {
             id: rs.id,

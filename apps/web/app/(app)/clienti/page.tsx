@@ -69,7 +69,7 @@ export default async function ClientiPage({
   return (
     <>
       <TopBar links={[{ label: "Configuratore", href: "/configuratore" }]}>
-        <Link href="/configuratore" className="bp sm">
+        <Link href="/preventivi/nuovo" className="bp sm">
           Nuovo preventivo <span aria-hidden="true">→</span>
         </Link>
       </TopBar>
