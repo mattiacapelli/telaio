@@ -84,7 +84,12 @@ export default async function IncassiPage({
 
   return (
     <>
-      <TopBar links={[{ label: "Scadenzario", href: "/scadenzario" }]}>
+      <TopBar
+        links={[
+          { label: "Scadenzario", href: "/scadenzario" },
+          { label: "Da telefono", href: "/incasso-rapido" },
+        ]}
+      >
         <IncassoModal conti={contiAttivi} trigger="Registra incasso +" triggerSize="sm" />
       </TopBar>
 

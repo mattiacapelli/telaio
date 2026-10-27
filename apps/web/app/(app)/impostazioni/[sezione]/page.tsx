@@ -15,10 +15,9 @@ import {
 } from "@telaio/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StubPage } from "@/components/domain/stub-page";
-import { PageHeader } from "@/components/ui/page-header";
+import { TopBar } from "@/components/shell/topbar";
 import { SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
-import { cn } from "@/lib/utils";
+import { cn, st } from "@/lib/utils";
 import { SezioneApi } from "../_sezioni/api";
 import { SezioneIva } from "../_sezioni/iva";
 import { SezioneListini } from "../_sezioni/listini";
@@ -104,52 +103,93 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
     );
   } else {
     return (
-      <>
-        <Navigazione sezione={sezione} />
-        <StubPage
-          numero="14"
-          sezione="Impostazioni"
-          titolo={voce.titolo}
-          descrizione={STUB[sezione] ?? ""}
-          vuoto={{
-            titolo: "Sezione in arrivo",
-            testo: "La struttura è pronta: mancano le opzioni di questa sezione.",
-          }}
-        />
-      </>
+      <Guscio
+        sezione={sezione}
+        titolo={voce.titolo}
+        gruppo={voce.gruppo}
+        descrizione={STUB[sezione] ?? ""}
+      >
+        <div
+          className="card"
+          style={st("display:flex;flex-direction:column;gap:8px;align-items:flex-start")}
+        >
+          <h2 className="h2">Sezione in arrivo</h2>
+          <p style={st("margin:0;font-size:14px;line-height:1.6;color:#3a372f;max-width:62ch")}>
+            La struttura è pronta: mancano le opzioni di questa sezione.
+          </p>
+        </div>
+      </Guscio>
     );
   }
 
   return (
-    <>
-      <Navigazione sezione={sezione} />
-      <PageHeader
-        numero="14"
-        sezione="Impostazioni"
-        titolo={voce.titolo}
-        descrizione={DESCRIZIONI[sezione]}
-      />
+    <Guscio
+      sezione={sezione}
+      titolo={voce.titolo}
+      gruppo={voce.gruppo}
+      descrizione={DESCRIZIONI[sezione] ?? ""}
+    >
       {contenuto}
-    </>
+    </Guscio>
   );
 }
 
-function Navigazione({ sezione }: { sezione: string }) {
+/** Cornice delle impostazioni: menu delle sezioni a sinistra, contenuto a destra. */
+function Guscio({
+  sezione,
+  titolo,
+  gruppo,
+  descrizione,
+  children,
+}: {
+  sezione: string;
+  titolo: string;
+  gruppo: string;
+  descrizione: string;
+  children: React.ReactNode;
+}) {
+  const gruppi = [...new Set(SEZIONI_IMPOSTAZIONI.map((s) => s.gruppo))];
   return (
-    <nav aria-label="Sezioni delle impostazioni" className="mb-8 flex flex-wrap gap-2">
-      {SEZIONI_IMPOSTAZIONI.map((s) => (
-        <Link
-          key={s.slug}
-          href={`/impostazioni/${s.slug}`}
-          aria-current={s.slug === sezione ? "page" : undefined}
-          className={cn(
-            "inline-flex min-h-11 items-center rounded-full px-4 text-sm",
-            s.slug === sezione ? "bg-ink text-paper" : "glass-pill text-ink-2 hover:bg-white/80",
+    <>
+      <TopBar placeholder="Cerca un'impostazione…" />
+      <section style={st("display:flex;flex-direction:column;gap:14px")}>
+        <span className="eb">14 — Impostazioni · {gruppo}</span>
+        <h1
+          className="d"
+          style={st(
+            "margin:0;font-weight:500;font-size:clamp(2.4rem,4.4vw,3.8rem);line-height:1.04;letter-spacing:-.032em",
           )}
         >
-          {s.titolo}
-        </Link>
-      ))}
-    </nav>
+          {titolo}
+        </h1>
+      </section>
+      <div style={st("display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start")}>
+        <nav
+          aria-label="Sezioni delle impostazioni"
+          className="card"
+          style={st("flex:0 0 220px;display:flex;flex-direction:column;padding:10px")}
+        >
+          {gruppi.map((g) => (
+            <div key={g} style={st("display:flex;flex-direction:column")}>
+              <span className="sng">{g}</span>
+              {SEZIONI_IMPOSTAZIONI.filter((s) => s.gruppo === g).map((s) => (
+                <Link
+                  key={s.slug}
+                  href={`/impostazioni/${s.slug}`}
+                  aria-current={s.slug === sezione ? "page" : undefined}
+                  className={cn("sn", s.slug === sezione && "on")}
+                >
+                  {s.titolo}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </nav>
+        <div style={st("flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px")}>
+          {descrizione && <p className="lead">{descrizione}</p>}
+          {children}
+        </div>
+      </div>
+    </>
   );
 }

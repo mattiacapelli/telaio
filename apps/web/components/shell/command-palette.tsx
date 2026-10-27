@@ -16,10 +16,31 @@ interface Risultato {
 }
 
 const AZIONI_RAPIDE = [
-  { titolo: "Nuovo preventivo", href: "/configuratore" },
-  { titolo: "Nuova fattura", href: "/fatture/nuova" },
-  { titolo: "Azioni in attesa di conferma", href: "/azioni-in-attesa" },
+  { titolo: "Registra incasso", sub: "Bonifico, contante o carta", href: "/incassi", icona: "+" },
+  {
+    titolo: "Nuovo preventivo",
+    sub: "Dal listino o dal configuratore",
+    href: "/configuratore",
+    icona: "+",
+  },
+  { titolo: "Nuova fattura", sub: "Libera, anche per privati", href: "/fatture/nuova", icona: "+" },
+  { titolo: "Registra spesa", sub: "Prima nota", href: "/prima-nota", icona: "+" },
+  { titolo: "Giroconto", sub: "Sposta soldi tra conti", href: "/prima-nota", icona: "⇄" },
+  {
+    titolo: "Azioni in attesa di conferma",
+    sub: "Proposte da AI e API",
+    href: "/azioni-in-attesa",
+    icona: "!",
+  },
 ];
+
+const iniziali = (t: string) =>
+  t
+    .split(" ")
+    .map((x) => x[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
 export function CommandPalette() {
   const router = useRouter();
@@ -67,7 +88,23 @@ export function CommandPalette() {
   }
 
   const voce =
-    "flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-2xl px-3 text-sm data-[selected=true]:bg-ink data-[selected=true]:text-paper";
+    "flex min-h-[52px] cursor-pointer items-center gap-3.5 rounded-[14px] px-3.5 py-3 data-[selected=true]:bg-[#eceae5]";
+  const gruppo =
+    "[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pt-3.5 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:text-muted";
+  const icona = (t: string) => (
+    <span
+      aria-hidden
+      className="grid size-[34px] flex-none place-items-center rounded-[10px] bg-[#eceae5] text-xs font-semibold text-ink"
+    >
+      {t}
+    </span>
+  );
+  const testo = (titolo: string, sub?: string) => (
+    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span className="truncate text-[15px] font-semibold text-ink">{titolo}</span>
+      {sub && <span className="truncate text-[13px] text-ink-2">{sub}</span>}
+    </span>
+  );
 
   return (
     <Command.Dialog
@@ -75,24 +112,39 @@ export function CommandPalette() {
       onOpenChange={setOpen}
       label="Palette comandi"
       shouldFilter={false}
-      overlayClassName="fixed inset-0 z-40 bg-ink/40 backdrop-blur-sm"
-      contentClassName="fixed top-[15vh] left-1/2 z-50 w-[min(600px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-[22px] border border-white/80 bg-paper shadow-2xl"
+      overlayClassName="fixed inset-0 z-40 bg-[rgba(23,21,15,.42)] backdrop-blur-[6px]"
+      contentClassName="fixed top-[min(120px,12vh)] left-1/2 z-50 flex max-h-[min(666px,80vh)] w-[min(660px,calc(100vw-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-3xl bg-[#fbfaf8] shadow-[0_40px_90px_-30px_rgba(23,21,15,.6)]"
     >
-      <Command.Input
-        value={query}
-        onValueChange={setQuery}
-        placeholder="Cerca o digita un comando…"
-        className="min-h-14 w-full border-b border-grey-2 bg-transparent px-5 text-base outline-none placeholder:text-muted"
-      />
-      <Command.List className="max-h-[50vh] overflow-y-auto p-2">
-        <Command.Empty className="px-3 py-6 text-center text-sm text-muted">
+      <div className="flex items-center gap-3.5 border-b border-ink/8 px-[22px]">
+        <svg
+          aria-hidden
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" />
+        </svg>
+        <Command.Input
+          value={query}
+          onValueChange={setQuery}
+          placeholder="Cerca clienti, preventivi, fatture o scrivi un'azione…"
+          className="min-h-[58px] w-full flex-1 bg-transparent text-[19px] outline-none focus-visible:outline-none placeholder:text-muted"
+        />
+        <kbd className="rounded-md border border-ink/16 bg-white px-1.5 py-1 font-sans text-[11px] font-medium text-ink-2">
+          esc
+        </kbd>
+      </div>
+      <Command.List className="max-h-[min(480px,55vh)] overflow-y-auto p-2.5">
+        <Command.Empty className="px-3 py-8 text-center text-sm text-muted">
           Nessun risultato
         </Command.Empty>
         {risultati.length > 0 && (
-          <Command.Group
-            heading="Risultati"
-            className="mb-2 text-xs text-muted [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5"
-          >
+          <Command.Group heading="Risultati" className={gruppo}>
             {risultati.map((r) => (
               <Command.Item
                 key={r.href}
@@ -100,31 +152,27 @@ export function CommandPalette() {
                 onSelect={() => vai(r.href)}
                 className={voce}
               >
-                <span>{r.titolo}</span>
-                <span className="text-xs opacity-70">{r.sottotitolo ?? r.tipo}</span>
+                {icona(iniziali(r.titolo))}
+                {testo(r.titolo, r.sottotitolo)}
+                <span className="text-[13px] text-ink-2 capitalize">{r.tipo}</span>
               </Command.Item>
             ))}
           </Command.Group>
         )}
-        <Command.Group
-          heading="Azioni rapide"
-          className="mb-2 text-xs text-muted [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5"
-        >
+        <Command.Group heading="Azioni rapide" className={gruppo}>
           {AZIONI_RAPIDE.map((a) => (
             <Command.Item
-              key={a.href}
+              key={a.titolo}
               value={a.titolo}
               onSelect={() => vai(a.href)}
               className={voce}
             >
-              {a.titolo}
+              {icona(a.icona)}
+              {testo(a.titolo, a.sub)}
             </Command.Item>
           ))}
         </Command.Group>
-        <Command.Group
-          heading="Pagine"
-          className="text-xs text-muted [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5"
-        >
+        <Command.Group heading="Pagine" className={gruppo}>
           {GRUPPI_NAV.flatMap((g) => g.voci).map((v) => (
             <Command.Item
               key={v.href}
@@ -132,12 +180,17 @@ export function CommandPalette() {
               onSelect={() => vai(v.href)}
               className={voce}
             >
-              <span>{v.titolo}</span>
-              <span className="text-xs opacity-70">{v.numero}</span>
+              {icona(v.numero)}
+              {testo(v.titolo)}
             </Command.Item>
           ))}
         </Command.Group>
       </Command.List>
+      <div className="flex items-center gap-4 border-t border-ink/8 bg-paper px-5 py-2.5 text-[13px] text-ink-2">
+        <span>↑ ↓ per muoverti</span>
+        <span>↵ per aprire</span>
+        <span>esc per chiudere</span>
+      </div>
     </Command.Dialog>
   );
 }

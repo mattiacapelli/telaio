@@ -53,16 +53,16 @@ export const AZIONI_PRINCIPALI: Record<string, { label: string; href: string }> 
 export const AZIONE_DEFAULT = { label: "Nuovo preventivo", href: "/configuratore" };
 
 export const SEZIONI_IMPOSTAZIONI = [
-  { slug: "ragioni-sociali", titolo: "Ragioni sociali" },
-  { slug: "iva", titolo: "IVA e fiscale" },
-  { slug: "listini", titolo: "Listini e moduli" },
-  { slug: "fatturazione-elettronica", titolo: "Fatturazione elettronica" },
-  { slug: "modelli-pdf", titolo: "Modelli PDF" },
-  { slug: "email", titolo: "Email e mittenti" },
-  { slug: "twenty", titolo: "Twenty" },
-  { slug: "pagamenti", titolo: "Pagamenti" },
-  { slug: "mcp", titolo: "MCP" },
-  { slug: "api", titolo: "API e webhook" },
-  { slug: "sicurezza", titolo: "Profilo e sicurezza" },
-  { slug: "dati", titolo: "Backup ed export" },
+  { slug: "ragioni-sociali", titolo: "Ragioni sociali", gruppo: "Azienda" },
+  { slug: "iva", titolo: "IVA e fiscale", gruppo: "Azienda" },
+  { slug: "listini", titolo: "Listini e moduli", gruppo: "Commerciale" },
+  { slug: "fatturazione-elettronica", titolo: "Fatturazione elettronica", gruppo: "Documenti" },
+  { slug: "modelli-pdf", titolo: "Modelli PDF", gruppo: "Documenti" },
+  { slug: "email", titolo: "Email e mittenti", gruppo: "Documenti" },
+  { slug: "twenty", titolo: "Twenty CRM", gruppo: "Integrazioni" },
+  { slug: "pagamenti", titolo: "Pagamenti", gruppo: "Integrazioni" },
+  { slug: "mcp", titolo: "MCP", gruppo: "Integrazioni" },
+  { slug: "api", titolo: "API e webhook", gruppo: "Integrazioni" },
+  { slug: "sicurezza", titolo: "Profilo e sicurezza", gruppo: "Account" },
+  { slug: "dati", titolo: "Backup ed export dati", gruppo: "Account" },
 ] as const;

@@ -2,8 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 
 export function LoginForm() {
@@ -44,44 +42,125 @@ export function LoginForm() {
   }
 
   return (
-    <form action={accedi} className="mt-8 flex flex-col gap-4">
+    <form
+      action={accedi}
+      style={{
+        width: "100%",
+        maxWidth: 420,
+        alignSelf: "center",
+        display: "flex",
+        flexDirection: "column",
+        gap: 22,
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <span className="eb">Accedi</span>
+        <h1
+          className="d"
+          style={{
+            margin: 0,
+            fontWeight: 500,
+            fontSize: 44,
+            lineHeight: 1.04,
+            letterSpacing: "-.03em",
+          }}
+        >
+          Bentornato.
+        </h1>
+      </div>
       {richiede2fa ? (
-        <Field label="Codice di verifica (TOTP)">
-          <Input
+        <div className="f">
+          <label className="lbl" htmlFor="codice">
+            Codice di verifica (TOTP)
+          </label>
+          <input
+            id="codice"
             name="codice"
+            className="in"
             inputMode="numeric"
             autoComplete="one-time-code"
             required
-            autoFocus
           />
-        </Field>
+        </div>
       ) : (
         <>
-          <Field label="Email">
-            <Input name="email" type="email" autoComplete="username webauthn" required autoFocus />
-          </Field>
-          <Field label="Password">
-            <Input
+          <div className="f">
+            <label className="lbl" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              className="in"
+              type="email"
+              autoComplete="username webauthn"
+              required
+            />
+          </div>
+          <div className="f">
+            <label className="lbl" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
               name="password"
+              className="in"
               type="password"
               autoComplete="current-password webauthn"
               required
             />
-          </Field>
+          </div>
         </>
       )}
       {errore && (
-        <p role="alert" className="text-sm font-medium text-orange-2">
+        <p role="alert" style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#8f3f1d" }}>
           {errore}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Accesso…" : richiede2fa ? "Verifica" : "Accedi"}
-      </Button>
+      <button type="submit" className="bp" disabled={pending} style={{ padding: "16px 22px" }}>
+        {pending ? "Accesso…" : richiede2fa ? "Verifica" : "Accedi"}{" "}
+        <span aria-hidden="true">→</span>
+      </button>
       {!richiede2fa && (
-        <Button type="button" variant="ghost" onClick={conPasskey}>
-          Accedi con passkey
-        </Button>
+        <>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              color: "#6b675c",
+              fontSize: 13,
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: "rgba(23,21,15,.14)" }} />
+            oppure
+            <span style={{ flex: 1, height: 1, background: "rgba(23,21,15,.14)" }} />
+          </div>
+          <button
+            type="button"
+            className="bg"
+            onClick={conPasskey}
+            style={{ padding: "16px 22px" }}
+          >
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="9" cy="8" r="4" />
+              <path d="M2 21c0-3.9 3.1-7 7-7 1.5 0 2.9.5 4 1.3" />
+              <circle cx="18" cy="15" r="2.5" />
+              <path d="M18 17.5V22M18 20h2" />
+            </svg>
+            Continua con passkey
+          </button>
+        </>
       )}
     </form>
   );

@@ -39,3 +39,9 @@ Una riga ciascuna: scelta — perché.
 - Sospendere o cessare un abbonamento annulla le rate future ancora da incassare — riattivando tornano da incassare e si rigenerano le mancanti; le rate già incassate o scadute non si toccano.
 - Fatture libere: cliente dell'anagrafica oppure occasionale/privato (dati solo nello snapshot); restano bozza fino all'emissione, che assegna il numero. Il form ha 5 righe fisse, le vuote sono ignorate.
 - Fatture libere come pagina intera (/fatture/nuova), come nel mockup: emittente, intestatario (Twenty/occasionale/privato), righe, totali live, «già incassata»; un incasso sulla fattura salda anche la sua rata.
+- Design system dei mockup (`design/`, non versionati) portato 1:1 in `globals.css` (`.glass`, `.card`, `.ink`, `.bp`, `.bg`, `.tbl`, `.tag`…); le pagine usano quelle classi e `st("…")` per gli stili inline come nei mockup.
+- `formatEuro` mette il simbolo davanti (`€ 1.275,00`, `− € 200,00`), come nei mockup.
+- Dove il mockup mostra funzioni che Telaio non ha (Stripe, solleciti automatici, rinnovo automatico, scadenze fiscali, importa fatture passive) non le ho riprodotte come finte: restano fuori finché non esistono. I solleciti restano sempre da confermare.
+- Stato cliente (Cliente/Prospect) derivato dai dati locali: «Cliente» se ha fatture emesse o abbonamenti, altrimenti «Prospect». Partner ed ex clienti non sono derivabili da Twenty.
+- Cash flow: incassi certi = rate non incassate, uscite = media dei tre mesi precedenti di prima nota, preventivi in attesa pesati al 50%.
+- `/incasso-rapido`: registrazione di un incasso da telefono, fuori dalla shell dell'app.
