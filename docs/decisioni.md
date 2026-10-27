@@ -46,3 +46,7 @@ Una riga ciascuna: scelta — perché.
 - Cash flow: incassi certi = rate non incassate, uscite = media dei tre mesi precedenti di prima nota, preventivi in attesa pesati al 50%.
 - `/incasso-rapido`: registrazione di un incasso da telefono, fuori dalla shell dell'app.
 - Editor del preventivo (/preventivi/nuovo): emittente, cliente, validità, voci da listino, sconto sull'una tantum (5/10/15%) e riepilogo; salva una bozza senza numero. «Preventivo rapido» resta il configuratore.
+- Approvazione MCP configurabile per strumento (`impostazioni` → `mcp.approvazione`): le scritture la chiedono per default, ma l'utente può farle girare subito e, al contrario, mettere «con conferma» anche una lettura. La logica di ogni strumento sta in un solo posto (`lib/mcp/esegui.ts`) ed è usata sia dall'esecuzione diretta sia dalla conferma. Cambia la regola iniziale «l'AI scrive solo tramite `pending_actions`»: ora vale per default, non per forza.
+- Webhook: eventi accodati dal dominio dopo il commit (un errore di accodamento non fa fallire l'operazione), consegna dal worker con firma HMAC-SHA256 e 5 ritentativi.
+- `sync-twenty` riallinea solo i clienti già usati e salta se Twenty non è collegato; `backup` usa `pg_dump` (formato custom) con rotazione.
+- 35 strumenti MCP, uno per funzione dell'app (letture e scritture). `invia_sollecito` ha la conferma obbligatoria (`sempreConferma`): rispetta la regola che i solleciti non partono mai senza conferma, anche quando si tolgono le conferme agli altri strumenti.

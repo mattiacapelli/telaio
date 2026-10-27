@@ -1,9 +1,11 @@
 import { createDb } from "@telaio/db";
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
+import { backupDatabase } from "./jobs/backup";
+import { consegnaWebhook } from "./jobs/consegna-webhook";
 import { generaRateAbbonamenti } from "./jobs/genera-rate";
 import { proponiSolleciti } from "./jobs/proponi-solleciti";
-import { nonImplementato } from "./jobs/stub";
+import { sincronizzaTwenty } from "./jobs/sync-twenty";
 
 const NOME_CODA = "telaio";
 const connection = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", {
@@ -11,7 +13,7 @@ const connection = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", 
 });
 const { db } = createDb();
 
-// Job ricorrenti (cron in fuso Europe/Rome). Implementati: `genera-rate` e `solleciti` (che propone bozze, non invia).
+// Job ricorrenti (cron in fuso Europe/Rome). `solleciti` propone bozze e non invia mai.
 const SCHEDULE = [
   { nome: "genera-rate", cron: "0 3 * * *" },
   { nome: "solleciti", cron: "0 9 * * *" },
@@ -30,7 +32,10 @@ const worker = new Worker(
   async (job) => {
     if (job.name === "genera-rate") return generaRateAbbonamenti(db);
     if (job.name === "solleciti") return proponiSolleciti(db);
-    return nonImplementato(job.name);
+    if (job.name === "sync-twenty") return sincronizzaTwenty(db);
+    if (job.name === "consegna-webhook") return consegnaWebhook(db);
+    if (job.name === "backup") return backupDatabase();
+    throw new Error(`Job sconosciuto: ${job.name}`);
   },
   { connection },
 );

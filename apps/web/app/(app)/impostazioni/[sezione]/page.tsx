@@ -1,6 +1,7 @@
 import {
   apiKeys,
   asc,
+  clientiRef,
   conti,
   desc,
   eq,
@@ -12,17 +13,23 @@ import {
   listinoModuli,
   moduloBasi,
   ragioniSociali,
+  sql,
+  webhookDeliveries,
+  webhooks,
 } from "@telaio/db";
+import { twentyDaEnv } from "@telaio/twenty";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TopBar } from "@/components/shell/topbar";
 import { SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
 import { cn, st } from "@/lib/utils";
 import { SezioneApi } from "../_sezioni/api";
+import { SezioneDati } from "../_sezioni/dati";
 import { SezioneIva } from "../_sezioni/iva";
 import { SezioneListini } from "../_sezioni/listini";
 import { SezioneMcp } from "../_sezioni/mcp";
 import { SezioneRagioniSociali } from "../_sezioni/ragioni-sociali";
+import { SezioneTwenty } from "../_sezioni/twenty";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +39,8 @@ const DESCRIZIONI: Record<string, string> = {
   listini: "Basi, moduli aggiuntivi, prezzi netti e compatibilità.",
   mcp: "Server MCP per gli assistenti AI: strumenti attivi e conferma delle scritture.",
   api: "Chiavi API, permessi e webhook in uscita.",
+  twenty: "Stato del collegamento al CRM e sincronizzazione dei clienti.",
+  dati: "Backup automatico del database ed export dei dati contabili.",
 };
 
 const STUB: Record<string, string> = {
@@ -39,11 +48,9 @@ const STUB: Record<string, string> = {
     "L'invio passa da un intermediario: l'interfaccia del servizio è definita, il collegamento si implementa dopo.",
   "modelli-pdf": "Modelli di preventivo e fattura in PDF, per ragione sociale.",
   email: "Mittenti e modelli per l'invio di preventivi, fatture e solleciti.",
-  twenty:
-    "Collegamento a Twenty CRM: oggi si configura con TWENTY_API_URL e TWENTY_API_KEY nel file .env.",
+
   pagamenti: "Collegamento a Stripe per gli incassi con carta.",
   sicurezza: "Profilo, password, passkey e autenticazione a due fattori (TOTP).",
-  dati: "Backup del database ed export dei dati.",
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ sezione: string }> }) {
@@ -92,14 +99,55 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
       );
     }
   } else if (sezione === "mcp") {
-    const [riga] = await db
-      .select()
-      .from(impostazioni)
-      .where(eq(impostazioni.chiave, "mcp.strumenti"));
-    contenuto = <SezioneMcp attivi={(riga?.valore ?? {}) as Record<string, boolean>} />;
-  } else if (sezione === "api") {
+    const righe = await db.select().from(impostazioni);
+    const valore = (chiave: string) =>
+      (righe.find((r) => r.chiave === chiave)?.valore ?? {}) as Record<string, boolean>;
     contenuto = (
-      <SezioneApi chiavi={await db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt))} />
+      <SezioneMcp attivi={valore("mcp.strumenti")} approvazioni={valore("mcp.approvazione")} />
+    );
+  } else if (sezione === "dati") {
+    contenuto = <SezioneDati anno={new Date().getFullYear()} />;
+  } else if (sezione === "twenty") {
+    const [stat] = await db
+      .select({
+        n: sql<number>`count(*)::int`,
+        ultima: sql<Date | null>`max(${clientiRef.lastSyncedAt})`,
+      })
+      .from(clientiRef);
+    const url = process.env.TWENTY_API_URL;
+    contenuto = (
+      <SezioneTwenty
+        finto={twentyDaEnv().finto}
+        host={url ? new URL(url).host : null}
+        riferimenti={stat?.n ?? 0}
+        ultimaSync={stat?.ultima ? new Date(stat.ultima) : null}
+      />
+    );
+  } else if (sezione === "api") {
+    const [chiavi, elencoHook, conteggi] = await Promise.all([
+      db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt)),
+      db.select().from(webhooks).orderBy(desc(webhooks.createdAt)),
+      db
+        .select({
+          webhookId: webhookDeliveries.webhookId,
+          stato: webhookDeliveries.stato,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(webhookDeliveries)
+        .groupBy(webhookDeliveries.webhookId, webhookDeliveries.stato),
+    ]);
+    const n = (id: string, stato: string) =>
+      conteggi.find((c) => c.webhookId === id && c.stato === stato)?.n ?? 0;
+    contenuto = (
+      <SezioneApi
+        chiavi={chiavi}
+        hook={elencoHook.map((w) => ({
+          w,
+          consegnati: n(w.id, "consegnato"),
+          inAttesa: n(w.id, "in_attesa"),
+          falliti: n(w.id, "fallito"),
+        }))}
+      />
     );
   } else {
     return (

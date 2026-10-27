@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/.next-e2e
+**/.turbo
+.git
+.env
+.env.*
+!.env.example
+design
+backups
+apps/web/test-results
+apps/web/playwright-report

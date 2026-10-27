@@ -13,11 +13,13 @@ import {
   listinoModuli,
   moduloBasi,
   ragioniSociali,
+  webhooks,
 } from "@telaio/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui/form-modal";
 import { audit } from "@/lib/audit";
+import { EVENTI_WEBHOOK } from "@/lib/eventi-webhook";
 import { euroCent, flag, leggi, percentualeBp, testoOpt } from "@/lib/form";
 import { requireSession } from "@/lib/session";
 
@@ -273,6 +275,30 @@ export async function impostaStrumentoMcp(form: FormData): Promise<void> {
   refresh();
 }
 
+/** Se uno strumento MCP aspetta la tua conferma prima di eseguire (vale per letture e scritture). */
+export async function impostaApprovazioneMcp(form: FormData): Promise<void> {
+  const { user } = await requireSession();
+  const nome = String(form.get("nome"));
+  const richiede = form.get("richiede") === "true";
+  const db = getDb();
+  const [corrente] = await db
+    .select()
+    .from(impostazioni)
+    .where(eq(impostazioni.chiave, "mcp.approvazione"));
+  const valore = { ...((corrente?.valore as Record<string, boolean>) ?? {}), [nome]: richiede };
+  await db
+    .insert(impostazioni)
+    .values({ chiave: "mcp.approvazione", valore })
+    .onConflictDoUpdate({ target: impostazioni.chiave, set: { valore, updatedAt: new Date() } });
+  await audit(db, {
+    userId: user.id,
+    azione: "mcp.approvazione",
+    entita: "impostazioni",
+    dettagli: { nome, richiede },
+  });
+  refresh();
+}
+
 export interface ChiaveCreata extends ActionState {
   chiave?: string;
 }
@@ -313,6 +339,66 @@ export async function revocaChiaveApi(form: FormData): Promise<void> {
     userId: user.id,
     azione: "api_key.revocata",
     entita: "api_keys",
+    entitaId: id,
+  });
+  refresh();
+}
+
+// ── Webhook ──────────────────────────────────────────────────────────────────
+
+export interface WebhookCreato extends ActionState {
+  secret?: string;
+}
+
+/** Il segreto HMAC si mostra una sola volta, alla creazione. */
+export async function creaWebhook(_: ActionState, form: FormData): Promise<WebhookCreato> {
+  const { user } = await requireSession();
+  const nomiEventi = EVENTI_WEBHOOK.map((e) => e.nome) as [string, ...string[]];
+  const r = leggi(
+    z.object({
+      url: z
+        .url("Indirizzo non valido")
+        .refine((u) => /^https?:\/\//.test(u), "Usa un indirizzo http o https"),
+      "eventi[]": z.array(z.enum(nomiEventi)).min(1, "Scegli almeno un evento"),
+    }),
+    form,
+  );
+  if (!r.ok) return r.state;
+  const secret = `whsec_${randomBytes(24).toString("base64url")}`;
+  const db = getDb();
+  const [w] = await db
+    .insert(webhooks)
+    .values({ url: r.data.url, secret, eventi: r.data["eventi[]"] })
+    .returning({ id: webhooks.id });
+  await audit(db, {
+    userId: user.id,
+    azione: "webhook.creato",
+    entita: "webhooks",
+    entitaId: w?.id,
+  });
+  refresh();
+  return { ok: true, secret };
+}
+
+export async function impostaWebhook(form: FormData): Promise<void> {
+  await requireSession();
+  const id = String(form.get("id"));
+  await getDb()
+    .update(webhooks)
+    .set({ attivo: form.get("attivo") === "true" })
+    .where(eq(webhooks.id, id));
+  refresh();
+}
+
+export async function eliminaWebhook(form: FormData): Promise<void> {
+  const { user } = await requireSession();
+  const id = String(form.get("id"));
+  const db = getDb();
+  await db.delete(webhooks).where(eq(webhooks.id, id));
+  await audit(db, {
+    userId: user.id,
+    azione: "webhook.eliminato",
+    entita: "webhooks",
     entitaId: id,
   });
   refresh();

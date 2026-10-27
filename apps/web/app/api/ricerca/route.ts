@@ -3,6 +3,8 @@ import { twentyDaEnv } from "@telaio/twenty";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   if (!(await getSession())) return NextResponse.json([], { status: 401 });
   const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";

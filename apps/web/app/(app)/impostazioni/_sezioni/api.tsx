@@ -1,11 +1,23 @@
-import type { apiKeys } from "@telaio/db";
+import type { apiKeys, webhooks } from "@telaio/db";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
-import { revocaChiaveApi } from "../actions";
+import { eliminaWebhook, impostaWebhook, revocaChiaveApi } from "../actions";
 import { NuovaChiaveApi } from "./chiavi-api";
+import { NuovoWebhook } from "./nuovo-webhook";
 
-export function SezioneApi({ chiavi }: { chiavi: (typeof apiKeys.$inferSelect)[] }) {
+export function SezioneApi({
+  chiavi,
+  hook,
+}: {
+  chiavi: (typeof apiKeys.$inferSelect)[];
+  hook: {
+    w: typeof webhooks.$inferSelect;
+    consegnati: number;
+    inAttesa: number;
+    falliti: number;
+  }[];
+}) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
@@ -63,13 +75,81 @@ export function SezioneApi({ chiavi }: { chiavi: (typeof apiKeys.$inferSelect)[]
         </ul>
       </Card>
       <Card>
-        <p className="eyebrow">Webhook in uscita</p>
-        <p className="mt-2 text-sm text-muted">
-          Eventi previsti: <code>preventivo.accettato</code>, <code>incasso.registrato</code>,{" "}
-          <code>rata.scaduta</code>, <code>fattura.scartata</code>. Firma HMAC e nuovi tentativi li
-          gestisce il worker. La configurazione dei webhook dall'interfaccia è ancora da
-          implementare.
-        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+              gap: 12,
+            }}
+          >
+            <h2 className="h2">Webhook in uscita</h2>
+            <span style={{ fontSize: 12, color: "#6b675c" }}>
+              consegna firmata, con nuovi tentativi
+            </span>
+          </div>
+          <NuovoWebhook />
+          {hook.length > 0 && (
+            <ul
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                borderTop: "1px solid rgba(23,21,15,.14)",
+              }}
+            >
+              {hook.map(({ w, consegnati, inAttesa, falliti }) => (
+                <li
+                  key={w.id}
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "14px 0",
+                    borderBottom: "1px solid rgba(23,21,15,.08)",
+                  }}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                    <span className="mono" style={{ overflowWrap: "anywhere" }}>
+                      {w.url}
+                    </span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <Tag tone={w.attivo ? "green" : "neutral"}>
+                        {w.attivo ? "Attivo" : "In pausa"}
+                      </Tag>
+                      {w.eventi.map((ev) => (
+                        <span key={ev} className="tag">
+                          {ev}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="sub" style={{ marginTop: 0 }}>
+                      {consegnati} consegnati · {inAttesa} in attesa · {falliti} falliti
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <form action={impostaWebhook}>
+                      <input type="hidden" name="id" value={w.id} />
+                      <input type="hidden" name="attivo" value={w.attivo ? "false" : "true"} />
+                      <Button type="submit" variant="glass" size="sm">
+                        {w.attivo ? "Pausa" : "Riattiva"}
+                      </Button>
+                    </form>
+                    <form action={eliminaWebhook}>
+                      <input type="hidden" name="id" value={w.id} />
+                      <Button type="submit" variant="glass" size="sm">
+                        Elimina
+                      </Button>
+                    </form>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </Card>
     </div>
   );

@@ -1,4 +1,5 @@
 import { abbonamenti, and, type Database, eq, generaRateAbbonamenti, gt, rate } from "@telaio/db";
+import { emettiEvento } from "../webhooks";
 
 export interface NuovoAbbonamento {
   ragioneSocialeId: string;
@@ -17,6 +18,10 @@ export async function creaAbbonamento(db: Database, dati: NuovoAbbonamento) {
   const [ab] = await db.insert(abbonamenti).values(dati).returning();
   if (!ab) throw new Error("Abbonamento non creato");
   await generaRateAbbonamenti(db, { abbonamentoId: ab.id });
+  await emettiEvento(db, "abbonamento.creato", {
+    abbonamentoId: ab.id,
+    descrizione: ab.descrizione,
+  });
   return ab;
 }
 

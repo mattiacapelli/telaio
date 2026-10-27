@@ -16,6 +16,7 @@ import {
 } from "@telaio/db";
 import { oggi } from "../date";
 import { regoleDa } from "../regole";
+import { emettiEvento } from "../webhooks";
 
 export const GIORNI_SCADENZA_DEFAULT = 30;
 
@@ -182,6 +183,16 @@ export async function emettiFattura(
   id: string,
   giorniScadenza = GIORNI_SCADENZA_DEFAULT,
 ) {
+  const esito = await emettiFatturaInTransazione(db, id, giorniScadenza);
+  await emettiEvento(db, "fattura.emessa", {
+    fatturaId: id,
+    numero: esito.numero,
+    totaleCent: esito.totaleCent,
+  });
+  return { numero: esito.numero };
+}
+
+async function emettiFatturaInTransazione(db: Database, id: string, giorniScadenza: number) {
   return db.transaction(async (tx) => {
     const [f] = await tx
       .select()
@@ -245,6 +256,6 @@ export async function emettiFattura(
       })
       .returning({ id: rate.id });
     if (r) await tx.update(fatture).set({ rataId: r.id }).where(eq(fatture.id, id));
-    return { numero };
+    return { numero, totaleCent: totali.totaleCent };
   });
 }

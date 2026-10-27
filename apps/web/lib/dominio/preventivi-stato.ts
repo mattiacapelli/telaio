@@ -15,12 +15,23 @@ import {
   ragioniSociali,
 } from "@telaio/db";
 import { regoleDa } from "../regole";
+import { emettiEvento } from "../webhooks";
 
 /**
  * Cambia lo stato di un preventivo rispettando le transizioni del dominio.
  * Alla prima uscita dalla bozza (invio) assegna il numero e congela emittente, regole e totali.
  */
 export async function cambiaStatoPreventivo(db: Database, id: string, nuovo: StatoPreventivo) {
+  const esito = await cambiaStatoInTransazione(db, id, nuovo);
+  await emettiEvento(db, "preventivo.stato", {
+    preventivoId: id,
+    stato: nuovo,
+    numero: esito.numero,
+  });
+  return esito;
+}
+
+async function cambiaStatoInTransazione(db: Database, id: string, nuovo: StatoPreventivo) {
   return db.transaction(async (tx) => {
     const [p] = await tx
       .select()

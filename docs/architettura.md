@@ -12,7 +12,8 @@ telaio/
 │   ├── db/         schema Drizzle, migrazioni, seed, client `postgres`
 │   └── twenty/     client tipizzato (Zod) per Twenty CRM
 ├── docs/           questa documentazione
-└── docker-compose.yml  Postgres, Redis, Mailpit (sviluppo)
+├── Dockerfile          un'immagine per web, worker e migrazioni (cambia il comando)
+└── docker-compose.yml  Postgres, Redis, Mailpit; profilo "app": migrate, web, worker
 ```
 
 ## Responsabilità
@@ -48,5 +49,5 @@ In locale si tiene **solo il riferimento**; ogni documento emesso congela una co
 
 - **Mutazioni dei form**: Server Actions con schema Zod; i form si aprono in modale.
 - **API REST** `/api/v1`: chiave API (hash SHA-256), permessi `lettura` / `lettura_scrittura`, rate limit per chiave in Redis.
-- **MCP** `/mcp` (Streamable HTTP): token personale (una API key con scope MCP). Gli strumenti di scrittura non toccano le tabelle di dominio: creano una `pending_action` che l'admin conferma in `/azioni-in-attesa`.
+- **MCP** `/mcp` (Streamable HTTP): token personale (una API key con scope MCP). Per ogni strumento l'admin decide (Impostazioni → MCP) se aspetta la sua approvazione: in quel caso la chiamata crea una `pending_action` che si conferma in `/azioni-in-attesa` e l'assistente legge l'esito con `stato_azione`. Predefinito: le scritture chiedono conferma, le letture no.
 - **Webhook in uscita**: gli eventi di dominio creano righe in `webhook_deliveries`; il worker le consegna con firma HMAC e ritenta con backoff.

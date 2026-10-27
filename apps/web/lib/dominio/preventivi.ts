@@ -18,6 +18,7 @@ import { twentyDaEnv } from "@telaio/twenty";
 import { z } from "zod";
 import { oggi } from "../date";
 import { regoleDa } from "../regole";
+import { emettiEvento } from "../webhooks";
 
 function aggiungiGiorni(data: string, giorni: number): string {
   const d = new Date(`${data}T00:00:00Z`);
@@ -186,7 +187,7 @@ export async function creaPreventivoDaListino(
     regole,
   );
 
-  return db.transaction(async (tx) => {
+  const creato = await db.transaction(async (tx) => {
     const [p] = await tx
       .insert(preventivi)
       .values({
@@ -221,4 +222,6 @@ export async function creaPreventivoDaListino(
       await tx.insert(preventivoRighe).values(righe.map((r) => ({ ...r, preventivoId: p.id })));
     return p;
   });
+  await emettiEvento(db, "preventivo.creato", { preventivoId: creato.id });
+  return creato;
 }

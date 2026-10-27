@@ -12,6 +12,7 @@ import {
 } from "@telaio/db";
 import { z } from "zod";
 import { reData } from "../date";
+import { emettiEvento } from "../webhooks";
 
 export const registraIncassoSchema = z.object({
   contoId: z.uuid("Scegli il conto"),
@@ -30,7 +31,7 @@ export type RegistraIncassoInput = z.infer<typeof registraIncassoSchema>;
  */
 export async function registraIncasso(db: Database, input: RegistraIncassoInput) {
   const dati = registraIncassoSchema.parse(input);
-  return db.transaction(async (tx) => {
+  const incasso = await db.transaction(async (tx) => {
     const [conto] = await tx
       .select()
       .from(conti)
@@ -113,4 +114,13 @@ export async function registraIncasso(db: Database, input: RegistraIncassoInput)
     }
     return incasso;
   });
+  await emettiEvento(db, "incasso.registrato", {
+    incassoId: incasso.id,
+    importoCent: incasso.importoCent,
+    contoId: incasso.contoId,
+    rataId: incasso.rataId,
+    fatturaId: incasso.fatturaId,
+    data: incasso.data,
+  });
+  return incasso;
 }

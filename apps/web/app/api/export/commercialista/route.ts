@@ -16,6 +16,8 @@ import { oggi } from "@/lib/date";
 import { intervallo, valorePeriodo } from "@/lib/periodo";
 import { requireSession } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 const euro = (cent: number) => (cent / 100).toFixed(2).replace(".", ",");
 const campo = (v: string | number | null | undefined) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 const riga = (v: (string | number | null | undefined)[]) => v.map(campo).join(";");

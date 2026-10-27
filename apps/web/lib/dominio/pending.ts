@@ -1,16 +1,11 @@
 import { and, type Database, eq, pendingActions } from "@telaio/db";
 import { audit } from "../audit";
-import { creaPreventivoDaListino, creaPreventivoSchema } from "./preventivi";
+import { eseguiStrumento } from "../mcp/esegui";
 
 /**
- * Esecutori delle azioni proposte da un'AI. Una pending_action esegue solo qui,
- * dopo la conferma esplicita dell'admin: l'AI non scrive mai direttamente nel DB.
+ * Una pending_action esegue solo qui, dopo la conferma esplicita dell'admin: lo strumento MCP
+ * proposto gira con i parametri salvati al momento della proposta.
  */
-const ESECUTORI: Record<string, (db: Database, payload: unknown) => Promise<unknown>> = {
-  crea_preventivo: async (db, payload) =>
-    creaPreventivoDaListino(db, creaPreventivoSchema.parse(payload)),
-};
-
 export async function proponiAzione(
   db: Database,
   azione: { tipo: string; payload: unknown; apiKeyId?: string; origine?: string },
@@ -37,12 +32,10 @@ export async function confermaAzione(db: Database, id: string, userId: string) {
   if (!azione) return { ok: false as const, errore: "Azione già gestita o inesistente" };
 
   try {
-    const esecutore = ESECUTORI[azione.tipo];
-    if (!esecutore) throw new Error(`Tipo di azione non ancora supportato: ${azione.tipo}`);
-    const risultato = await esecutore(db, azione.payload);
+    const risultato = await eseguiStrumento(db, azione.tipo, azione.payload);
     await db
       .update(pendingActions)
-      .set({ risultato: risultato as object })
+      .set({ risultato: (risultato ?? null) as object })
       .where(eq(pendingActions.id, id));
     await audit(db, {
       userId,

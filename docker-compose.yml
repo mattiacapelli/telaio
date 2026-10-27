@@ -31,6 +31,50 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # ── App (profilo "app"): `docker compose --profile app up --build` ─────────────────────────────
+  # Un'unica immagine per web, worker e migrazioni: cambia solo il comando.
+  migrate:
+    profiles: ["app"]
+    build: .
+    image: telaio-app
+    command: ["pnpm", "db:migrate"]
+    environment: &app_env
+      DATABASE_URL: postgres://telaio:telaio@postgres:5432/telaio
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      BETTER_AUTH_URL: http://localhost:3000
+    env_file: [{ path: .env, required: false }]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  web:
+    profiles: ["app"]
+    image: telaio-app
+    command: ["pnpm", "--filter", "@telaio/web", "start"]
+    environment: *app_env
+    env_file: [{ path: .env, required: false }]
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+
+  worker:
+    profiles: ["app"]
+    image: telaio-app
+    command: ["pnpm", "--filter", "@telaio/worker", "start"]
+    environment:
+      <<: *app_env
+      BACKUP_DIR: /backups
+    env_file: [{ path: .env, required: false }]
+    volumes:
+      - telaio_backups:/backups
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+
 volumes:
+  telaio_backups:
   telaio_pgdata:
   telaio_redisdata:
