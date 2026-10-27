@@ -1,34 +1,77 @@
-"use client";
-
-import { Search } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { AZIONE_DEFAULT, AZIONI_PRINCIPALI } from "@/lib/nav";
-import { openPalette } from "./command-palette";
+import { SearchPill } from "./search-pill";
 
-export function Topbar() {
-  const pathname = usePathname();
-  const azione = AZIONI_PRINCIPALI[`/${pathname.split("/")[1] ?? ""}`] ?? AZIONE_DEFAULT;
+/**
+ * Barra superiore delle liste: ricerca a sinistra, a destra un link secondario
+ * e l'azione principale (un `.bp.sm`, oppure una modale passata come children).
+ */
+export function TopBar({
+  placeholder = "Cerca clienti, preventivi, incassi…",
+  links = [],
+  children,
+}: {
+  placeholder?: string;
+  links?: { label: string; href: string }[];
+  children?: React.ReactNode;
+}) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-2">
-      <button
-        type="button"
-        onClick={openPalette}
-        className="glass-pill flex min-h-13 max-w-[440px] flex-[1_1_260px] items-center gap-3 px-[18px] text-left text-[15px] text-muted"
-      >
-        <Search className="size-[18px]" aria-hidden />
-        <span className="flex-1">Cerca clienti, preventivi, fatture…</span>
-        <kbd className="rounded-md border border-ink/16 px-1.5 py-0.5 font-sans text-xs">⌘K</kbd>
-      </button>
-      <div className="glass-pill flex min-h-13 items-center gap-3 pr-1.5 pl-[18px]">
-        <Button asChild size="sm">
-          <Link href={azione.href}>
-            {azione.label}
-            <span aria-hidden>+</span>
-          </Link>
-        </Button>
-      </div>
+    <header
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 8,
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <SearchPill placeholder={placeholder} />
+      {(links.length > 0 || children) && (
+        <div className="glass pill" style={{ paddingRight: children ? 6 : 18 }}>
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} style={{ fontSize: 14, fontWeight: 500 }}>
+              {l.label}
+            </Link>
+          ))}
+          {children}
+        </div>
+      )}
+    </header>
+  );
+}
+
+/** Barra delle pagine di dettaglio: «← indietro», stato e azioni. */
+export function DetailBar({
+  indietro,
+  stato,
+  children,
+}: {
+  indietro: { label: string; href: string };
+  stato?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <header
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 8,
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <Link href={indietro.href} className="glass pill" style={{ fontWeight: 500, fontSize: 15 }}>
+        <span aria-hidden="true">←</span> {indietro.label}
+      </Link>
+      {stato && (
+        <div className="glass pill" style={{ fontSize: 14, color: "#3a372f" }}>
+          {stato}
+        </div>
+      )}
+      {children && (
+        <div className="glass pill" style={{ paddingRight: 6, gap: 6 }}>
+          {children}
+        </div>
+      )}
     </header>
   );
 }

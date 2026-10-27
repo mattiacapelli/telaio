@@ -4,7 +4,8 @@
     "includes": [
       "**",
       "!**/node_modules",
-      "!**/.next",
+      "!**/.next*",
+      "!design",
       "!**/dist",
       "!**/.turbo",
       "!**/drizzle",

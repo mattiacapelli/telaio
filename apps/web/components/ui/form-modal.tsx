@@ -1,7 +1,6 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
 import { createContext, useActionState, useContext, useEffect, useState } from "react";
 import { Button, type ButtonProps } from "./button";
 
@@ -56,40 +55,75 @@ export function FormModal({
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-ink/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[90dvh] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[22px] border border-white/80 bg-paper p-6 shadow-2xl sm:p-8">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <Dialog.Title className="font-display text-2xl font-semibold">{title}</Dialog.Title>
-              <Dialog.Description className={description ? "mt-1 text-sm text-muted" : "sr-only"}>
-                {description ?? title}
-              </Dialog.Description>
-            </div>
-            <Dialog.Close asChild>
-              <Button variant="ghost" size="icon" aria-label="Chiudi">
-                <X />
-              </Button>
-            </Dialog.Close>
-          </div>
-          <form action={formAction} className="flex flex-col gap-4">
-            <FormStateContext.Provider value={state}>{children}</FormStateContext.Provider>
-            {state.message && !state.ok && (
-              <p role="alert" className="rounded-2xl bg-orange/10 px-4 py-3 text-sm text-orange-2">
-                {state.message}
-              </p>
-            )}
-            <div className="mt-2 flex justify-end gap-3">
+        <Dialog.Overlay
+          className="fixed inset-0 z-40"
+          style={{
+            background: "rgba(23,21,15,.42)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+          }}
+        />
+        <div
+          className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
+          style={{ padding: "clamp(16px,6vh,64px) 16px" }}
+        >
+          <Dialog.Content className="dlg pointer-events-auto">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <Dialog.Title className="h2">{title}</Dialog.Title>
               <Dialog.Close asChild>
-                <Button type="button" variant="ghost">
-                  Annulla
-                </Button>
+                <button
+                  type="button"
+                  aria-label="Chiudi"
+                  className="icon"
+                  style={{ width: 40, height: 40, background: "#fff", fontSize: 20 }}
+                >
+                  ×
+                </button>
               </Dialog.Close>
-              <Button type="submit" disabled={pending}>
-                {pending ? "Salvataggio…" : submitLabel}
-              </Button>
             </div>
-          </form>
-        </Dialog.Content>
+            <Dialog.Description
+              className={description ? undefined : "sr-only"}
+              style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: "#3a372f" }}
+            >
+              {description ?? title}
+            </Dialog.Description>
+            <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <FormStateContext.Provider value={state}>{children}</FormStateContext.Provider>
+              {state.message && !state.ok && (
+                <p
+                  role="alert"
+                  style={{
+                    margin: 0,
+                    padding: "12px 16px",
+                    borderRadius: 14,
+                    background: "#17150f",
+                    color: "#f4f3f0",
+                    fontSize: 14,
+                  }}
+                >
+                  {state.message}
+                </p>
+              )}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 4 }}>
+                <Dialog.Close asChild>
+                  <Button type="button" variant="glass">
+                    Annulla
+                  </Button>
+                </Dialog.Close>
+                <Button type="submit" disabled={pending}>
+                  {pending ? "Salvataggio…" : submitLabel}
+                </Button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </div>
       </Dialog.Portal>
     </Dialog.Root>
   );

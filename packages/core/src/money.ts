@@ -12,14 +12,21 @@ export function percentuale(importoCent: number, bp: number): number {
   return roundDiv(importoCent * bp, 10000);
 }
 
-const eur = new Intl.NumberFormat("it-IT", {
-  style: "currency",
-  currency: "EUR",
+const numero = new Intl.NumberFormat("it-IT", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
   useGrouping: "always",
 });
 
+/** "€ 1.275,00": il simbolo davanti, come nei mockup; i negativi come "− € 200,00". */
 export function formatEuro(cent: number): string {
-  return eur.format(cent / 100);
+  const testo = `€ ${numero.format(Math.abs(cent) / 100)}`;
+  return cent < 0 ? `− ${testo}` : testo;
+}
+
+/** Come formatEuro ma senza decimali se l'importo è tondo ("€ 7.225"). */
+export function formatEuroCompatto(cent: number): string {
+  return cent % 100 === 0 ? formatEuro(cent).replace(/,00$/, "") : formatEuro(cent);
 }
 
 /** "12,50" | "12.50" | "1.234,5" → 1250 | 1250 | 123450. Null se non valido. */

@@ -287,3 +287,13 @@ describe("solleciti", () => {
     ).toBe(true);
   });
 });
+
+describe("formatEuro", () => {
+  it("mette il simbolo davanti e il segno meno prima", async () => {
+    const { formatEuro, formatEuroCompatto } = await import("./money");
+    expect(formatEuro(127500)).toBe("€ 1.275,00");
+    expect(formatEuro(-20000)).toBe("− € 200,00");
+    expect(formatEuroCompatto(722500)).toBe("€ 7.225");
+    expect(formatEuroCompatto(722550)).toBe("€ 7.225,50");
+  });
+});

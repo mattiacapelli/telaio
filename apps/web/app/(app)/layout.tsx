@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { SidebarNav } from "@/components/shell/sidebar";
-import { Topbar } from "@/components/shell/topbar";
 import { requireSession } from "@/lib/session";
 import { LogoutButton } from "./logout-button";
 
@@ -38,34 +37,67 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .toUpperCase();
 
   return (
-    <div className="min-[860px]:flex">
-      <aside className="flex flex-col gap-6 p-7 min-[860px]:sticky min-[860px]:top-0 min-[860px]:h-dvh min-[860px]:w-[272px] min-[860px]:flex-none min-[860px]:overflow-y-auto min-[860px]:pr-0">
-        <Link
-          href="/"
-          className="glass-pill flex min-h-13 items-center gap-1.5 px-3.5 text-sm font-medium whitespace-nowrap"
-        >
-          <span>
-            {saluto(ora)}, {nome.split(" ")[0]}
-          </span>
-          <span className="text-[13px] font-normal text-muted">· {data}</span>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexWrap: "wrap",
+        background:
+          "radial-gradient(800px 520px at 95% -8%, #ddd9cf, transparent 70%), radial-gradient(700px 500px at 20% 110%, #e6e2d9, transparent 70%), #f4f3f0",
+      }}
+    >
+      <aside
+        className="sb"
+        style={{ display: "flex", flexDirection: "column", gap: 24, padding: "28px 0 28px 28px" }}
+      >
+        <Link href="/" className="glass pill" style={{ fontWeight: 500, fontSize: 15 }}>
+          {saluto(ora)}, {nome.split(" ")[0]}{" "}
+          <span style={{ color: "#6b675c", fontWeight: 400 }}>· {data}</span>
         </Link>
         <SidebarNav />
-        <div className="mt-auto flex items-center gap-3 pt-2">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginTop: "auto",
+            paddingTop: 8,
+          }}
+        >
           <span
             aria-hidden
-            className="grid size-10 flex-none place-items-center rounded-full bg-ink font-display text-sm font-semibold text-paper"
+            className="d"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#17150f",
+              color: "#f4f3f0",
+              display: "grid",
+              placeItems: "center",
+              fontWeight: 600,
+              fontSize: 14,
+            }}
           >
             {iniziali}
           </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate text-sm font-medium">{nome}</span>
-            <span className="text-xs text-muted">Amministratore</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 500, fontSize: 14 }}>{nome}</span>
+            <span style={{ fontSize: 12, color: "#6b675c" }}>Amministratore</span>
           </div>
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col gap-8 px-7 pt-7 pb-18">
-        <Topbar />
+      <main
+        style={{
+          flex: "1 1 0",
+          minWidth: 0,
+          padding: "28px 28px 72px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 32,
+        }}
+      >
         {children}
       </main>
       <CommandPalette />
