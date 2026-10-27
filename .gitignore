@@ -27,3 +27,4 @@ test-results/
 !.env.example
 
 .claude/settings.local.json
+.next-e2e/

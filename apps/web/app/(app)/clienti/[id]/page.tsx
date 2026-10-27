@@ -31,7 +31,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageHeader
-        numero="01"
+        numero="02"
         sezione="Clienti"
         titolo={cliente.nome}
         descrizione={

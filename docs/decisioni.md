@@ -38,3 +38,4 @@ Una riga ciascuna: scelta — perché.
 - Generazione rate spostata in `@telaio/db` — la usano sia il worker (ogni notte) sia il web alla creazione/riattivazione di un abbonamento, così le rate compaiono subito senza duplicare la logica.
 - Sospendere o cessare un abbonamento annulla le rate future ancora da incassare — riattivando tornano da incassare e si rigenerano le mancanti; le rate già incassate o scadute non si toccano.
 - Fatture libere: cliente dell'anagrafica oppure occasionale/privato (dati solo nello snapshot); restano bozza fino all'emissione, che assegna il numero. Il form ha 5 righe fisse, le vuote sono ignorate.
+- Fatture libere come pagina intera (/fatture/nuova), come nel mockup: emittente, intestatario (Twenty/occasionale/privato), righe, totali live, «già incassata»; un incasso sulla fattura salda anche la sua rata.

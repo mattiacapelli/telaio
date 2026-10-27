@@ -21,11 +21,11 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-xs font-medium text-ink-2",
+        "inline-flex items-center gap-[7px] rounded-full border border-ink/16 px-[11px] py-1.5 text-xs leading-none font-medium whitespace-nowrap text-ink-2",
         className,
       )}
     >
-      <span aria-hidden className={cn("size-1.5 rounded-full", tones[tone])} />
+      <span aria-hidden className={cn("size-[7px] rounded-full", tones[tone])} />
       {children}
     </span>
   );

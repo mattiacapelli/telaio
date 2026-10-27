@@ -75,7 +75,7 @@ export default async function ConfiguratorePage({
   return (
     <>
       <PageHeader
-        numero="03"
+        numero="04"
         sezione="Commerciale"
         titolo="Configuratore"
         descrizione="Scegli la base: ti propongo solo i moduli compatibili e calcolo i totali."

@@ -106,6 +106,8 @@ export interface NuovaFatturaLibera {
     partitaIva: string | null;
     codiceFiscale: string | null;
     indirizzo: string | null;
+    sdiPec: string | null;
+    privato: boolean;
   } | null;
   note: string | null;
   righe: { descrizione: string; quantita: number; prezzoUnitarioCent: number; scontoBp: number }[];

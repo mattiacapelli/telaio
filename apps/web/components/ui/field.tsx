@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useFormState } from "./form-modal";
 
 const control =
-  "min-h-11 w-full rounded-2xl border border-grey-2 bg-white/70 px-4 text-sm text-ink placeholder:text-muted focus-visible:border-ink";
+  "h-[46px] w-full rounded-[14px] border border-ink/16 bg-white/75 px-3.5 text-[15px] text-ink placeholder:text-muted focus-visible:border-ink";
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(control, className)} {...props} />;
@@ -15,7 +15,7 @@ export function Textarea({
   className,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn(control, "min-h-24 py-3", className)} {...props} />;
+  return <textarea className={cn(control, "h-auto min-h-24 py-3", className)} {...props} />;
 }
 
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -41,8 +41,8 @@ export function Field({
   const state = useFormState();
   const error = errorProp ?? (name ? state.errors?.[name] : undefined);
   return (
-    <label className={cn("flex flex-col gap-1.5", className)}>
-      <span className="text-[13px] font-medium text-ink-2">{label}</span>
+    <label className={cn("flex flex-col gap-2", className)}>
+      <span className="text-[13px] leading-tight font-medium text-ink-2">{label}</span>
       {children}
       {hint && !error && <span className="text-xs text-muted">{hint}</span>}
       {error && (

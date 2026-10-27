@@ -4,16 +4,16 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border px-[22px] text-sm leading-none font-medium whitespace-nowrap transition-[background-color,color,transform] duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
   {
     variants: {
       variant: {
-        primary: "bg-ink text-paper hover:bg-ink-2",
-        ghost: "border border-grey-2 bg-transparent text-ink hover:bg-white/60",
-        glass: "glass-pill text-ink hover:bg-white/80",
-        danger: "bg-orange text-white hover:bg-orange-2",
+        primary: "border-ink bg-ink text-paper hover:-translate-y-0.5",
+        ghost: "border-transparent bg-transparent text-ink hover:bg-ink hover:text-paper",
+        glass: "border-ink/22 bg-white/55 text-ink hover:bg-ink hover:text-paper",
+        danger: "border-orange bg-orange text-white hover:bg-orange-2",
       },
-      size: { default: "", sm: "px-4 text-[13px]", icon: "w-11 px-0" },
+      size: { default: "", sm: "min-h-10 px-4 text-[13px]", icon: "w-11 px-0" },
     },
     defaultVariants: { variant: "primary", size: "default" },
   },

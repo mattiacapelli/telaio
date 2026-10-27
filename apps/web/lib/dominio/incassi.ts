@@ -40,6 +40,7 @@ export async function registraIncasso(db: Database, input: RegistraIncassoInput)
     let ragioneSocialeId: string | null = conto.ragioneSocialeId;
     let clienteRefId: string | null = null;
     let fatturaId = dati.fatturaId ?? null;
+    let rataId = dati.rataId ?? null;
 
     if (dati.rataId) {
       const [r] = await tx.select().from(rate).where(eq(rate.id, dati.rataId)).for("update");
@@ -55,6 +56,8 @@ export async function registraIncasso(db: Database, input: RegistraIncassoInput)
       if (f.stato === "bozza") throw new Error("La fattura non è ancora emessa");
       ragioneSocialeId = f.ragioneSocialeId;
       clienteRefId ??= f.clienteRefId;
+      // un incasso sulla fattura salda anche la sua rata nello scadenzario
+      rataId ??= f.rataId;
     }
 
     const [incasso] = await tx
@@ -63,7 +66,7 @@ export async function registraIncasso(db: Database, input: RegistraIncassoInput)
         contoId: dati.contoId,
         ragioneSocialeId,
         clienteRefId,
-        rataId: dati.rataId ?? null,
+        rataId,
         fatturaId,
         data: dati.data,
         importoCent: dati.importoCent,
@@ -83,12 +86,12 @@ export async function registraIncasso(db: Database, input: RegistraIncassoInput)
       incassoId: incasso.id,
     });
 
-    if (dati.rataId) {
+    if (rataId) {
       const [{ tot } = { tot: 0 }] = await tx
         .select({ tot: sql<number>`coalesce(sum(${incassi.importoCent}),0)::int` })
         .from(incassi)
-        .where(and(eq(incassi.rataId, dati.rataId), isNull(incassi.deletedAt)));
-      const [r] = await tx.select().from(rate).where(eq(rate.id, dati.rataId));
+        .where(and(eq(incassi.rataId, rataId), isNull(incassi.deletedAt)));
+      const [r] = await tx.select().from(rate).where(eq(rate.id, rataId));
       if (r)
         await tx
           .update(rate)

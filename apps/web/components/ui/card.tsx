@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("glass-card p-5 sm:p-6", className)} {...props} />;
+  return <div className={cn("glass-card p-5 sm:p-7", className)} {...props} />;
 }
 
 export function InkPanel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("ink-panel p-5 sm:p-6", className)} {...props} />;
+  return <div className={cn("ink-panel p-5 sm:p-7", className)} {...props} />;
 }
 
 export function EmptyState({

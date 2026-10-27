@@ -24,7 +24,7 @@ export default async function ClientiPage({
   return (
     <>
       <PageHeader
-        numero="01"
+        numero="02"
         sezione="Commerciale"
         titolo="Clienti"
         descrizione="Le anagrafiche arrivano da Twenty CRM e non vengono duplicate."

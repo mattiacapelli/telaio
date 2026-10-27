@@ -12,18 +12,24 @@ export function PageHeader({
   azione?: React.ReactNode;
 }) {
   return (
-    <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div>
+    <section className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-end gap-6">
+      <div className="flex flex-col gap-3.5">
         <p className="eyebrow">
           {numero ? `${numero} — ` : ""}
           {sezione}
         </p>
-        <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+        <h1 className="font-display text-[clamp(2.4rem,4.4vw,3.8rem)] leading-[1.04] font-medium tracking-[-0.032em]">
           {titolo}
         </h1>
-        {descrizione && <p className="mt-2 max-w-2xl text-muted">{descrizione}</p>}
       </div>
-      {azione}
-    </header>
+      {(descrizione || azione) && (
+        <div className="flex flex-col items-start gap-4">
+          {descrizione && (
+            <p className="max-w-[46ch] text-base leading-[1.7] text-ink-2">{descrizione}</p>
+          )}
+          {azione}
+        </div>
+      )}
+    </section>
   );
 }

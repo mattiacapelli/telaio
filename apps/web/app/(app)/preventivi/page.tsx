@@ -23,7 +23,7 @@ export default async function PreventiviPage() {
   return (
     <>
       <PageHeader
-        numero="02"
+        numero="03"
         sezione="Commerciale"
         titolo="Preventivi"
         descrizione="Bozze, inviati, accettati. Si creano dal configuratore."

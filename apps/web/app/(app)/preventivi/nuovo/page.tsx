@@ -5,7 +5,7 @@ export const metadata = { title: "Nuovo preventivo" };
 export default function Page() {
   return (
     <StubPage
-      numero="02"
+      numero="03"
       sezione="Commerciale"
       titolo="Nuovo preventivo"
       descrizione="Parti dal configuratore per scegliere base e moduli."

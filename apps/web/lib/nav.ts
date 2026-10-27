@@ -8,11 +8,11 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
   {
     titolo: "Commerciale",
     voci: [
-      { numero: "01", titolo: "Clienti", href: "/clienti" },
-      { numero: "02", titolo: "Preventivi", href: "/preventivi" },
-      { numero: "03", titolo: "Configuratore", href: "/configuratore" },
-      { numero: "04", titolo: "Listini", href: "/listini" },
-      { numero: "05", titolo: "Azioni in attesa", href: "/azioni-in-attesa" },
+      { numero: "01", titolo: "Dashboard", href: "/" },
+      { numero: "02", titolo: "Clienti", href: "/clienti" },
+      { numero: "03", titolo: "Preventivi", href: "/preventivi" },
+      { numero: "04", titolo: "Configuratore", href: "/configuratore" },
+      { numero: "05", titolo: "Listini", href: "/listini" },
     ],
   },
   {
@@ -30,19 +30,22 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
     titolo: "Analisi",
     voci: [
       { numero: "12", titolo: "Cash flow", href: "/cash-flow" },
-      { numero: "13", titolo: "Report", href: "/report" },
+      { numero: "13", titolo: "Report ed export", href: "/report" },
     ],
   },
   {
     titolo: "Sistema",
-    voci: [{ numero: "14", titolo: "Impostazioni", href: "/impostazioni/ragioni-sociali" }],
+    voci: [
+      { numero: "14", titolo: "Impostazioni", href: "/impostazioni/ragioni-sociali" },
+      { numero: "15", titolo: "Azioni in attesa", href: "/azioni-in-attesa" },
+    ],
   },
 ];
 
 export const AZIONI_PRINCIPALI: Record<string, { label: string; href: string }> = {
   "/preventivi": { label: "Nuovo preventivo", href: "/configuratore" },
   "/configuratore": { label: "Nuovo preventivo", href: "/configuratore" },
-  "/fatture": { label: "Nuova fattura", href: "/fatture" },
+  "/fatture": { label: "Nuova fattura", href: "/fatture/nuova" },
   "/incassi": { label: "Registra incasso", href: "/incassi" },
   "/abbonamenti": { label: "Nuovo abbonamento", href: "/abbonamenti" },
 };

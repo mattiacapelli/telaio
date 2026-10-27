@@ -45,7 +45,7 @@ export default async function ListiniPage() {
   return (
     <>
       <PageHeader
-        numero="04"
+        numero="05"
         sezione="Commerciale"
         titolo="Listini"
         descrizione="Consultazione dei listini. Si modificano in Impostazioni."

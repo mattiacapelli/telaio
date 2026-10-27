@@ -34,7 +34,7 @@ export default async function AzioniInAttesaPage() {
   return (
     <>
       <PageHeader
-        numero="05"
+        numero="15"
         sezione="Commerciale"
         titolo="Azioni in attesa"
         descrizione="Quello che un assistente AI propone di fare. Nulla viene eseguito finché non confermi."

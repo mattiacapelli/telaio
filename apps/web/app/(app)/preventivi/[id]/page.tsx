@@ -53,7 +53,7 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
   return (
     <>
       <PageHeader
-        numero="02"
+        numero="03"
         sezione="Preventivi"
         titolo={p.oggetto}
         descrizione={`${(p.snapshot.emittente as { nome?: string }).nome ?? ""} · ${cliente ?? "cliente da assegnare"}`}

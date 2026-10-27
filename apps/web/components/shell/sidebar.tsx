@@ -8,11 +8,18 @@ import { cn } from "@/lib/utils";
 export function SidebarNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Navigazione principale" className="mt-6 flex flex-col gap-6">
-      {GRUPPI_NAV.map((gruppo) => (
+    <nav aria-label="Navigazione principale" className="flex flex-col">
+      {GRUPPI_NAV.map((gruppo, i) => (
         <div key={gruppo.titolo}>
-          <p className="eyebrow mb-2 px-3">{gruppo.titolo}</p>
-          <ul className="flex flex-col gap-0.5">
+          <p
+            className={cn(
+              "border-b border-ink/14 pr-1 pb-2.5 pl-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted",
+              i === 0 ? "pt-0" : "pt-5.5",
+            )}
+          >
+            {gruppo.titolo}
+          </p>
+          <ul>
             {gruppo.voci.map((voce) => {
               const attiva =
                 pathname === voce.href ||
@@ -24,12 +31,18 @@ export function SidebarNav() {
                     href={voce.href}
                     aria-current={attiva ? "page" : undefined}
                     className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-full px-3 text-sm transition-colors",
-                      attiva ? "glass-pill font-semibold text-ink" : "text-ink-2 hover:bg-white/50",
+                      "flex items-baseline gap-3.5 border-b border-ink/8 px-1 py-[11px] text-[15px] leading-tight transition-colors",
+                      attiva ? "font-semibold text-ink" : "font-medium text-ink-2 hover:text-ink",
                     )}
                   >
-                    <span className="w-6 text-xs tabular-nums text-muted">{voce.numero}</span>
+                    <span className="w-5 text-xs font-medium text-muted">{voce.numero}</span>
                     {voce.titolo}
+                    {attiva && (
+                      <span
+                        aria-hidden
+                        className="ml-auto size-[7px] self-center rounded-full bg-ink"
+                      />
+                    )}
                   </Link>
                 </li>
               );
