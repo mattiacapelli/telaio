@@ -68,6 +68,13 @@ docs/           architettura, dominio, decisioni
 - **Job una tantum**: `pnpm --filter @telaio/worker job <genera-rate|solleciti|sync-twenty|consegna-webhook|backup>`. Il backup richiede `pg_dump` (nell'immagine Docker c'è già).
 - **Export**: `/api/export/commercialista?tipo=fatture|prima-nota&p=mese|trimestre|anno` (CSV), disponibile da Report e da Impostazioni → Backup ed export.
 
+## PWA
+
+Telaio si installa come app dal menu dell'account (su iPhone: Condividi → Aggiungi alla schermata
+Home). Il Service Worker è attivo solo in produzione e mette in cache soltanto risorse statiche
+pubbliche; offline non si lavora. Configurazione, icone, compatibilità e limiti: [docs/pwa.md](docs/pwa.md).
+Per cambiare il logo: sostituire `apps/web/public/icons/logo.png` e lanciare `pnpm --filter @telaio/web icone`.
+
 ## Docker
 
 Un solo `Dockerfile` (multi-stage) per web, worker e migrazioni: cambia solo il comando.

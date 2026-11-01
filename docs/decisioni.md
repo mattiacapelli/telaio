@@ -55,3 +55,10 @@ Una riga ciascuna: scelta — perché.
 - Il configuratore rapido è stato assorbito dall'editor del preventivo (`/preventivi/nuovo`, con «Copia riepilogo»); `/configuratore` reindirizza lì. Stesse funzioni, un solo posto.
 - Menu laterale comprimibile (stato in un cookie, letto lato server per non lampeggiare) e navigazione mobile in pannello laterale; il titolo e le azioni di ogni pagina stanno nella testata della pagina, non più in una barra a parte.
 - Porte dei servizi di sviluppo spostate (Postgres 5433, Redis 6380, Mailpit 1026/8026) per non andare in conflitto con altri progetti che usano le porte standard sulla stessa macchina; dentro la rete Docker le porte restano quelle di sempre.
+- PWA a fasi, con una regola di fondo: il Service Worker non memorizza mai pagine, API o dati autenticati, solo risorse statiche pubbliche. Offline si vede una pagina statica e i moduli vengono bloccati; nessun lavoro offline. Dettagli e compatibilità in `docs/pwa.md`.
+- Service Worker scritto a mano (nessuna libreria), registrato solo in produzione; aggiornamenti attivati solo dall'utente, con conferma se ci sono moduli modificati. Cache svuotate a login e logout.
+- Web Push rimandato del tutto (niente dipendenze, tabelle o chiavi VAPID per ora).
+- Logo definitivo da immagine fornita (`public/icons/logo.png`); le icone si generano con lo script `icone`.
+- Tema scuro con selettore Sistema/Chiaro/Scuro nel menu account (scelta in localStorage, script iniziale contro il lampo); le superfici invertite usano il token `on-fg`.
+- Badge sull'icona = azioni in attesa; scorciatoie `G` + lettera e `?` (nessuna agisce sui dati); da offline l'invio dei moduli è bloccato lato client con un avviso.
+- Verifiche reali solo su Chromium; Safari (macOS e iOS), Edge e Chrome Android non sono stati provati direttamente.
