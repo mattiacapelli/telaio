@@ -7,7 +7,7 @@ export const metadata = { title: "Accedi" };
 export default async function LoginPage() {
   if (await getSession()) redirect("/");
   return (
-    <main className="grid min-h-dvh place-items-center bg-subtle px-4 py-10">
+    <main className="grid min-h-dvh place-items-center bg-subtle px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div className="flex w-full max-w-sm flex-col items-center gap-6">
         <div className="flex items-center gap-2">
           <span className="grid size-7 place-items-center rounded-md bg-fg text-sm font-semibold text-on-fg">

@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const inAttesa = coda?.n ?? 0;
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-surface">
+    <div className="flex h-dvh overflow-hidden bg-surface pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
       <Sidebar
         utente={utente}
         inAttesa={inAttesa}

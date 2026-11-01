@@ -97,7 +97,7 @@ export function AggiornamentoPwa() {
   return (
     <div
       role="status"
-      className="fixed bottom-4 left-4 z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-lg border border-line bg-surface p-3 shadow-pop animate-[toast-in_180ms_ease-out]"
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-lg border border-line bg-surface p-3 shadow-pop animate-[toast-in_180ms_ease-out]"
     >
       <p className="text-sm font-medium text-fg">È disponibile un aggiornamento di Telaio.</p>
       {conferma ? (

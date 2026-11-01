@@ -100,7 +100,7 @@ export function DrawerContent({
       <Overlay />
       <D.Content
         className={cn(
-          "fixed inset-y-0 z-50 flex w-full max-w-md flex-col bg-surface shadow-pop",
+          "fixed inset-y-0 z-50 flex w-full max-w-md flex-col bg-surface pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-pop",
           sinistra
             ? "left-0 max-w-72 border-r border-line data-[state=open]:animate-[slide-in-left_180ms_ease-out]"
             : "right-0 border-l border-line data-[state=open]:animate-[slide-in-right_180ms_ease-out]",

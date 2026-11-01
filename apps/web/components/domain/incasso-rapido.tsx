@@ -91,7 +91,7 @@ export function IncassoRapido({
   }
 
   return (
-    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col gap-3 overflow-hidden bg-surface px-4 pt-5 pb-4">
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col gap-3 overflow-hidden bg-surface px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="flex items-center justify-between">
         <div className="flex flex-col leading-tight">
           <span className="text-xs text-fg-3">Incasso al volo</span>

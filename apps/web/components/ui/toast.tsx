@@ -57,7 +57,7 @@ export function Toaster() {
     () => VUOTO,
   );
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+    <div className="pointer-events-none fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
       {lista.map((n) => {
         const Icona = ICONE[n.esito];
         return (
