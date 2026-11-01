@@ -54,7 +54,6 @@ export function LoginForm({ inizia2fa = false }: { inizia2fa?: boolean }) {
     <form action={accedi} className="flex w-full max-w-sm flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Accedi a Telaio</h1>
-        <p className="text-sm text-fg-2">Il gestionale commerciale. Accesso riservato.</p>
       </div>
       {richiede2fa ? (
         <>
