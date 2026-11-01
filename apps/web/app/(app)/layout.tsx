@@ -1,7 +1,9 @@
 import { eq, getDb, pendingActions, sql } from "@telaio/db";
 import { cookies } from "next/headers";
+import { BadgeApp } from "@/components/pwa/badge-app";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { Header } from "@/components/shell/header";
+import { Scorciatoie } from "@/components/shell/scorciatoie";
 import { Sidebar } from "@/components/shell/sidebar";
 import { requireSession } from "@/lib/session";
 
@@ -33,6 +35,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <CommandPalette />
+      <Scorciatoie />
+      <BadgeApp conteggio={inAttesa} />
     </div>
   );
 }
