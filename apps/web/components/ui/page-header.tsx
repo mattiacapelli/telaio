@@ -1,88 +1,36 @@
 /**
- * Testata di pagina del mockup: eyebrow + titolo a sinistra; a destra un paragrafo
- * (`descrizione`) oppure un blocco libero (`destra`, per esempio i filtri a chip).
+ * Testata di pagina: titolo e descrizione a sinistra, azioni a destra.
+ * `numero`, `sezione`, `azione` e `destra` sono accettati per le pagine non ancora migrate.
  */
 export function PageHeader({
-  numero,
-  sezione,
   titolo,
   descrizione,
-  destra,
+  azioni,
+  stato,
   azione,
+  destra,
 }: {
-  numero?: string;
-  sezione: string;
   titolo: string;
   descrizione?: string;
-  destra?: React.ReactNode;
+  azioni?: React.ReactNode;
+  /** etichetta accanto al titolo (per esempio lo stato di un documento) */
+  stato?: React.ReactNode;
+  numero?: string;
+  sezione?: string;
   azione?: React.ReactNode;
+  destra?: React.ReactNode;
 }) {
-  const titoloEl = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <span className="eb">
-        {numero ? `${numero} — ` : ""}
-        {sezione}
-      </span>
-      <h1
-        className="d num"
-        style={{
-          margin: 0,
-          fontWeight: 500,
-          fontSize: "clamp(2.4rem, 4.4vw, 3.8rem)",
-          lineHeight: 1.04,
-          letterSpacing: "-.032em",
-        }}
-      >
-        {titolo}
-      </h1>
-    </div>
-  );
-  if (destra) {
-    return (
-      <section
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 24,
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-        }}
-      >
-        {titoloEl}
-        {destra}
-      </section>
-    );
-  }
+  const laterale = azioni ?? azione ?? destra;
   return (
-    <section
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-        gap: 24,
-        alignItems: "end",
-      }}
-    >
-      {titoloEl}
-      {(descrizione || azione) && (
-        <div
-          style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 }}
-        >
-          {descrizione && (
-            <p
-              style={{
-                margin: 0,
-                maxWidth: "46ch",
-                fontSize: 16,
-                lineHeight: 1.7,
-                color: "#3a372f",
-              }}
-            >
-              {descrizione}
-            </p>
-          )}
-          {azione}
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">{titolo}</h1>
+          {stato}
         </div>
-      )}
-    </section>
+        {descrizione && <p className="mt-1 max-w-2xl text-sm text-fg-2">{descrizione}</p>}
+      </div>
+      {laterale && <div className="flex flex-wrap items-center gap-2">{laterale}</div>}
+    </div>
   );
 }
