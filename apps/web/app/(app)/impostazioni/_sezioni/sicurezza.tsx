@@ -10,16 +10,18 @@ export function SezioneSicurezza({
   dueFattori,
   passkey,
   sessioni,
+  passwordMinima,
 }: {
   nome: string;
   email: string;
   dueFattori: boolean;
   passkey: PasskeyRiga[];
   sessioni: SessioneRiga[];
+  passwordMinima: number;
 }) {
   return (
     <>
-      <Profilo nome={nome} email={email} />
+      <Profilo nome={nome} email={email} passwordMinima={passwordMinima} />
       <DueFattori attivo={dueFattori} />
       <Passkey elenco={passkey} />
       <Sessioni elenco={sessioni} />

@@ -10,7 +10,15 @@ import { authClient } from "@/lib/auth-client";
 import { alInvio, messaggioErrore } from "./errori";
 
 /** Nome e password dell'utente. L'email è l'identità di accesso e non si cambia da qui. */
-export function Profilo({ nome, email }: { nome: string; email: string }) {
+export function Profilo({
+  nome,
+  email,
+  passwordMinima = 8,
+}: {
+  nome: string;
+  email: string;
+  passwordMinima?: number;
+}) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState(false);
   const [errorePassword, setErrorePassword] = useState<string | null>(null);
@@ -30,8 +38,8 @@ export function Profilo({ nome, email }: { nome: string; email: string }) {
     setErrorePassword(null);
     const corrente = String(formData.get("corrente"));
     const nuova = String(formData.get("nuova"));
-    if (nuova.length < 8)
-      return setErrorePassword("La nuova password deve avere almeno 8 caratteri");
+    if (nuova.length < passwordMinima)
+      return setErrorePassword(`La nuova password deve avere almeno ${passwordMinima} caratteri`);
     if (nuova !== String(formData.get("conferma")))
       return setErrorePassword("Le due password nuove non coincidono");
     setInCorso(true);
@@ -83,7 +91,7 @@ export function Profilo({ nome, email }: { nome: string; email: string }) {
               name="nuova"
               type="password"
               required
-              minLength={8}
+              minLength={passwordMinima}
               autoComplete="new-password"
             />
           </Field>

@@ -8,7 +8,13 @@ import { Field, Input } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { pulisciCache } from "@/lib/pwa";
 
-export function LoginForm({ inizia2fa = false }: { inizia2fa?: boolean }) {
+export function LoginForm({
+  inizia2fa = false,
+  dopoLogin = "/",
+}: {
+  inizia2fa?: boolean;
+  dopoLogin?: string;
+}) {
   const router = useRouter();
   const [errore, setErrore] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -26,7 +32,7 @@ export function LoginForm({ inizia2fa = false }: { inizia2fa?: boolean }) {
           : await authClient.twoFactor.verifyTotp({ code: codice.replace(/\s/g, "") });
         if (error) return setErrore("Codice non valido");
         await pulisciCache();
-        return router.replace("/");
+        return router.replace(dopoLogin);
       }
       const { data, error } = await authClient.signIn.email({
         email: String(formData.get("email")),
@@ -36,7 +42,7 @@ export function LoginForm({ inizia2fa = false }: { inizia2fa?: boolean }) {
       if (data && "twoFactorRedirect" in data && data.twoFactorRedirect)
         return setRichiede2fa(true);
       await pulisciCache();
-      router.replace("/");
+      router.replace(dopoLogin);
     } finally {
       setPending(false);
     }
@@ -47,7 +53,7 @@ export function LoginForm({ inizia2fa = false }: { inizia2fa?: boolean }) {
     const { error } = await authClient.signIn.passkey();
     if (error) return setErrore("Accesso con passkey non riuscito");
     await pulisciCache();
-    router.replace("/");
+    router.replace(dopoLogin);
   }
 
   return (

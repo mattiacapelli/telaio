@@ -23,7 +23,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { auth } from "@/lib/auth";
+import { auth, passwordMinima } from "@/lib/auth";
 import { SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
 import { requireSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -120,6 +120,7 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
       <SezioneSicurezza
         nome={user.name}
         email={user.email}
+        passwordMinima={await passwordMinima()}
         dueFattori={!!user.twoFactorEnabled}
         passkey={passkeys.map((p) => ({
           id: p.id,
