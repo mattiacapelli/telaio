@@ -62,3 +62,6 @@ Una riga ciascuna: scelta — perché.
 - Tema scuro con selettore Sistema/Chiaro/Scuro nel menu account (scelta in localStorage, script iniziale contro il lampo); le superfici invertite usano il token `on-fg`.
 - Badge sull'icona = azioni in attesa; scorciatoie `G` + lettera e `?` (nessuna agisce sui dati); da offline l'invio dei moduli è bloccato lato client con un avviso.
 - Verifiche reali solo su Chromium; Safari (macOS e iOS), Edge e Chrome Android non sono stati provati direttamente.
+- Profilo e sicurezza (`/impostazioni/sicurezza`) sul backend Better Auth già presente: nome, cambio password, verifica in due passaggi (TOTP con QR e chiave manuale, 10 codici di recupero), passkey (aggiungi, rinomina, elimina) e dispositivi connessi. Ogni modifica a 2FA chiede la password. Nuova dipendenza `qrcode` per il QR, generato nel browser.
+- I moduli di questa sezione usano `onSubmit` e non `action=`: React 19 svuota i campi dopo ogni invio, anche in caso d'errore.
+- Il login con 2FA ora funziona dall'interfaccia: dopo la password il client rimanda a `/login?2fa=1` e il form riparte da lì; accetta anche un codice di recupero.

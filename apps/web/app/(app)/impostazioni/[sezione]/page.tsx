@@ -18,11 +18,14 @@ import {
   webhooks,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { auth } from "@/lib/auth";
 import { SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
+import { requireSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { SezioneApi } from "../_sezioni/api";
 import { SezioneDati } from "../_sezioni/dati";
@@ -30,6 +33,7 @@ import { SezioneIva } from "../_sezioni/iva";
 import { SezioneListini } from "../_sezioni/listini";
 import { SezioneMcp } from "../_sezioni/mcp";
 import { SezioneRagioniSociali } from "../_sezioni/ragioni-sociali";
+import { SezioneSicurezza } from "../_sezioni/sicurezza";
 import { SezioneTwenty } from "../_sezioni/twenty";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +45,7 @@ const DESCRIZIONI: Record<string, string> = {
   mcp: "Server MCP per gli assistenti AI: strumenti attivi e conferma delle scritture.",
   api: "Chiavi API, permessi e webhook in uscita.",
   twenty: "Stato del collegamento al CRM e sincronizzazione dei clienti.",
+  sicurezza: "Profilo, password, verifica in due passaggi, passkey e dispositivi connessi.",
   dati: "Backup automatico del database ed export dei dati contabili.",
 };
 
@@ -51,7 +56,6 @@ const STUB: Record<string, string> = {
   email: "Mittenti e modelli per l'invio di preventivi, fatture e solleciti.",
 
   pagamenti: "Collegamento a Stripe per gli incassi con carta.",
-  sicurezza: "Profilo, password, passkey e autenticazione a due fattori (TOTP).",
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ sezione: string }> }) {
@@ -105,6 +109,32 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
       (righe.find((r) => r.chiave === chiave)?.valore ?? {}) as Record<string, boolean>;
     contenuto = (
       <SezioneMcp attivi={valore("mcp.strumenti")} approvazioni={valore("mcp.approvazione")} />
+    );
+  } else if (sezione === "sicurezza") {
+    const [{ user, session }, h] = await Promise.all([requireSession(), headers()]);
+    const [passkeys, sessioni] = await Promise.all([
+      auth.api.listPasskeys({ headers: h }),
+      auth.api.listSessions({ headers: h }),
+    ]);
+    contenuto = (
+      <SezioneSicurezza
+        nome={user.name}
+        email={user.email}
+        dueFattori={!!user.twoFactorEnabled}
+        passkey={passkeys.map((p) => ({
+          id: p.id,
+          nome: p.name ?? null,
+          creata: p.createdAt ? new Date(p.createdAt).toISOString() : null,
+          sincronizzata: p.backedUp,
+        }))}
+        sessioni={sessioni.map((x) => ({
+          token: x.token,
+          agente: x.userAgent ?? null,
+          ip: x.ipAddress ?? null,
+          creata: new Date(x.createdAt).toISOString(),
+          corrente: x.token === session.token,
+        }))}
+      />
     );
   } else if (sezione === "dati") {
     contenuto = <SezioneDati anno={new Date().getFullYear()} />;

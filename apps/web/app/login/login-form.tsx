@@ -8,20 +8,22 @@ import { Field, Input } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { pulisciCache } from "@/lib/pwa";
 
-export function LoginForm() {
+export function LoginForm({ inizia2fa = false }: { inizia2fa?: boolean }) {
   const router = useRouter();
   const [errore, setErrore] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [richiede2fa, setRichiede2fa] = useState(false);
+  const [richiede2fa, setRichiede2fa] = useState(inizia2fa);
+  const [recupero, setRecupero] = useState(false);
 
   async function accedi(formData: FormData) {
     setErrore(null);
     setPending(true);
     try {
       if (richiede2fa) {
-        const { error } = await authClient.twoFactor.verifyTotp({
-          code: String(formData.get("codice")),
-        });
+        const codice = String(formData.get("codice")).trim();
+        const { error } = recupero
+          ? await authClient.twoFactor.verifyBackupCode({ code: codice })
+          : await authClient.twoFactor.verifyTotp({ code: codice.replace(/\s/g, "") });
         if (error) return setErrore("Codice non valido");
         await pulisciCache();
         return router.replace("/");
@@ -55,15 +57,28 @@ export function LoginForm() {
         <p className="text-sm text-fg-2">Il gestionale commerciale. Accesso riservato.</p>
       </div>
       {richiede2fa ? (
-        <Field label="Codice di verifica (TOTP)">
-          <Input
-            name="codice"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-            autoFocus
-          />
-        </Field>
+        <>
+          <Field label={recupero ? "Codice di recupero" : "Codice di verifica (TOTP)"}>
+            <Input
+              key={recupero ? "recupero" : "totp"}
+              name="codice"
+              inputMode={recupero ? "text" : "numeric"}
+              autoComplete="one-time-code"
+              required
+              autoFocus
+            />
+          </Field>
+          <button
+            type="button"
+            onClick={() => {
+              setRecupero((r) => !r);
+              setErrore(null);
+            }}
+            className="-mt-2 cursor-pointer self-start text-sm text-fg-2 underline-offset-2 hover:text-fg hover:underline"
+          >
+            {recupero ? "Usa il codice dell'app" : "Usa un codice di recupero"}
+          </button>
+        </>
       ) : (
         <>
           <Field label="Email">
@@ -87,6 +102,20 @@ export function LoginForm() {
       <Button type="submit" disabled={pending} className="h-9">
         {pending ? "Accesso…" : richiede2fa ? "Verifica" : "Accedi"}
       </Button>
+      {richiede2fa && (
+        <button
+          type="button"
+          onClick={() => {
+            setRichiede2fa(false);
+            setRecupero(false);
+            setErrore(null);
+            router.replace("/login");
+          }}
+          className="-mt-2 cursor-pointer text-sm text-fg-2 hover:text-fg hover:underline"
+        >
+          Torna all&apos;accesso
+        </button>
+      )}
       {!richiede2fa && (
         <>
           <div className="flex items-center gap-3 text-xs text-fg-3">
