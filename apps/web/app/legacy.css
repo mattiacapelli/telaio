@@ -91,13 +91,6 @@ body {
 }
 
 /* ───────────── Classi del mockup (design/), riprese 1:1 ───────────── */
-a {
-  color: var(--ink);
-  text-decoration: none;
-}
-button {
-  font-family: inherit;
-}
 .d {
   font-family: var(--font-display);
 }

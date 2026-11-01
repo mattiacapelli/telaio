@@ -1,10 +1,12 @@
 import { formatEuro, formatEuroCompatto } from "@telaio/core";
 import { getDb } from "@telaio/db";
 import Link from "next/link";
-import { TopBar } from "@/components/shell/topbar";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatsRow } from "@/components/ui/stats";
+import { Switch } from "@/components/ui/switch";
 import { calcolaCashFlow } from "@/lib/dominio/cashflow";
-import { st } from "@/lib/utils";
 
 export const metadata = { title: "Cash flow" };
 export const dynamic = "force-dynamic";
@@ -33,224 +35,166 @@ export default async function CashFlowPage({
         `${(i / Math.max(1, serie.length - 1)) * 100},${100 - ((r.saldo - minS) / Math.max(1, maxS - minS)) * 100}`,
     )
     .join(" ");
-  const toggle = (on: boolean) => ({ background: on ? "#17150f" : "#c3bfb4" });
   const href = (p: Record<string, string>) =>
     `/cash-flow?${new URLSearchParams({ pv, prud, ...p })}`;
 
   return (
     <>
-      <TopBar links={[{ label: "Scadenzario", href: "/scadenzario" }]}>
-        <Link href="/report" className="bp sm">
-          Report <span aria-hidden="true">→</span>
-        </Link>
-      </TopBar>
-
       <PageHeader
-        numero="12"
-        sezione="Cash flow previsionale"
-        titolo="Prossimi sei mesi"
-        descrizione="Parte dalla liquidità di oggi, aggiunge le rate e i canoni in scadenza e toglie la spesa media degli ultimi tre mesi. I preventivi in attesa li conti solo se vuoi, pesati al 50%."
+        titolo="Cash flow"
+        descrizione="Parte dalla liquidità di oggi, aggiunge le rate in scadenza e toglie la spesa media degli ultimi tre mesi. I preventivi in attesa li conti solo se vuoi, pesati al 50%."
+        azioni={
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/scadenzario">Scadenzario</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/report">Report</Link>
+            </Button>
+          </>
+        }
       />
 
-      <section
-        className="card"
-        style={st(
-          "display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between;align-items:center;padding:24px 30px",
-        )}
-      >
-        <Link
-          href={href({ pv: conPreventivi ? "0" : "1" })}
-          style={st("display:flex;align-items:center;gap:14px;font-size:14px")}
-        >
-          <span className="sw" aria-hidden style={toggle(conPreventivi)}>
-            <span style={{ left: conPreventivi ? 21 : 3 }} />
-          </span>
-          Includi preventivi in attesa, pesati per probabilità
-        </Link>
-        <Link
-          href={href({ prud: prudente ? "0" : "1" })}
-          style={st("display:flex;align-items:center;gap:14px;font-size:14px")}
-        >
-          <span className="sw" aria-hidden style={toggle(prudente)}>
-            <span style={{ left: prudente ? 21 : 3 }} />
-          </span>
-          Scenario prudente: incassi in ritardo di un mese
-        </Link>
-      </section>
+      <Card className="flex flex-wrap items-center justify-between gap-4">
+        {[
+          {
+            on: conPreventivi,
+            href: href({ pv: conPreventivi ? "0" : "1" }),
+            testo: "Includi preventivi in attesa, pesati per probabilità",
+          },
+          {
+            on: prudente,
+            href: href({ prud: prudente ? "0" : "1" }),
+            testo: "Scenario prudente: incassi in ritardo di un mese",
+          },
+        ].map((o) => (
+          <Link
+            key={o.testo}
+            href={o.href}
+            className="flex items-center gap-3 text-sm"
+            aria-label={o.testo}
+          >
+            <Switch label={o.testo} checked={o.on} tabIndex={-1} className="pointer-events-none" />
+            {o.testo}
+          </Link>
+        ))}
+      </Card>
 
-      <section
-        style={st(
-          "display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;border-top:1px solid rgba(23,21,15,.14);padding-top:24px",
-        )}
-      >
-        <div style={st("display:flex;flex-direction:column;gap:8px")}>
-          <span className="eb">Liquidità oggi</span>
-          <b
-            className="d num"
-            style={st("font-weight:600;font-size:32px;letter-spacing:-.02em;line-height:1")}
-          >
-            {formatEuro(liquidita)}
-          </b>
-          <span className="num" style={st("font-size:13px;color:#3a372f")}>
-            {contiAttivi.length} conti
-          </span>
-        </div>
-        <div style={st("display:flex;flex-direction:column;gap:8px")}>
-          <span className="eb">Fra sei mesi</span>
-          <b
-            className="d num"
-            style={st("font-weight:600;font-size:32px;letter-spacing:-.02em;line-height:1")}
-          >
-            {formatEuro(fine)}
-          </b>
-          <span className="num" style={st("font-size:13px;color:#3a372f")}>
-            {fine >= liquidita ? "+" : "−"} {formatEuro(Math.abs(fine - liquidita))} rispetto a oggi
-          </span>
-        </div>
-        <div style={st("display:flex;flex-direction:column;gap:8px")}>
-          <span className="eb">Mese più stretto</span>
-          <b
-            className="d"
-            style={st("font-weight:600;font-size:32px;letter-spacing:-.02em;line-height:1")}
-          >
-            {minimo.lungo}
-          </b>
-          <span className="num" style={st("font-size:13px;color:#3a372f")}>
-            saldo minimo {formatEuroCompatto(minimo.saldo)}
-          </span>
-        </div>
-      </section>
+      <StatsRow
+        dati={[
+          {
+            etichetta: "Liquidità oggi",
+            valore: formatEuro(liquidita),
+            nota: `${contiAttivi.length} conti`,
+          },
+          {
+            etichetta: "Fra sei mesi",
+            valore: formatEuro(fine),
+            nota: `${fine >= liquidita ? "+" : "−"} ${formatEuro(Math.abs(fine - liquidita))} rispetto a oggi`,
+          },
+          {
+            etichetta: "Mese più stretto",
+            valore: minimo.lungo,
+            nota: `saldo minimo ${formatEuroCompatto(minimo.saldo)}`,
+          },
+        ]}
+      />
 
-      <section className="card" style={st("display:flex;flex-direction:column;gap:24px")}>
-        <div
-          style={st(
-            "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px",
-          )}
-        >
-          <h2 className="h2">Entrate e uscite previste</h2>
-          <div style={st("display:flex;flex-wrap:wrap;gap:16px")}>
-            <span className="lg">
-              <i style={{ background: "#17150f" }} />
-              Incassi certi
-            </span>
-            {conPreventivi && (
-              <span className="lg">
-                <i style={{ background: "#2b5ea7" }} />
-                Preventivi pesati
+      <Card>
+        <CardHeader
+          title="Entrate e uscite previste"
+          action={
+            <div className="flex flex-wrap gap-3 text-xs text-fg-2">
+              <span className="inline-flex items-center gap-1.5">
+                <i className="size-2 rounded-sm bg-brand" />
+                Incassi certi
               </span>
-            )}
-            <span className="lg">
-              <i style={{ background: "#b4532a" }} />
-              Uscite stimate
-            </span>
-          </div>
-        </div>
-        <div
-          style={st(
-            "display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:20px;align-items:end;height:260px;border-bottom:1px solid rgba(23,21,15,.14)",
-          )}
-        >
+              {conPreventivi && (
+                <span className="inline-flex items-center gap-1.5">
+                  <i className="size-2 rounded-sm bg-fg-3" />
+                  Preventivi pesati
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5">
+                <i className="size-2 rounded-sm bg-bad" />
+                Uscite stimate
+              </span>
+            </div>
+          }
+        />
+        <div className="grid h-56 grid-cols-6 items-end gap-4 border-b border-line">
           {serie.map((r) => (
-            <div key={r.ym} style={st("display:flex;gap:6px;align-items:flex-end;height:100%")}>
+            <div key={r.ym} className="flex h-full items-end gap-1">
               <div
-                style={{
-                  flex: 1,
-                  height: `${((r.certi + r.pesati) / massimo) * 100}%`,
-                  display: "flex",
-                  flexDirection: "column",
-                  borderRadius: "6px 6px 0 0",
-                  overflow: "hidden",
-                }}
+                className="flex flex-1 flex-col overflow-hidden rounded-t-sm"
+                style={{ height: `${((r.certi + r.pesati) / massimo) * 100}%` }}
               >
-                <div style={{ flex: r.pesati, background: "#2b5ea7" }} />
-                <div style={{ flex: r.certi, background: "#17150f" }} />
+                <div className="bg-fg-3" style={{ flex: r.pesati }} />
+                <div className="bg-brand" style={{ flex: r.certi }} />
               </div>
               <div
-                style={{
-                  flex: 1,
-                  height: `${(r.uscite / massimo) * 100}%`,
-                  background: "#b4532a",
-                  borderRadius: "6px 6px 0 0",
-                }}
+                className="flex-1 rounded-t-sm bg-bad/80"
+                style={{ height: `${(r.uscite / massimo) * 100}%` }}
               />
             </div>
           ))}
         </div>
-        <div
-          style={st(
-            "display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:20px;font-size:13px;color:#3a372f;text-align:center;margin-top:-12px",
-          )}
-        >
+        <div className="mt-2 grid grid-cols-6 gap-4 text-center text-xs text-fg-2">
           {serie.map((r) => (
             <span key={r.ym}>{r.label}</span>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="ink" style={st("display:flex;flex-direction:column;gap:18px")}>
-        <div
-          style={st(
-            "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px",
-          )}
-        >
-          <span className="d" style={st("font-size:22px;font-weight:500;letter-spacing:-.015em")}>
-            Saldo di cassa a fine mese
-          </span>
-          <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
-            somma dei {contiAttivi.length} conti
-          </span>
-        </div>
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          style={{ width: "100%", height: 110 }}
-          aria-hidden
-        >
+      <Card>
+        <CardHeader
+          title="Saldo di cassa a fine mese"
+          description={`Somma dei ${contiAttivi.length} conti`}
+        />
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-24 w-full" aria-hidden>
           <polyline
             points={punti}
             fill="none"
-            stroke="#f4f3f0"
-            strokeWidth="1.5"
+            stroke="var(--brand)"
+            strokeWidth="2"
             vectorEffect="non-scaling-stroke"
           />
         </svg>
-        <div
-          style={st(
-            "display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:20px;text-align:center",
-          )}
-        >
+        <div className="mt-2 grid grid-cols-6 gap-4 text-center">
           {serie.map((r) => (
-            <div key={r.ym} style={st("display:flex;flex-direction:column;gap:4px")}>
-              <span style={st("font-size:12px;color:rgba(244,243,240,.7)")}>{r.label}</span>
-              <b className="num" style={st("font-weight:600;font-size:15px")}>
-                {formatEuroCompatto(r.saldo)}
-              </b>
+            <div key={r.ym} className="flex flex-col leading-tight">
+              <span className="text-xs text-fg-2">{r.label}</span>
+              <b className="text-sm font-medium tabular-nums">{formatEuroCompatto(r.saldo)}</b>
             </div>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-        <h2 className="h2">Dettaglio per mese</h2>
-        <div className="tw">
-          <table className="tbl" style={{ minWidth: 720 }}>
+      <Card className="p-0">
+        <div className="p-4 pb-2">
+          <CardHeader title="Dettaglio per mese" className="mb-0" />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
-              <tr>
-                <th>Mese</th>
-                <th className="r">Incassi certi</th>
-                <th className="r">Preventivi pesati</th>
-                <th className="r">Uscite stimate</th>
-                <th className="r">Saldo fine mese</th>
+              <tr className="border-y border-line bg-subtle text-xs font-medium text-fg-2">
+                <th className="h-8 px-4 text-left">Mese</th>
+                <th className="px-4 text-right">Incassi certi</th>
+                <th className="px-4 text-right">Preventivi pesati</th>
+                <th className="px-4 text-right">Uscite stimate</th>
+                <th className="px-4 text-right">Saldo fine mese</th>
               </tr>
             </thead>
             <tbody>
               {serie.map((r) => (
-                <tr key={r.ym}>
-                  <td style={st("font-weight:600;color:#17150f")}>{r.lungo}</td>
-                  <td className="r num">{formatEuro(r.certi)}</td>
-                  <td className="r num">{conPreventivi ? formatEuro(r.pesati) : "—"}</td>
-                  <td className="r num">− {formatEuro(r.uscite)}</td>
-                  <td className="r num" style={st("font-weight:600;color:#17150f")}>
+                <tr key={r.ym} className="border-b border-line last:border-b-0">
+                  <td className="px-4 py-2 font-medium">{r.lungo}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{formatEuro(r.certi)}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">
+                    {conPreventivi ? formatEuro(r.pesati) : "—"}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums">− {formatEuro(r.uscite)}</td>
+                  <td className="px-4 py-2 text-right font-medium tabular-nums">
                     {formatEuro(r.saldo)}
                   </td>
                 </tr>
@@ -258,11 +202,11 @@ export default async function CashFlowPage({
             </tbody>
           </table>
         </div>
-        <p style={st("margin:0;font-size:13px;color:#6b675c")}>
+        <p className="border-t border-line px-4 py-3 text-xs text-fg-2">
           Le uscite sono la media mensile degli ultimi tre mesi di prima nota; le scadenze fiscali
           non sono ancora incluse.
         </p>
-      </section>
+      </Card>
     </>
   );
 }

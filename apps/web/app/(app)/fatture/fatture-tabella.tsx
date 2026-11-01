@@ -159,11 +159,14 @@ export function FattureTabella({
           id: "pag",
           intestazione: "Pagamento",
           ordina: (r) => r.pagamento,
-          cella: (r) => (
-            <Badge variant={PAGAMENTO[r.pagamento] ?? "neutral"} dot>
-              {r.etichettaPagamento}
-            </Badge>
-          ),
+          cella: (r) =>
+            r.pagamento === "nessuno" ? (
+              <span className="text-fg-3">—</span>
+            ) : (
+              <Badge variant={PAGAMENTO[r.pagamento] ?? "neutral"} dot>
+                {r.etichettaPagamento}
+              </Badge>
+            ),
         },
       ]}
       azioniRiga={(r) => [{ etichetta: "Apri", href: `/fatture/${r.id}`, icona: <ExternalLink /> }]}

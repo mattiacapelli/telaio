@@ -16,15 +16,15 @@ import {
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
 import Link from "next/link";
-import { IncassoModal } from "@/components/domain/incasso-modal";
-import { TopBar } from "@/components/shell/topbar";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { FormModal } from "@/components/ui/form-modal";
 import { PageHeader } from "@/components/ui/page-header";
-import { Tag } from "@/components/ui/tag";
-import { formatData, oggi } from "@/lib/date";
-import { st } from "@/lib/utils";
+import { StatsRow } from "@/components/ui/stats";
+import { oggi } from "@/lib/date";
 import { inviaSollecitoAction, scartaSollecitoAction } from "./actions";
+import { RateTabella, type RigaRata } from "./rate-tabella";
 
 export const metadata = { title: "Scadenzario" };
 export const dynamic = "force-dynamic";
@@ -35,12 +35,7 @@ const LIVELLI = [
   ["Avviso formale", "Email · tono deciso, ultimo livello"],
 ];
 
-export default async function ScadenzarioPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ f?: string }>;
-}) {
-  const { f = "tutte" } = await searchParams;
+export default async function ScadenzarioPage() {
   const db = getDb();
   const dataOggi = oggi();
   const inizioMese = `${dataOggi.slice(0, 7)}-01`;
@@ -105,346 +100,176 @@ export default async function ScadenzarioPage({
     (m, { r }) => Math.max(m, giorniDiRitardo(r.scadenza, dataOggi)),
     0,
   );
-  const mostrate = f === "scadute" ? scadute : f === "prossime" ? prossime : lista;
-  const filtri = [
-    ["tutte", "Tutte", lista.length],
-    ["scadute", "Scadute", scadute.length],
-    ["prossime", "Prossimi 30 gg", prossime.length],
-  ] as const;
   const anteprima = bozze[0];
 
-  const kpi = [
-    {
-      e: "Da incassare",
-      v: formatEuro(somma(lista)),
-      s: `${lista.length} rat${lista.length === 1 ? "a" : "e"}`,
-    },
-    {
-      e: "Scaduto",
-      v: formatEuro(somma(scadute)),
-      s: scadute.length
-        ? `${scadute.length} rat${scadute.length === 1 ? "a" : "e"} · ${maxRitardo} giorni`
-        : "nessuna rata scaduta",
-      warn: true,
-    },
-    {
-      e: "Prossimi 30 giorni",
-      v: formatEuro(somma(prossime)),
-      s: `${prossime.length} rat${prossime.length === 1 ? "a" : "e"}`,
-    },
-    { e: "Solleciti inviati", v: String(inviati[0]?.n ?? 0), s: "questo mese" },
-  ];
+  const righe: RigaRata[] = lista.map((x) => ({
+    id: x.r.id,
+    scadenza: x.r.scadenza,
+    stato: x.r.scadenza < dataOggi ? "scaduta" : "in_arrivo",
+    giorniRitardo: giorniDiRitardo(x.r.scadenza, dataOggi),
+    parziale: x.r.stato === "parziale",
+    cliente: x.cliente,
+    descrizione: x.r.descrizione,
+    emittente: x.emittente,
+    residuoCent: residuo(x),
+    importoCent: x.r.importoCent,
+    solleciti: x.nSoll,
+    bozza: !!x.bozza,
+  }));
 
   return (
     <>
-      <TopBar links={[{ label: "Incassi", href: "/incassi" }]}>
-        <Link href="/cash-flow" className="bp sm">
-          Cash flow <span aria-hidden="true">→</span>
-        </Link>
-      </TopBar>
-
       <PageHeader
-        numero="08"
-        sezione="Scadenzario e solleciti"
-        titolo="Da incassare"
-        descrizione="Rate dei preventivi accettati e canoni in scadenza. I solleciti li prepara il sistema con il mittente e l'IBAN della ragione sociale giusta; li invii tu, dopo averli riletti."
+        titolo="Scadenzario"
+        descrizione="Rate dei preventivi accettati e canoni in scadenza. I solleciti li prepara il sistema; li invii tu, dopo averli riletti."
+        azioni={
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/incassi">Incassi</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/cash-flow">Cash flow</Link>
+            </Button>
+          </>
+        }
+      />
+      <StatsRow
+        dati={[
+          {
+            etichetta: "Da incassare",
+            valore: formatEuro(somma(lista)),
+            nota: `${lista.length} rat${lista.length === 1 ? "a" : "e"}`,
+          },
+          {
+            etichetta: "Scaduto",
+            valore: formatEuro(somma(scadute)),
+            nota: scadute.length
+              ? `${scadute.length} rat${scadute.length === 1 ? "a" : "e"} · ${maxRitardo} giorni`
+              : "nessuna rata scaduta",
+            tono: scadute.length ? "bad" : undefined,
+          },
+          {
+            etichetta: "Prossimi 30 giorni",
+            valore: formatEuro(somma(prossime)),
+            nota: `${prossime.length} rat${prossime.length === 1 ? "a" : "e"}`,
+          },
+          { etichetta: "Solleciti inviati", valore: inviati[0]?.n ?? 0, nota: "questo mese" },
+        ]}
       />
 
-      <section
-        className="card"
-        style={st(
-          "padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))",
-        )}
-      >
-        {kpi.map((k, i) => (
-          <div
-            key={k.e}
-            style={{
-              padding: "24px 26px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              borderRight: i < kpi.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-            }}
-          >
-            <span
-              className="eb"
-              style={k.warn && k.v !== formatEuro(0) ? { color: "#8f3f1d" } : undefined}
-            >
-              {k.e}
-            </span>
-            <b
-              className="d num"
-              style={st("font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1")}
-            >
-              {k.v}
-            </b>
-            <span className="num" style={st("font-size:13px;color:#3a372f")}>
-              {k.s}
-            </span>
-          </div>
-        ))}
-      </section>
-
       {bozze.length > 0 && (
-        <section className="ink" style={st("display:flex;flex-direction:column;gap:6px")}>
-          <div
-            style={st(
-              "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px",
-            )}
-          >
-            <span className="d" style={st("font-size:22px;font-weight:500;letter-spacing:-.015em")}>
-              Solleciti da confermare
-            </span>
-            <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
-              Nessun sollecito parte da solo: rivedi testo e destinatario, poi conferma.
-            </span>
-          </div>
-          {bozze.map(({ s, r, cliente }) => (
-            <div
-              key={s.id}
-              className="todo"
-              style={{ flexWrap: "wrap", justifyContent: "space-between" }}
-            >
-              <div style={st("display:flex;flex-direction:column;gap:4px")}>
-                <span style={{ fontWeight: 600 }}>
-                  {cliente ?? "Cliente"} · {r.descrizione}
-                </span>
-                <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
-                  {giorniDiRitardo(r.scadenza, dataOggi)} giorni di ritardo · livello {s.livello} ·{" "}
-                  {formatEuro(r.importoCent)}
-                </span>
-              </div>
-              <div style={st("display:flex;gap:8px;align-items:center")}>
-                <FormModal
-                  trigger="Rivedi e invia"
-                  triggerVariant="glass"
-                  triggerSize="sm"
-                  title="Rivedi il sollecito"
-                  description="L'email parte solo quando premi «Invia sollecito»."
-                  submitLabel="Invia sollecito"
-                  action={inviaSollecitoAction}
-                >
-                  <input type="hidden" name="id" value={s.id} />
-                  <Field
-                    label="Destinatario"
-                    name="destinatario"
-                    hint={
-                      suggerimenti.get(s.id)
-                        ? undefined
-                        : "Nessun indirizzo trovato su Twenty: inseriscilo a mano"
-                    }
+        <Card>
+          <CardHeader
+            title="Solleciti da confermare"
+            description="Nessun sollecito parte da solo: rivedi testo e destinatario, poi conferma."
+          />
+          <ul className="-mx-2 flex flex-col">
+            {bozze.map(({ s, r, cliente }) => (
+              <li
+                key={s.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-md px-2 py-2.5"
+              >
+                <div className="flex flex-col leading-tight">
+                  <span className="text-sm font-medium">
+                    {cliente ?? "Cliente"} · {r.descrizione}
+                  </span>
+                  <span className="text-xs text-fg-3">
+                    {giorniDiRitardo(r.scadenza, dataOggi)} giorni di ritardo · livello {s.livello}{" "}
+                    · {formatEuro(r.importoCent)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FormModal
+                    trigger="Rivedi e invia"
+                    triggerVariant="secondary"
+                    triggerSize="sm"
+                    title="Rivedi il sollecito"
+                    description="L'email parte solo quando premi «Invia sollecito»."
+                    submitLabel="Invia sollecito"
+                    action={inviaSollecitoAction}
                   >
-                    <Input
+                    <input type="hidden" name="id" value={s.id} />
+                    <Field
+                      label="Destinatario"
                       name="destinatario"
-                      type="email"
-                      required
-                      defaultValue={suggerimenti.get(s.id)}
-                    />
-                  </Field>
-                  <Field label="Oggetto" name="oggetto">
-                    <Input name="oggetto" required defaultValue={s.oggetto ?? ""} />
-                  </Field>
-                  <Field label="Testo" name="corpo">
-                    <Textarea
-                      name="corpo"
-                      required
-                      defaultValue={s.corpo ?? ""}
-                      style={{ minHeight: 224 }}
-                    />
-                  </Field>
-                </FormModal>
-                <form action={scartaSollecitoAction}>
-                  <input type="hidden" name="id" value={s.id} />
-                  <button
-                    type="submit"
-                    style={st(
-                      "min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(244,243,240,.28);background:none;color:rgba(244,243,240,.9);font:500 13px/1 Inter,sans-serif;cursor:pointer",
-                    )}
-                  >
-                    Scarta
-                  </button>
-                </form>
-              </div>
-            </div>
-          ))}
-        </section>
+                      hint={
+                        suggerimenti.get(s.id)
+                          ? undefined
+                          : "Nessun indirizzo trovato su Twenty: inseriscilo a mano"
+                      }
+                    >
+                      <Input
+                        name="destinatario"
+                        type="email"
+                        required
+                        defaultValue={suggerimenti.get(s.id)}
+                      />
+                    </Field>
+                    <Field label="Oggetto" name="oggetto">
+                      <Input name="oggetto" required defaultValue={s.oggetto ?? ""} />
+                    </Field>
+                    <Field label="Testo" name="corpo">
+                      <Textarea
+                        name="corpo"
+                        required
+                        defaultValue={s.corpo ?? ""}
+                        className="min-h-56"
+                      />
+                    </Field>
+                  </FormModal>
+                  <form action={scartaSollecitoAction}>
+                    <input type="hidden" name="id" value={s.id} />
+                    <Button type="submit" variant="ghost" size="sm">
+                      Scarta
+                    </Button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
 
-      <section className="card" style={st("display:flex;flex-direction:column;gap:18px")}>
-        <div
-          style={st(
-            "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px",
-          )}
-        >
-          <h2 className="h2">Rate e scadenze</h2>
-          <div role="group" aria-label="Filtra" style={st("display:flex;flex-wrap:wrap;gap:8px")}>
-            {filtri.map(([id, label, n]) => (
-              <Link
-                key={id}
-                href={`/scadenzario?f=${id}`}
-                className={`chip${f === id ? " on" : ""}`}
-              >
-                {label} <b>{n}</b>
-              </Link>
-            ))}
-          </div>
-        </div>
-        {mostrate.length === 0 ? (
-          <p style={st("margin:0;padding:12px 0;color:#3a372f")}>Nessuna rata con questi filtri.</p>
-        ) : (
-          <div className="tw">
-            <table className="tbl" style={{ minWidth: 900 }}>
-              <thead>
-                <tr>
-                  <th>Scadenza</th>
-                  <th>Cliente · rata</th>
-                  <th>Emittente</th>
-                  <th className="r">Importo</th>
-                  <th>Solleciti</th>
-                  <th>Prossima azione</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mostrate.map((x) => {
-                  const { r, cliente, emittente, nSoll, bozza } = x;
-                  const scaduta = r.scadenza < dataOggi;
-                  const rit = giorniDiRitardo(r.scadenza, dataOggi);
-                  return (
-                    <tr key={r.id}>
-                      <td className="num">
-                        <span style={{ color: scaduta ? "#8f3f1d" : "#17150f", fontWeight: 600 }}>
-                          {formatData(r.scadenza)}
-                        </span>
-                        <span className="sub">
-                          {scaduta
-                            ? `scaduta da ${rit} giorni`
-                            : r.stato === "parziale"
-                              ? "pagata in parte"
-                              : "da incassare"}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={st("font-weight:500;color:#17150f")}>{cliente ?? "—"}</span>
-                        <span className="sub">{r.descrizione}</span>
-                      </td>
-                      <td>{emittente}</td>
-                      <td className="r num" style={st("font-weight:600;color:#17150f")}>
-                        {formatEuro(residuo(x))}
-                        {x.incassato > 0 && (
-                          <span className="sub">su {formatEuro(r.importoCent)}</span>
-                        )}
-                      </td>
-                      <td>
-                        {nSoll > 0 ? (
-                          <Tag tone="orange">
-                            {nSoll} inviat{nSoll === 1 ? "o" : "i"}
-                          </Tag>
-                        ) : (
-                          <span style={{ color: "#6b675c" }}>—</span>
-                        )}
-                      </td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        {bozza ? (
-                          <Tag tone="orange">Bozza da confermare</Tag>
-                        ) : (
-                          <IncassoModal
-                            conti={contiAttivi}
-                            rataId={r.id}
-                            importoCent={residuo(x)}
-                            descrizione={r.descrizione}
-                            trigger="Registra incasso"
-                            triggerVariant="glass"
-                            triggerSize="sm"
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <RateTabella righe={righe} conti={contiAttivi} />
 
-      <section style={st("display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start")}>
-        <div
-          className="card"
-          style={st("flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px")}
-        >
-          <div
-            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-          >
-            <h2 className="h2">Cadenza dei solleciti</h2>
-            <span style={st("font-size:12px;color:#6b675c")}>sempre con tua conferma</span>
-          </div>
-          <div
-            style={st("display:flex;flex-direction:column;border-top:1px solid rgba(23,21,15,.14)")}
-          >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="Cadenza dei solleciti" description="Sempre con la tua conferma" />
+          <ol className="flex flex-col divide-y divide-line text-sm">
             {LIVELLI.slice(0, LIVELLO_MASSIMO).map(([t, d], i) => (
-              <div
-                key={t}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  padding: "14px 0",
-                  borderBottom: i < LIVELLI.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-                }}
-              >
-                <span
-                  className="num"
-                  style={st("flex:none;width:64px;font-size:12px;color:#6b675c")}
-                >
-                  Livello {i + 1}
+              <li key={t} className="flex items-baseline gap-3 py-2">
+                <span className="w-16 shrink-0 text-xs text-fg-3">Livello {i + 1}</span>
+                <span className="flex flex-col leading-tight">
+                  <span className="font-medium">{t}</span>
+                  <span className="text-xs text-fg-2">{d}</span>
                 </span>
-                <div style={st("display:flex;flex-direction:column;gap:2px;flex:1")}>
-                  <span style={st("font-weight:600;font-size:15px")}>{t}</span>
-                  <span style={st("font-size:13px;color:#3a372f")}>{d}</span>
-                </div>
-              </div>
+              </li>
             ))}
-          </div>
-          <p style={st("margin:0;font-size:13px;line-height:1.6;color:#3a372f")}>
-            Il sistema prepara la bozza ogni mattina per le rate scadute; non ne propone un'altra
-            finché ce n'è una in attesa e aspetta {GIORNI_TRA_SOLLECITI} giorni dall&apos;ultimo
-            inviato. I solleciti si fermano appena l&apos;incasso viene registrato.
+          </ol>
+          <p className="mt-3 text-xs text-fg-2">
+            Ogni mattina il sistema prepara la bozza per le rate scadute; non ne propone un'altra
+            finché ce n'è una in attesa e aspetta {GIORNI_TRA_SOLLECITI} giorni dall'ultimo inviato.
+            I solleciti si fermano appena l'incasso viene registrato.
           </p>
-        </div>
-
-        <div
-          className="ink"
-          style={st("flex:1.4 1 420px;min-width:0;display:flex;flex-direction:column;gap:16px")}
-        >
-          <div style={st("display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px")}>
-            <span
-              style={st(
-                "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7)",
-              )}
-            >
-              Anteprima · {anteprima ? `livello ${anteprima.s.livello}` : "ultima bozza"}
-            </span>
-          </div>
-          <div
-            style={st(
-              "background:#f4f3f0;color:#17150f;border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.6",
-            )}
-          >
-            {anteprima ? (
-              <>
-                <b>Oggetto: {anteprima.s.oggetto}</b>
-                <div style={{ whiteSpace: "pre-wrap" }}>{anteprima.s.corpo}</div>
-              </>
-            ) : (
-              <span style={{ color: "#6b675c" }}>
-                Quando una rata scade, la bozza del sollecito compare qui per essere riletta e
-                confermata.
-              </span>
-            )}
-          </div>
-        </div>
-      </section>
+        </Card>
+        <Card>
+          <CardHeader
+            title="Anteprima"
+            description={anteprima ? `Livello ${anteprima.s.livello}` : "Ultima bozza"}
+          />
+          {anteprima ? (
+            <div className="flex flex-col gap-2 rounded-md border border-line bg-subtle p-3 text-sm">
+              <b>Oggetto: {anteprima.s.oggetto}</b>
+              <div className="whitespace-pre-wrap text-fg-2">{anteprima.s.corpo}</div>
+            </div>
+          ) : (
+            <p className="text-sm text-fg-2">
+              Quando una rata scade, la bozza del sollecito compare qui per essere riletta e
+              confermata.
+            </p>
+          )}
+        </Card>
+      </div>
     </>
   );
 }

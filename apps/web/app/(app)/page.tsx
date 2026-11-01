@@ -21,13 +21,14 @@ import {
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
 import Link from "next/link";
-import { TopBar } from "@/components/shell/topbar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { FilterLinks } from "@/components/ui/filter-links";
 import { PageHeader } from "@/components/ui/page-header";
-import { Tag } from "@/components/ui/tag";
-import { formatData, oggi } from "@/lib/date";
+import { StatsRow } from "@/components/ui/stats";
+import { oggi } from "@/lib/date";
 import { saldiConti } from "@/lib/dominio/movimenti";
-import { st } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -47,9 +48,9 @@ const MESI_LUNGHI = [
   "Novembre",
   "Dicembre",
 ];
-const COLORI_CONTO = { bonifico: "#17150f", contante: "#969184", carta: "#2b5ea7" } as const;
-const ETICHETTA_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Credito" } as const;
-const TIPO_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Credito" } as const;
+const COLORI_CONTO = { bonifico: "#3e63dd", contante: "#a0a0a0", carta: "#202124" } as const;
+const ETICHETTA_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Carta" } as const;
+const TIPO_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Carta" } as const;
 
 export default async function Dashboard({
   searchParams,
@@ -257,158 +258,89 @@ export default async function Dashboard({
 
   return (
     <>
-      <TopBar links={[{ label: "Configuratore", href: "/configuratore" }]}>
-        <Link href="/preventivi/nuovo" className="bp sm">
-          Nuovo preventivo <span aria-hidden="true">→</span>
-        </Link>
-      </TopBar>
-
       <PageHeader
-        numero="01"
-        sezione="Dashboard"
         titolo={`${MESI_LUNGHI[mese - 1]} ${anno}`}
-        destra={
-          <div
-            role="group"
-            aria-label="Filtra per emittente"
-            style={st("display:flex;flex-wrap:wrap;gap:8px")}
-          >
-            <Link href="/" className={`chip${em ? "" : " on"}`}>
-              Tutte le ragioni sociali
-            </Link>
-            {emittenti.map((e) => (
-              <Link key={e.id} href={`/?em=${e.id}`} className={`chip${em === e.id ? " on" : ""}`}>
-                {e.nome}
-              </Link>
-            ))}
-          </div>
+        descrizione="Come sta andando lo studio, e cosa richiede attenzione oggi."
+        azioni={
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/configuratore">Configuratore</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/preventivi/nuovo">Nuovo preventivo</Link>
+            </Button>
+          </>
         }
       />
 
-      <section
-        className="card"
-        style={st(
-          "padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))",
-        )}
-      >
-        {kpi.map((k, i) => (
-          <div
-            key={k.e}
-            style={{
-              padding: "26px 28px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-              borderRight: i < kpi.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-            }}
-          >
-            <span className="eb">{k.e}</span>
-            <b
-              className="d num"
-              style={st("font-weight:600;font-size:32px;letter-spacing:-.02em;line-height:1")}
-            >
+      <FilterLinks
+        etichetta="Filtra per ragione sociale"
+        attiva={em ?? ""}
+        voci={[
+          { id: "", label: "Tutte le ragioni sociali", href: "/" },
+          ...emittenti.map((e) => ({ id: e.id, label: e.nome, href: `/?em=${e.id}` })),
+        ]}
+      />
+
+      <StatsRow
+        dati={kpi.map((k) => ({
+          etichetta: k.e,
+          valore: (
+            <>
               {k.v}
-              {k.per && (
-                <span style={st("font-size:15px;color:#6b675c;font-weight:500")}>{k.per}</span>
-              )}
-            </b>
-            {"s" in k && k.s && (
-              <span className="num" style={st("font-size:13px;color:#3a372f")}>
-                {k.s}
-              </span>
-            )}
-            {"link" in k && k.link && (
-              <Link
-                href={k.link.href}
-                style={{
-                  fontSize: 13,
-                  color: "warn" in k.link && k.link.warn ? "#8f3f1d" : "#3a372f",
-                  fontWeight: "warn" in k.link && k.link.warn ? 500 : 400,
-                  textDecoration: "underline",
-                  textUnderlineOffset: 3,
-                }}
-              >
-                {k.link.t}
-              </Link>
-            )}
-          </div>
-        ))}
-      </section>
+              {k.per && <span className="text-sm font-normal text-fg-2">{k.per}</span>}
+            </>
+          ),
+          nota: "s" in k ? k.s : k.link?.t,
+          href: "link" in k ? k.link?.href : undefined,
+          tono: "link" in k && k.link && "warn" in k.link && k.link.warn ? "bad" : undefined,
+        }))}
+      />
 
-      <section
-        className="fx"
-        style={st("display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px")}
-      >
-        <div className="ink" style={st("display:flex;flex-direction:column;gap:6px")}>
-          <span
-            style={st(
-              "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7);margin-bottom:8px",
-            )}
-          >
-            Da sistemare oggi
-          </span>
-          {daSistemare.length === 0 && (
-            <p
-              style={st(
-                "margin:0;font-size:14px;color:rgba(244,243,240,.78);padding:14px 0;border-top:1px solid rgba(244,243,240,.14)",
-              )}
-            >
-              Tutto in regola: niente da sistemare.
-            </p>
-          )}
-          {daSistemare.map((x) => (
-            <Link key={x.t} href={x.href} className="todo" style={{ color: "#f4f3f0" }}>
-              <b>{x.n}</b>
-              <span style={st("flex:1;font-size:14px;line-height:1.5")}>
-                {x.t}
-                <span style={st("display:block;color:rgba(244,243,240,.7);font-size:13px")}>
-                  {x.s}
-                </span>
-              </span>
-              <span aria-hidden="true">→</span>
-            </Link>
-          ))}
-        </div>
-
-        <div
-          className="card"
-          style={st("grid-column:span 2;min-width:0;display:flex;flex-direction:column;gap:24px")}
-        >
-          <div
-            style={st(
-              "display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap",
-            )}
-          >
-            <h2 className="h2">Incassi ultimi 6 mesi</h2>
-            <div style={st("display:flex;gap:16px;font-size:13px;color:#3a372f")}>
-              {(["bonifico", "contante", "carta"] as const).map((t) => (
-                <span key={t} className="lg">
-                  <i style={{ background: COLORI_CONTO[t] }} />
-                  {ETICHETTA_CONTO[t]}
-                </span>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader title="Da sistemare oggi" />
+          {daSistemare.length === 0 ? (
+            <p className="text-sm text-fg-2">Tutto in regola: niente da sistemare.</p>
+          ) : (
+            <ul className="-mx-2 flex flex-col">
+              {daSistemare.map((x) => (
+                <li key={x.t}>
+                  <Link
+                    href={x.href}
+                    className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors duration-150 hover:bg-hover"
+                  >
+                    <Badge variant="warn">{x.n}</Badge>
+                    <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                      <span className="truncate text-sm font-medium">{x.t}</span>
+                      <span className="truncate text-xs text-fg-3">{x.s}</span>
+                    </span>
+                  </Link>
+                </li>
               ))}
-            </div>
-          </div>
-          <div
-            style={st(
-              "display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px;align-items:end;height:220px;border-bottom:1px solid rgba(23,21,15,.14)",
-            )}
-          >
+            </ul>
+          )}
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Incassi ultimi 6 mesi"
+            action={
+              <div className="flex gap-3 text-xs text-fg-2">
+                {(["bonifico", "contante", "carta"] as const).map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1.5">
+                    <i className="size-2 rounded-sm" style={{ background: COLORI_CONTO[t] }} />
+                    {ETICHETTA_CONTO[t]}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+          <div className="grid h-44 grid-cols-6 items-end gap-3 border-b border-line">
             {valori.map((v, i) => (
-              <div
-                key={v.ym}
-                style={st(
-                  "display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:6px",
-                )}
-              >
+              <div key={v.ym} className="flex h-full flex-col justify-end gap-1">
                 <span
-                  className="num"
-                  style={{
-                    fontSize: 12,
-                    color: i === 5 ? "#17150f" : "#3a372f",
-                    fontWeight: i === 5 ? 600 : 400,
-                    textAlign: "center",
-                  }}
+                  className={`text-center text-xs tabular-nums ${i === 5 ? "font-medium text-fg" : "text-fg-2"}`}
                 >
                   {v.tot > 0
                     ? new Intl.NumberFormat("it-IT", { useGrouping: "always" }).format(
@@ -418,13 +350,8 @@ export default async function Dashboard({
                 </span>
                 {v.tot > 0 && (
                   <div
-                    style={{
-                      height: `${Math.max(4, Math.round((v.tot / massimo) * 92))}%`,
-                      display: "flex",
-                      flexDirection: "column",
-                      borderRadius: "8px 8px 0 0",
-                      overflow: "hidden",
-                    }}
+                    className="flex flex-col overflow-hidden rounded-t-sm"
+                    style={{ height: `${Math.max(4, Math.round((v.tot / massimo) * 88))}%` }}
                   >
                     <div style={{ flex: v.carta, background: COLORI_CONTO.carta }} />
                     <div style={{ flex: v.contante, background: COLORI_CONTO.contante }} />
@@ -434,254 +361,168 @@ export default async function Dashboard({
               </div>
             ))}
           </div>
-          <div
-            style={st(
-              "display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px;font-size:12px;color:#6b675c;text-align:center;margin-top:-12px",
-            )}
-          >
+          <div className="mt-2 grid grid-cols-6 gap-3 text-center text-xs text-fg-2">
             {mesi.map((m, i) => (
-              <span key={m.ym} style={i === 5 ? st("color:#17150f;font-weight:600") : undefined}>
+              <span key={m.ym} className={i === 5 ? "font-medium text-fg" : undefined}>
                 {m.label}
               </span>
             ))}
           </div>
-        </div>
-      </section>
+        </Card>
+      </div>
 
-      <section
-        className="fx"
-        style={st("display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px")}
-      >
-        <div
-          className="card"
-          style={st("grid-column:span 2;min-width:0;display:flex;flex-direction:column;gap:18px")}
-        >
-          <div style={st("display:flex;justify-content:space-between;align-items:baseline")}>
-            <h2 className="h2">Preventivi in attesa di risposta</h2>
-            <Link
-              href="/preventivi"
-              style={st("font-size:13px;text-decoration:underline;text-underline-offset:3px")}
-            >
-              Vedi tutti
-            </Link>
-          </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Preventivi in attesa di risposta"
+            action={
+              <Link href="/preventivi" className="text-sm text-fg-2 hover:text-fg">
+                Vedi tutti
+              </Link>
+            }
+          />
           {aperti.length === 0 ? (
-            <p style={st("margin:0;font-size:14px;color:#6b675c")}>
-              Nessun preventivo in attesa di risposta.
-            </p>
+            <p className="text-sm text-fg-2">Nessun preventivo in attesa di risposta.</p>
           ) : (
-            <div className="tw">
-              <table className="tbl" style={{ minWidth: 660 }}>
-                <thead>
-                  <tr>
-                    <th>Numero</th>
-                    <th>Cliente</th>
-                    <th>Emittente</th>
-                    <th className="r">Una tantum</th>
-                    <th className="r">Canone</th>
-                    <th>Stato</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {aperti.slice(0, 4).map(({ p, emittente, cliente, unaTantum, canone }) => {
-                    const regole = p.snapshot.regole as unknown as RegoleFiscali;
-                    const ut = prezzoVisualizzato(unaTantum, regole);
-                    const cn = prezzoVisualizzato(canone, regole);
-                    const giorni = p.validoFino
-                      ? Math.ceil(
-                          (new Date(`${p.validoFino}T00:00:00Z`).getTime() -
-                            new Date(`${dataOggi}T00:00:00Z`).getTime()) /
-                            86400000,
-                        )
-                      : null;
-                    const inScadenza = giorni !== null && giorni <= 7;
-                    return (
-                      <tr key={p.id}>
-                        <td>
-                          <Link href={`/preventivi/${p.id}`} style={{ fontWeight: 600 }}>
-                            {p.numero ?? "Bozza"}
-                          </Link>
-                        </td>
-                        <td>{cliente ?? "—"}</td>
-                        <td>{emittente}</td>
-                        <td className="r num">
-                          {unaTantum > 0 ? (
-                            <>
-                              <span style={st("color:#17150f;font-weight:500")}>
-                                {formatEuro(ut.nettoCent)}
-                              </span>
-                              {ut.lordoCent !== null && (
-                                <span className="sub">{formatEuro(ut.lordoCent)} ivato</span>
-                              )}
-                            </>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="r num">
-                          {canone > 0 ? (
-                            <>
-                              {formatEuro(cn.nettoCent)}/a
-                              {cn.lordoCent !== null && (
-                                <span className="sub">{formatEuro(cn.lordoCent)} ivato</span>
-                              )}
-                            </>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td>
-                          {inScadenza ? (
-                            <span
-                              className="tag"
-                              style={{ borderColor: "rgba(180,83,42,.4)", color: "#8f3f1d" }}
-                            >
-                              <i style={{ background: "#b4532a" }} />
-                              {giorni !== null && giorni < 0 ? "Scaduto" : `Scade tra ${giorni} gg`}
-                            </span>
-                          ) : (
-                            <Tag tone="blue">
-                              {p.stato === "in_revisione" ? "In revisione" : "Inviato"}
-                            </Tag>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ul className="-mx-2 flex flex-col">
+              {aperti.slice(0, 5).map(({ p, emittente, cliente, unaTantum, canone }) => {
+                const regole = p.snapshot.regole as unknown as RegoleFiscali;
+                const ut = prezzoVisualizzato(unaTantum, regole);
+                const cn = prezzoVisualizzato(canone, regole);
+                const giorni = p.validoFino
+                  ? Math.ceil(
+                      (new Date(`${p.validoFino}T00:00:00Z`).getTime() -
+                        new Date(`${dataOggi}T00:00:00Z`).getTime()) /
+                        86400000,
+                    )
+                  : null;
+                const inScadenza = giorni !== null && giorni <= 7;
+                return (
+                  <li key={p.id}>
+                    <Link
+                      href={`/preventivi/${p.id}`}
+                      className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors duration-150 hover:bg-hover"
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                        <span className="truncate text-sm font-medium">
+                          {p.numero ?? "Bozza"} · {cliente ?? "cliente da assegnare"}
+                        </span>
+                        <span className="truncate text-xs text-fg-3">{emittente}</span>
+                      </span>
+                      <span className="hidden text-right text-sm tabular-nums sm:block">
+                        {unaTantum > 0 ? formatEuro(ut.nettoCent) : "—"}
+                        {canone > 0 && (
+                          <span className="block text-xs text-fg-3">
+                            {formatEuro(cn.nettoCent)}/a
+                          </span>
+                        )}
+                      </span>
+                      <Badge variant={inScadenza ? "warn" : "brand"} dot>
+                        {inScadenza
+                          ? giorni !== null && giorni < 0
+                            ? "Scaduto"
+                            : `Scade tra ${giorni} gg`
+                          : p.stato === "in_revisione"
+                            ? "In revisione"
+                            : "Inviato"}
+                      </Badge>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </div>
+        </Card>
 
-        <div className="card" style={st("display:flex;flex-direction:column;gap:18px;min-width:0")}>
-          <div style={st("display:flex;justify-content:space-between;align-items:baseline")}>
-            <h2 className="h2">Saldi per conto</h2>
-            <Link
-              href="/conti"
-              style={st("font-size:13px;text-decoration:underline;text-underline-offset:3px")}
-            >
-              Tutti
-            </Link>
-          </div>
-          <div
-            style={st("display:flex;flex-direction:column;border-top:1px solid rgba(23,21,15,.14)")}
-          >
-            {elencoConti.map((c, i) => (
-              <div
-                key={c.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  padding: "13px 0",
-                  borderBottom:
-                    i < elencoConti.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-                }}
-              >
-                <div style={st("display:flex;flex-direction:column;gap:4px")}>
-                  <span style={st("font-weight:500;font-size:14px")}>{c.nome}</span>
-                  <span style={st("font-size:12px;color:#6b675c")}>
+        <Card>
+          <CardHeader
+            title="Saldi per conto"
+            action={
+              <Link href="/conti" className="text-sm text-fg-2 hover:text-fg">
+                Tutti
+              </Link>
+            }
+          />
+          <ul className="divide-y divide-line">
+            {elencoConti.map((c) => (
+              <li key={c.id} className="flex items-center justify-between gap-3 py-2">
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="truncate text-sm font-medium">{c.nome}</span>
+                  <span className="text-xs text-fg-3">
                     {TIPO_CONTO[c.tipo]}
                     {c.iban ? ` · ••${c.iban.slice(-4)}` : ""}
                   </span>
-                </div>
-                <b className="num" style={st("font-weight:600;font-size:15px")}>
+                </span>
+                <span className="text-sm font-medium tabular-nums">
                   {formatEuroCompatto(saldi.get(c.id) ?? 0)}
-                </b>
-              </div>
+                </span>
+              </li>
             ))}
-          </div>
-        </div>
-      </section>
+          </ul>
+        </Card>
+      </div>
 
-      <section
-        className="fx"
-        style={st("display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px")}
-      >
-        <div
-          className="card"
-          style={st("grid-column:span 2;min-width:0;display:flex;flex-direction:column;gap:18px")}
-        >
-          <div
-            style={st(
-              "display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px",
-            )}
-          >
-            <h2 className="h2">Prossimi incassi</h2>
-            <Link href="/incassi" className="bg sm">
-              Registra incasso
-            </Link>
-          </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Prossimi incassi"
+            action={
+              <Link href="/scadenzario" className="text-sm text-fg-2 hover:text-fg">
+                Scadenzario
+              </Link>
+            }
+          />
           {prossime.length === 0 ? (
-            <p style={st("margin:0;font-size:14px;color:#6b675c")}>Nessun incasso in arrivo.</p>
+            <p className="text-sm text-fg-2">Nessun incasso in arrivo.</p>
           ) : (
-            <div
-              style={st(
-                "display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0;border-top:1px solid rgba(23,21,15,.14)",
-              )}
-            >
+            <div className="grid gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-2">
               {prossime.map(({ r, cliente }) => {
                 const scaduta = r.scadenza < dataOggi;
                 const [, m, g] = r.scadenza.split("-");
                 return (
-                  <div
-                    key={r.id}
-                    style={st("padding:18px 20px 4px 0;display:flex;flex-direction:column;gap:6px")}
-                  >
-                    <span className="eb" style={scaduta ? { color: "#8f3f1d" } : undefined}>
+                  <div key={r.id} className="flex flex-col gap-0.5 bg-surface p-3">
+                    <span className={`text-xs font-medium ${scaduta ? "text-bad" : "text-fg-3"}`}>
                       {scaduta ? "Scaduto · " : ""}
                       {Number(g)} {(MESI[Number(m) - 1] ?? "").toLowerCase()}
                     </span>
-                    <span style={{ fontWeight: 500 }}>{cliente ?? "—"}</span>
-                    <span style={st("font-size:13px;color:#3a372f")}>{r.descrizione}</span>
-                    <b className="num d" style={st("font-weight:600;font-size:22px")}>
+                    <span className="text-sm font-medium">{cliente ?? "—"}</span>
+                    <span className="truncate text-xs text-fg-2">{r.descrizione}</span>
+                    <span className="mt-1 text-base font-semibold tabular-nums">
                       {formatEuro(r.importoCent)}
-                    </b>
+                    </span>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </Card>
 
-        <div className="card" style={st("display:flex;flex-direction:column;gap:16px;min-width:0")}>
-          <div style={st("display:flex;justify-content:space-between;align-items:baseline")}>
-            <h2 className="h2">Pipeline Twenty</h2>
-            <span className="eb" style={{ fontSize: 11 }}>
-              Opportunità
-            </span>
-          </div>
+        <Card>
+          <CardHeader title="Pipeline Twenty" description="Opportunità per fase" />
           {fasi.size === 0 ? (
-            <p style={st("margin:0;font-size:14px;color:#6b675c")}>
-              Nessuna opportunità da Twenty.
-            </p>
+            <p className="text-sm text-fg-2">Nessuna opportunità da Twenty.</p>
           ) : (
-            <div style={st("display:flex;flex-direction:column;gap:13px")}>
+            <div className="flex flex-col gap-3">
               {[...fasi.entries()].map(([fase, f]) => (
-                <div key={fase} style={st("display:flex;flex-direction:column;gap:6px")}>
-                  <div style={st("display:flex;justify-content:space-between;font-size:14px")}>
+                <div key={fase} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-sm">
                     <span>{fase}</span>
-                    <span className="num" style={{ color: "#3a372f" }}>
+                    <span className="text-fg-2 tabular-nums">
                       {f.n} · {formatEuroCompatto(f.tot)}
                     </span>
                   </div>
-                  <div style={st("height:6px;border-radius:6px;background:rgba(23,21,15,.08)")}>
+                  <div className="h-1.5 rounded-full bg-hover">
                     <div
-                      style={{
-                        width: `${Math.max(4, Math.round((f.tot / maxFase) * 100))}%`,
-                        height: "100%",
-                        borderRadius: 6,
-                        background: "#969184",
-                      }}
+                      className="h-full rounded-full bg-brand"
+                      style={{ width: `${Math.max(4, Math.round((f.tot / maxFase) * 100))}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </section>
+        </Card>
+      </div>
     </>
   );
 }

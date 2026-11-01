@@ -15,10 +15,13 @@ import {
   sql,
 } from "@telaio/db";
 import Link from "next/link";
-import { TopBar } from "@/components/shell/topbar";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { FilterLinks } from "@/components/ui/filter-links";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatsRow } from "@/components/ui/stats";
 import { oggi } from "@/lib/date";
 import { intervallo, type Periodo, valorePeriodo } from "@/lib/periodo";
-import { st } from "@/lib/utils";
 
 export const metadata = { title: "Report ed export" };
 export const dynamic = "force-dynamic";
@@ -103,255 +106,140 @@ export default async function ReportPage({
 
   return (
     <>
-      <TopBar links={[{ label: "Cash flow", href: "/cash-flow" }]}>
-        <a href={`/api/export/commercialista?tipo=fatture&p=${p}`} className="bp sm">
-          Export commercialista <span aria-hidden="true">↓</span>
-        </a>
-      </TopBar>
+      <PageHeader
+        titolo="Report ed export"
+        descrizione={`Come stanno andando i conti. Periodo: ${etichetta.toLowerCase()}.`}
+        azioni={
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/cash-flow">Cash flow</Link>
+            </Button>
+            <Button asChild>
+              <a href={`/api/export/commercialista?tipo=fatture&p=${p}`}>Export commercialista</a>
+            </Button>
+          </>
+        }
+      />
 
-      <section
-        style={st(
-          "display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between",
-        )}
-      >
-        <div style={st("display:flex;flex-direction:column;gap:14px")}>
-          <span className="eb">13 — Report ed export · {etichetta}</span>
-          <h1
-            className="d"
-            style={st(
-              "margin:0;font-weight:500;font-size:clamp(2.4rem,4.4vw,3.8rem);line-height:1.04;letter-spacing:-.032em",
-            )}
-          >
-            Come stanno andando
-          </h1>
-        </div>
-        <div role="group" aria-label="Periodo" style={st("display:flex;flex-wrap:wrap;gap:8px")}>
-          {PERIODI.map(([id, l]) => (
-            <Link key={id} href={`/report?p=${id}`} className={`chip${p === id ? " on" : ""}`}>
-              {l}
-            </Link>
-          ))}
-        </div>
-      </section>
+      <FilterLinks
+        etichetta="Periodo"
+        attiva={p}
+        voci={PERIODI.map(([id, l]) => ({ id, label: l, href: `/report?p=${id}` }))}
+      />
 
-      <section
-        style={st(
-          "display:flex;flex-wrap:wrap;gap:clamp(28px,5vw,56px);border-top:1px solid rgba(23,21,15,.14);padding-top:24px",
-        )}
-      >
-        {[
-          [ricavi, "Ricavi netti"],
-          [iva, "IVA fatturata"],
-          [costiTot, "Costi netti"],
-          [margine, "Margine"],
-        ].map(([v, e]) => (
-          <div key={e} style={st("display:flex;flex-direction:column;gap:6px")}>
-            <b
-              className="d num"
-              style={st("font-weight:600;font-size:34px;letter-spacing:-.02em;line-height:1")}
-            >
-              {formatEuroCompatto(v as number)}
-            </b>
-            <span className="eb">{e}</span>
-          </div>
-        ))}
-      </section>
+      <StatsRow
+        dati={[
+          { etichetta: "Ricavi netti", valore: formatEuroCompatto(ricavi) },
+          { etichetta: "IVA fatturata", valore: formatEuroCompatto(iva) },
+          { etichetta: "Costi netti", valore: formatEuroCompatto(costiTot) },
+          {
+            etichetta: "Margine",
+            valore: formatEuroCompatto(margine),
+            nota: ricavi ? `${Math.round((margine / ricavi) * 100)}% dei ricavi` : undefined,
+          },
+        ]}
+      />
 
-      <section
-        style={st("display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px")}
-      >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {emittenti.map((e) => {
           const r = perEmittente.find((x) => x.id === e.id);
           const c = costi.find((x) => x.id === e.id)?.tot ?? 0;
           const ric = r?.ricavi ?? 0;
           const m = ric - c;
           return (
-            <div
-              key={e.id}
-              className="card"
-              style={st("display:flex;flex-direction:column;gap:14px;padding:24px")}
-            >
-              <div
-                style={st(
-                  "display:flex;justify-content:space-between;align-items:baseline;gap:12px",
-                )}
-              >
-                <span
-                  className="d"
-                  style={st("font-size:20px;font-weight:600;letter-spacing:-.01em")}
-                >
-                  {e.nome}
-                </span>
-                <span style={st("font-size:12px;color:#6b675c")}>
+            <Card key={e.id} className="flex flex-col gap-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-base font-semibold">{e.nome}</span>
+                <span className="text-xs text-fg-3">
                   {e.ivaAttiva ? `IVA ${e.aliquotaIvaBp / 100}%` : "senza IVA"}
                 </span>
               </div>
-              <b
-                className="d num"
-                style={st("font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1")}
-              >
+              <span className="text-2xl font-semibold tracking-tight tabular-nums">
                 {formatEuroCompatto(ric)}
-              </b>
-              <div style={st("height:8px;border-radius:8px;background:rgba(23,21,15,.08)")}>
+              </span>
+              <div className="h-1.5 rounded-full bg-hover">
                 <div
-                  style={{
-                    width: `${ricavi ? Math.max(3, (ric / ricavi) * 100) : 0}%`,
-                    height: "100%",
-                    borderRadius: 8,
-                    background: "#17150f",
-                  }}
+                  className="h-full rounded-full bg-brand"
+                  style={{ width: `${ricavi ? Math.max(3, (ric / ricavi) * 100) : 0}%` }}
                 />
               </div>
-              {[
-                ["IVA", e.ivaAttiva ? formatEuro(r?.iva ?? 0) : "non applicata"],
-                ["Costi", formatEuro(c)],
-                [
-                  "Margine",
-                  `${formatEuro(m)}${ric ? ` · ${Math.round((m / ric) * 100)}%` : ""}`,
-                  true,
-                ],
-              ].map(([k, v, forte], i, arr) => (
-                <div
-                  key={k as string}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 14,
-                    color: forte ? "#17150f" : "#6b675c",
-                    fontWeight: forte ? 600 : 400,
-                    padding: "8px 0",
-                    borderTop: i === 0 ? "1px solid rgba(23,21,15,.08)" : undefined,
-                    borderBottom: i < arr.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-                  }}
-                >
-                  <span>{k}</span>
-                  <span className="num" style={{ color: "#17150f", fontWeight: forte ? 600 : 400 }}>
-                    {v}
-                  </span>
+              <dl className="divide-y divide-line text-sm">
+                {[
+                  ["IVA", e.ivaAttiva ? formatEuro(r?.iva ?? 0) : "non applicata"],
+                  ["Costi", formatEuro(c)],
+                  ["Margine", `${formatEuro(m)}${ric ? ` · ${Math.round((m / ric) * 100)}%` : ""}`],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between py-1.5">
+                    <dt className="text-fg-2">{k}</dt>
+                    <dd className="font-medium tabular-nums">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="Voci vendute" description={`${etichetta} · netto`} />
+          {voci.length === 0 ? (
+            <p className="text-sm text-fg-2">Nessuna fattura emessa nel periodo.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {voci.map((v) => (
+                <div key={v.nome} className="flex flex-col gap-1">
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="truncate">
+                      {v.nome}{" "}
+                      <span className="text-fg-3">
+                        · {v.n} vendit{v.n === 1 ? "a" : "e"}
+                      </span>
+                    </span>
+                    <b className="font-medium tabular-nums">{formatEuroCompatto(v.tot)}</b>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-hover">
+                    <div
+                      className="h-full rounded-full bg-brand"
+                      style={{ width: `${Math.max(3, (v.tot / maxVoce) * 100)}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
-          );
-        })}
-      </section>
-
-      <section style={st("display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start")}>
-        <div
-          className="card"
-          style={st("flex:1.3 1 420px;min-width:0;display:flex;flex-direction:column;gap:14px")}
-        >
-          <div
-            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-          >
-            <h2 className="h2">Voci vendute</h2>
-            <span style={st("font-size:13px;color:#6b675c")}>{etichetta} · netto</span>
-          </div>
-          {voci.length === 0 ? (
-            <p style={st("margin:0;font-size:14px;color:#6b675c")}>
-              Nessuna fattura emessa nel periodo.
-            </p>
+          )}
+        </Card>
+        <Card>
+          <CardHeader title="Clienti principali" description={`${etichetta} · netto`} />
+          {clienti.length === 0 ? (
+            <p className="text-sm text-fg-2">Nessuna fattura emessa nel periodo.</p>
           ) : (
-            voci.map((v) => (
-              <div key={v.nome} style={st("display:flex;flex-direction:column;gap:6px")}>
-                <div style={st("display:flex;justify-content:space-between;font-size:14px")}>
-                  <span>
-                    {v.nome}{" "}
-                    <span style={{ color: "#6b675c" }}>
-                      · {v.n} vendit{v.n === 1 ? "a" : "e"}
-                    </span>
-                  </span>
-                  <b className="num" style={{ fontWeight: 600 }}>
-                    {formatEuroCompatto(v.tot)}
-                  </b>
-                </div>
-                <div style={st("height:6px;border-radius:6px;background:rgba(23,21,15,.08)")}>
-                  <div
-                    style={{
-                      width: `${Math.max(3, (v.tot / maxVoce) * 100)}%`,
-                      height: "100%",
-                      borderRadius: 6,
-                      background: "#17150f",
-                    }}
-                  />
-                </div>
-              </div>
-            ))
+            <ul className="divide-y divide-line text-sm">
+              {clienti.map((c) => (
+                <li key={c.nome} className="flex justify-between gap-3 py-2">
+                  <span className="font-medium">{c.nome}</span>
+                  <b className="font-medium tabular-nums">{formatEuroCompatto(c.tot)}</b>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-        <div
-          className="card"
-          style={st("flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:14px")}
-        >
-          <div
-            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-          >
-            <h2 className="h2">Clienti principali</h2>
-            <span style={st("font-size:13px;color:#6b675c")}>{etichetta} · netto</span>
-          </div>
-          <div style={st("border-top:1px solid rgba(23,21,15,.14)")}>
-            {clienti.length === 0 && (
-              <p style={st("margin:14px 0 0;font-size:14px;color:#6b675c")}>
-                Nessuna fattura emessa nel periodo.
-              </p>
-            )}
-            {clienti.map((c) => (
-              <div
-                key={c.nome}
-                style={st(
-                  "display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(23,21,15,.08);font-size:14px",
-                )}
-              >
-                <b style={{ fontWeight: 600 }}>{c.nome}</b>
-                <b className="num" style={{ fontWeight: 600 }}>
-                  {formatEuroCompatto(c.tot)}
-                </b>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </Card>
+      </div>
 
-      <section className="ink" style={st("display:flex;flex-direction:column;gap:16px")}>
-        <div
-          style={st(
-            "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px",
-          )}
-        >
-          <span className="d" style={st("font-size:22px;font-weight:500;letter-spacing:-.015em")}>
-            Export per il commercialista
-          </span>
+      <Card>
+        <CardHeader
+          title="Export per il commercialista"
+          description={`File CSV (separatore «;», importi con la virgola) del periodo: ${etichetta.toLowerCase()}.`}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="secondary">
+            <a href={`/api/export/commercialista?tipo=fatture&p=${p}`}>Fatture emesse ↓</a>
+          </Button>
+          <Button asChild variant="secondary">
+            <a href={`/api/export/commercialista?tipo=prima-nota&p=${p}`}>Prima nota ↓</a>
+          </Button>
         </div>
-        <p
-          style={st(
-            "margin:0;font-size:14px;line-height:1.6;color:rgba(244,243,240,.78);max-width:62ch",
-          )}
-        >
-          File CSV (separatore «;», importi con la virgola) del periodo selezionato:{" "}
-          {etichetta.toLowerCase()}.
-        </p>
-        <div
-          style={st(
-            "display:flex;flex-wrap:wrap;gap:10px;border-top:1px solid rgba(244,243,240,.16);padding-top:16px",
-          )}
-        >
-          <a
-            href={`/api/export/commercialista?tipo=fatture&p=${p}`}
-            style={st(
-              "display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;background:#f4f3f0;color:#17150f;font:500 14px/1 Inter,sans-serif",
-            )}
-          >
-            Fatture emesse ↓
-          </a>
-          <a
-            href={`/api/export/commercialista?tipo=prima-nota&p=${p}`}
-            style={st(
-              "display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;border:1px solid rgba(244,243,240,.28);color:#f4f3f0;font:500 14px/1 Inter,sans-serif",
-            )}
-          >
-            Prima nota ↓
-          </a>
-        </div>
-      </section>
+      </Card>
     </>
   );
 }
