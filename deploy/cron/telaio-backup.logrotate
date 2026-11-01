@@ -1,0 +1,8 @@
+# /etc/logrotate.d/telaio-backup
+/var/log/telaio-backup.log {
+    monthly
+    rotate 6
+    compress
+    missingok
+    notifempty
+}

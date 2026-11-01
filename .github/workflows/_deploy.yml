@@ -1,0 +1,115 @@
+# Workflow riutilizzabile: pubblica una versione sul VPS via SSH. Lo chiamano ci-cd.yml e deploy-manuale.yml.
+#
+# Secrets (Settings → Environments → production, oppure di repository):
+#   VPS_HOST             indirizzo del VPS
+#   VPS_USER             utente SSH dedicato al deploy (nel gruppo docker)
+#   VPS_SSH_KEY          chiave privata SSH (solo per il deploy)
+#   VPS_SSH_KNOWN_HOSTS  riga di known_hosts del VPS (ssh-keyscan -t ed25519 <host>, verificata a mano)
+# Variabili (opzionali):
+#   VPS_SSH_PORT (22), VPS_DEPLOY_PATH (/opt/telaio), TELAIO_URL (https://telaio.mattiacapelli.it)
+name: Deploy (riutilizzabile)
+
+on:
+  workflow_call:
+    inputs:
+      versione:
+        description: SHA del commit (tag immutabile delle immagini)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    # Un solo deploy alla volta, e mai interrotto a metà.
+    concurrency:
+      group: deploy-produzione
+      cancel-in-progress: false
+    env:
+      VERSIONE: ${{ inputs.versione }}
+      PERCORSO: ${{ vars.VPS_DEPLOY_PATH || '/opt/telaio' }}
+      PORTA_SSH: ${{ vars.VPS_SSH_PORT || '22' }}
+      URL_APP: ${{ vars.TELAIO_URL || 'https://telaio.mattiacapelli.it' }}
+    steps:
+      - name: La versione deve essere uno SHA completo
+        run: |
+          if [[ ! "$VERSIONE" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Versione non valida («$VERSIONE»): serve lo SHA completo del commit, non un tag mobile come latest"
+            exit 1
+          fi
+
+      # Si usano compose e script del commit che si pubblica, coerenti con le sue immagini.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.versione }}
+
+      - name: Le immagini esistono su GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UTENTE_GH: ${{ github.actor }}
+        run: |
+          PROPRIETARIO="${GITHUB_REPOSITORY_OWNER,,}"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$UTENTE_GH" --password-stdin
+          for immagine in web worker; do
+            docker buildx imagetools inspect "ghcr.io/${PROPRIETARIO}/telaio-${immagine}:${VERSIONE}" > /dev/null \
+              || { echo "::error::Immagine telaio-${immagine}:${VERSIONE} non trovata su GHCR"; exit 1; }
+          done
+
+      - name: Configura SSH
+        env:
+          CHIAVE: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.VPS_HOST }}
+          UTENTE: ${{ secrets.VPS_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$CHIAVE" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          {
+            echo "Host vps"
+            echo "  HostName $HOST"
+            echo "  User $UTENTE"
+            echo "  Port $PORTA_SSH"
+            echo "  IdentityFile ~/.ssh/id_deploy"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+            echo "  ServerAliveInterval 30"
+          } > ~/.ssh/config
+
+      - name: Copia compose e script sul VPS
+        run: |
+          # shellcheck disable=SC2029
+          tar czf - docker-compose.prod.yml deploy | ssh vps "mkdir -p '$PERCORSO' && tar xzf - -C '$PERCORSO'"
+
+      - name: Deploy (pull, backup, migrazioni, aggiornamento, verifica)
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UTENTE_GH: ${{ github.actor }}
+        run: |
+          # Il token non resta sul server: login, deploy, logout. Passa da stdin, mai da argomenti.
+          # shellcheck disable=SC2029  # le variabili si espandono qui di proposito: sono i valori da inviare
+          printf '%s' "$GHCR_TOKEN" | ssh vps "docker login ghcr.io -u '$UTENTE_GH' --password-stdin"
+          trap 'ssh vps "docker logout ghcr.io" || true' EXIT
+          # shellcheck disable=SC2029
+          ssh vps "cd '$PERCORSO' && ./deploy/deploy.sh '$VERSIONE'"
+
+      - name: Verifica dall'esterno (DNS, Nginx, HTTPS, versione servita)
+        run: |
+          for _ in $(seq 1 15); do
+            RISPOSTA="$(curl -fsS --max-time 10 "$URL_APP/api/health" || true)"
+            if [[ "$RISPOSTA" == *'"stato":"ok"'* && "$RISPOSTA" == *"\"versione\":\"$VERSIONE\""* ]]; then
+              echo "OK: $RISPOSTA"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "::error::$URL_APP/api/health non risponde con la versione $VERSIONE (ultima risposta: ${RISPOSTA:-nessuna})"
+          exit 1

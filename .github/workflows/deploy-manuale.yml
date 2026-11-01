@@ -1,0 +1,25 @@
+# Deploy manuale di una versione già pubblicata su GHCR. Serve anche per il rollback applicativo:
+# indica lo SHA del commit da rimettere in produzione (Actions → Deploy manuale → Run workflow).
+name: Deploy manuale
+
+on:
+  workflow_dispatch:
+    inputs:
+      versione:
+        description: SHA completo (40 caratteri) del commit di cui esistono già le immagini su GHCR
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.versione }}
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      versione: ${{ inputs.versione }}
+    secrets: inherit
