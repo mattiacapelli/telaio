@@ -17,21 +17,10 @@ export function FormSwitch({
 }) {
   const [checked, setChecked] = useState(defaultChecked);
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-        padding: "12px 0",
-        borderTop: "1px solid rgba(23,21,15,.08)",
-      }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontWeight: 600, fontSize: 15 }}>{label}</span>
-        {description && (
-          <span style={{ fontSize: 13, color: "#3a372f", lineHeight: 1.5 }}>{description}</span>
-        )}
+    <div className="flex items-center justify-between gap-4 border-t border-line py-3">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium">{label}</span>
+        {description && <span className="text-sm text-fg-2">{description}</span>}
       </div>
       <Switch label={label} checked={checked} onCheckedChange={setChecked} />
       <input type="hidden" name={name} value={checked ? "on" : ""} />

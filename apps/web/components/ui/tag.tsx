@@ -1,21 +1,14 @@
-import { cn } from "@/lib/utils";
+import { Badge, type VarianteBadge } from "./badge";
 
-const colori = {
-  neutral: "#969184",
-  blue: "#2b5ea7",
-  orange: "#b4532a",
-  ink: "#17150f",
-  green: "#3d7a4f",
-} as const;
+const TONI: Record<string, VarianteBadge> = {
+  neutral: "neutral",
+  blue: "brand",
+  orange: "warn",
+  ink: "neutral",
+  green: "ok",
+};
 
-const stili = {
-  base: undefined,
-  solid: { background: "#17150f", borderColor: "#17150f", color: "#f4f3f0" },
-  muted: { color: "#6b675c" },
-  warn: { borderColor: "rgba(180,83,42,.4)", color: "#8f3f1d" },
-} as const;
-
-/** Etichetta `.tag` del mockup, con pallino colorato (`dot={false}` per toglierlo). */
+/** Alias di `Badge` con i nomi usati finora (`tone`, `look`); le pagine nuove usano `Badge`. */
 export function Tag({
   tone = "neutral",
   look,
@@ -23,17 +16,23 @@ export function Tag({
   children,
   className,
 }: {
-  tone?: keyof typeof colori;
-  /** solid = pieno inchiostro (accettato), muted = spento (rifiutato), warn = arancio (in scadenza) */
+  tone?: "neutral" | "blue" | "orange" | "ink" | "green";
   look?: "solid" | "muted" | "warn";
   dot?: boolean;
   children: React.ReactNode;
   className?: string;
 }) {
+  const variante: VarianteBadge =
+    look === "solid"
+      ? "solid"
+      : look === "warn"
+        ? "warn"
+        : look === "muted"
+          ? "neutral"
+          : (TONI[tone] ?? "neutral");
   return (
-    <span className={cn("tag", className)} style={stili[look ?? "base"]}>
-      {dot && <i aria-hidden style={{ background: look === "solid" ? "#f4f3f0" : colori[tone] }} />}
+    <Badge variant={variante} dot={dot && look !== "solid"} className={className}>
       {children}
-    </span>
+    </Badge>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
 import { createContext, useActionState, useContext, useEffect, useState } from "react";
 import { Button, type ButtonProps } from "./button";
+import { Dialog, DialogClose, DialogContent, DialogTrigger } from "./dialog";
+import { toast } from "./toast";
 
 export interface ActionState {
   ok: boolean;
@@ -19,7 +20,7 @@ export const useFormState = () => useContext(FormStateContext);
 
 /**
  * Tutti i form di Telaio si aprono in modale. La Server Action riceve (prev, FormData)
- * e ritorna ActionState; a successo la modale si chiude.
+ * e ritorna ActionState; a successo la modale si chiude e compare una notifica.
  */
 export function FormModal({
   trigger,
@@ -44,87 +45,42 @@ export function FormModal({
   const [state, formAction, pending] = useActionState(action, initialState);
 
   useEffect(() => {
-    if (state.ok) setOpen(false);
+    if (state.ok) {
+      setOpen(false);
+      toast("Salvato");
+    }
   }, [state]);
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button variant={triggerVariant} size={triggerSize}>
           {trigger}
         </Button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay
-          className="fixed inset-0 z-40"
-          style={{
-            background: "rgba(23,21,15,.42)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-          }}
-        />
-        <div
-          className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
-          style={{ padding: "clamp(16px,6vh,64px) 16px" }}
-        >
-          <Dialog.Content className="dlg pointer-events-auto">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 12,
-              }}
+      </DialogTrigger>
+      <DialogContent title={title} description={description}>
+        <form action={formAction} className="flex flex-col gap-4">
+          <FormStateContext.Provider value={state}>{children}</FormStateContext.Provider>
+          {state.message && !state.ok && (
+            <p
+              role="alert"
+              className="rounded-md border border-bad/20 bg-bad-soft px-3 py-2 text-sm text-bad"
             >
-              <Dialog.Title className="h2">{title}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  aria-label="Chiudi"
-                  className="icon"
-                  style={{ width: 40, height: 40, background: "#fff", fontSize: 20 }}
-                >
-                  ×
-                </button>
-              </Dialog.Close>
-            </div>
-            <Dialog.Description
-              className={description ? undefined : "sr-only"}
-              style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: "#3a372f" }}
-            >
-              {description ?? title}
-            </Dialog.Description>
-            <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <FormStateContext.Provider value={state}>{children}</FormStateContext.Provider>
-              {state.message && !state.ok && (
-                <p
-                  role="alert"
-                  style={{
-                    margin: 0,
-                    padding: "12px 16px",
-                    borderRadius: 14,
-                    background: "#17150f",
-                    color: "#f4f3f0",
-                    fontSize: 14,
-                  }}
-                >
-                  {state.message}
-                </p>
-              )}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 4 }}>
-                <Dialog.Close asChild>
-                  <Button type="button" variant="glass">
-                    Annulla
-                  </Button>
-                </Dialog.Close>
-                <Button type="submit" disabled={pending}>
-                  {pending ? "Salvataggio…" : submitLabel}
-                </Button>
-              </div>
-            </form>
-          </Dialog.Content>
-        </div>
-      </Dialog.Portal>
-    </Dialog.Root>
+              {state.message}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Annulla
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Salvataggio…" : submitLabel}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
