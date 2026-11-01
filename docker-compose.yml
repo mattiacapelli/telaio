@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: telaio
       POSTGRES_DB: telaio
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - telaio_pgdata:/var/lib/postgresql
     healthcheck:
@@ -21,15 +21,15 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - telaio_redisdata:/data
 
   mailpit:
     image: axllent/mailpit:v1.31.6
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "1026:1025"
+      - "8026:8025"
 
   # ── App (profilo "app"): `docker compose --profile app up --build` ─────────────────────────────
   # Un'unica immagine per web, worker e migrazioni: cambia solo il comando.

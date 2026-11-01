@@ -17,7 +17,7 @@ pnpm db:seed
 pnpm dev                      # web su http://localhost:3000 + worker
 ```
 
-Accesso: l'utente creato dal seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, di default `mattia@telaio.local` / `telaio-dev-2026`). Mailpit: http://localhost:8025.
+Accesso: l'utente creato dal seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, di default `mattia@telaio.local` / `telaio-dev-2026`). Mailpit: http://localhost:8026.
 
 ## Script
 
