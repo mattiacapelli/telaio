@@ -7,6 +7,7 @@ import { Card, CardHeader, EmptyState } from "@/components/ui/card";
 import { Checkbox, Field, Input, SearchInput, Select, Textarea } from "@/components/ui/field";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { Interattivo } from "./interattivo";
+import { TabellaDemo } from "./tabella-demo";
 
 export const metadata = { title: "Design system" };
 
@@ -118,6 +119,10 @@ export default function DesignSystemPage() {
 
       <Sezione titolo="Menu, modali, notifiche, schede">
         <Interattivo />
+      </Sezione>
+
+      <Sezione titolo="Tabella dati">
+        <TabellaDemo />
       </Sezione>
 
       <Sezione titolo="Avatar e percorso">

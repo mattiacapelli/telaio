@@ -45,10 +45,7 @@ export function SearchInput({ className, ...props }: React.InputHTMLAttributes<H
   );
 }
 
-export function Checkbox({
-  className,
-  ...props
-}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">) {
+export function Checkbox({ className, ...props }: Omit<React.ComponentProps<"input">, "type">) {
   return (
     <input
       type="checkbox"
