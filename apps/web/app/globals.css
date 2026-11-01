@@ -151,6 +151,16 @@ body {
     opacity: 1;
   }
 }
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
 @keyframes toast-in {
   from {
     opacity: 0;

@@ -75,30 +75,46 @@ export function DialogContent({
   );
 }
 
-/** Pannello laterale per dettagli e modifiche rapide. */
+/** Pannello laterale per dettagli e modifiche rapide (a destra, o a sinistra per il menu mobile). */
 export function DrawerContent({
   title,
   description,
   footer,
   children,
   className,
+  lato = "destra",
+  senzaIntestazione = false,
 }: {
   title: string;
   description?: string;
   footer?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  lato?: "destra" | "sinistra";
+  /** nasconde l'intestazione visibile (il titolo resta per i lettori di schermo) */
+  senzaIntestazione?: boolean;
 }) {
+  const sinistra = lato === "sinistra";
   return (
     <D.Portal>
       <Overlay />
       <D.Content
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-line bg-surface shadow-pop data-[state=open]:animate-[slide-in-right_180ms_ease-out]",
+          "fixed inset-y-0 z-50 flex w-full max-w-md flex-col bg-surface shadow-pop",
+          sinistra
+            ? "left-0 max-w-72 border-r border-line data-[state=open]:animate-[slide-in-left_180ms_ease-out]"
+            : "right-0 border-l border-line data-[state=open]:animate-[slide-in-right_180ms_ease-out]",
           className,
         )}
       >
-        <Intestazione title={title} description={description} />
+        {senzaIntestazione ? (
+          <>
+            <D.Title className="sr-only">{title}</D.Title>
+            <D.Description className="sr-only">{description ?? title}</D.Description>
+          </>
+        ) : (
+          <Intestazione title={title} description={description} />
+        )}
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
           <div className="flex justify-end gap-2 border-t border-line bg-subtle px-5 py-3">

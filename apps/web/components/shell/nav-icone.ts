@@ -1,0 +1,37 @@
+import {
+  Banknote,
+  BarChart3,
+  BookOpen,
+  CalendarClock,
+  FileText,
+  Inbox,
+  Landmark,
+  LayoutDashboard,
+  type LucideIcon,
+  Receipt,
+  Repeat,
+  Settings,
+  SlidersHorizontal,
+  Tag,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+
+/** Icona di ogni voce del menu, per percorso. */
+export const ICONE_NAV: Record<string, LucideIcon> = {
+  "/": LayoutDashboard,
+  "/clienti": Users,
+  "/preventivi": FileText,
+  "/configuratore": SlidersHorizontal,
+  "/listini": Tag,
+  "/fatture": Receipt,
+  "/incassi": Banknote,
+  "/scadenzario": CalendarClock,
+  "/abbonamenti": Repeat,
+  "/prima-nota": BookOpen,
+  "/conti": Landmark,
+  "/cash-flow": TrendingUp,
+  "/report": BarChart3,
+  "/impostazioni/ragioni-sociali": Settings,
+  "/azioni-in-attesa": Inbox,
+};

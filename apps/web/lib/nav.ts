@@ -66,3 +66,40 @@ export const SEZIONI_IMPOSTAZIONI = [
   { slug: "sicurezza", titolo: "Profilo e sicurezza", gruppo: "Account" },
   { slug: "dati", titolo: "Backup ed export dati", gruppo: "Account" },
 ] as const;
+
+export interface Briciola {
+  label: string;
+  href?: string;
+}
+
+const ETICHETTE_SEGMENTO: Record<string, string> = {
+  nuova: "Nuova",
+  nuovo: "Nuovo",
+  "design-system": "Design system",
+  "incasso-rapido": "Incasso al volo",
+  "azioni-in-attesa": "Azioni in attesa",
+};
+
+/** Briciole di pane per l'intestazione, ricavate dal percorso. */
+export function briciole(pathname: string): Briciola[] {
+  const segmenti = pathname.split("/").filter(Boolean);
+  if (segmenti.length === 0) return [{ label: "Dashboard" }];
+  const voci = GRUPPI_NAV.flatMap((g) => g.voci);
+  const base = `/${segmenti[0]}`;
+  const voce = voci.find((v) => v.href === base || v.href.startsWith(`${base}/`));
+  const primo: Briciola = {
+    label: voce?.titolo ?? ETICHETTE_SEGMENTO[segmenti[0] ?? ""] ?? segmenti[0] ?? "",
+    href: base,
+  };
+  if (segmenti[0] === "impostazioni") {
+    const sezione = SEZIONI_IMPOSTAZIONI.find((s) => s.slug === segmenti[1]);
+    return [
+      { label: "Impostazioni", href: "/impostazioni/ragioni-sociali" },
+      ...(sezione ? [{ label: sezione.titolo }] : []),
+    ];
+  }
+  if (segmenti.length === 1) return [{ label: primo.label }];
+  const secondo = segmenti[1] ?? "";
+  const esteso = ETICHETTE_SEGMENTO[secondo] ?? "Dettaglio";
+  return [primo, { label: esteso }];
+}
