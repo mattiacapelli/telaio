@@ -75,10 +75,15 @@ Home). Il Service Worker è attivo solo in produzione e mette in cache soltanto 
 pubbliche; offline non si lavora. Configurazione, icone, compatibilità e limiti: [docs/pwa.md](docs/pwa.md).
 Per cambiare il logo: sostituire `apps/web/public/icons/logo.png` e lanciare `pnpm --filter @telaio/web icone`.
 
-## Docker
+## Docker e deploy
 
-Un solo `Dockerfile` (multi-stage) per web, worker e migrazioni: cambia solo il comando.
+Un solo `Dockerfile` (multi-stage) produce due immagini: `web` (Next.js standalone) e `worker`
+(job BullMQ; con altri comandi anche migrazioni e creazione dell'admin). Girano senza privilegi e
+senza dipendenze di sviluppo.
 
-```bash
-docker compose --profile app up --build   # migrate → web (3000) + worker
-```
+- **Sviluppo:** `docker-compose.yml` avvia Postgres, Redis e Mailpit; `docker compose --profile app up --build`
+  prova anche le immagini di produzione in locale (web su 3000).
+- **Produzione:** `docker-compose.prod.yml` (Postgres 18, Redis 7, migrazioni, web, worker), Nginx sull'host,
+  immagini su GHCR con il commit SHA come tag e deploy via GitHub Actions. Salute dell'app su `/api/health`.
+  Guida completa (DNS, VPS, secrets, primo deploy, backup, rollback, troubleshooting): [docs/deploy.md](docs/deploy.md).
+- Le variabili di produzione sono in `.env.production.example`; il file vero sta solo sul VPS.
