@@ -13,19 +13,19 @@ export function Prezzo({
   className?: string;
   suffisso?: string;
 }) {
-  if (nettoCent === 0) return <span className="text-muted">—</span>;
+  if (nettoCent === 0) return <span className="text-fg-2">—</span>;
   const p = prezzoVisualizzato(nettoCent, regole);
   return (
     <span className={cn("inline-flex flex-col leading-tight tabular-nums", className)}>
-      <span className="money font-semibold">
+      <span className="tabular-nums font-semibold">
         {formatEuro(p.nettoCent)}
         {suffisso}
-        {p.lordoCent !== null && <span className="ml-1 text-xs font-normal text-muted">netto</span>}
+        {p.lordoCent !== null && <span className="ml-1 text-xs font-normal text-fg-2">netto</span>}
       </span>
       {p.lordoCent !== null ? (
-        <span className="text-xs text-muted">{formatEuro(p.lordoCent)} con IVA</span>
+        <span className="text-xs text-fg-2">{formatEuro(p.lordoCent)} con IVA</span>
       ) : (
-        p.dicitura && <span className="text-xs text-muted">{p.dicitura}</span>
+        p.dicitura && <span className="text-xs text-fg-2">{p.dicitura}</span>
       )}
     </span>
   );

@@ -14,10 +14,12 @@ export function NuovaChiaveApi() {
 
   if (stato.ok && stato.chiave) {
     return (
-      <div className="ink-panel p-5">
-        <p className="eyebrow !text-grey-2">Copia ora la chiave: non verrà mostrata di nuovo</p>
+      <div className="rounded-lg bg-fg text-white p-5">
+        <p className="text-xs font-medium text-white/70">
+          Copia ora la chiave: non verrà mostrata di nuovo
+        </p>
         <div className="mt-3 flex items-center gap-3">
-          <code className="min-w-0 flex-1 overflow-x-auto rounded-2xl bg-white/10 px-4 py-3 text-sm">
+          <code className="min-w-0 flex-1 overflow-x-auto rounded-lg bg-white/10 px-4 py-3 text-sm">
             {stato.chiave}
           </code>
           <Button
@@ -59,13 +61,13 @@ export function NuovaChiaveApi() {
               name="scopes[]"
               value={s}
               defaultChecked={s === "api"}
-              className="size-4 accent-[var(--ink)]"
+              className="size-4 accent-[var(--brand)]"
             />
             {s === "api" ? "API REST" : "Server MCP"}
           </label>
         ))}
         {e.scopes && (
-          <span role="alert" className="text-xs text-orange-2">
+          <span role="alert" className="text-xs text-bad">
             {e.scopes}
           </span>
         )}

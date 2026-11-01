@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatsRow } from "@/components/ui/stats";
-import { Switch } from "@/components/ui/switch";
+import { InterruttoreVisivo } from "@/components/ui/switch";
 import { calcolaCashFlow } from "@/lib/dominio/cashflow";
 
 export const metadata = { title: "Cash flow" };
@@ -74,7 +74,7 @@ export default async function CashFlowPage({
             className="flex items-center gap-3 text-sm"
             aria-label={o.testo}
           >
-            <Switch label={o.testo} checked={o.on} tabIndex={-1} className="pointer-events-none" />
+            <InterruttoreVisivo attivo={o.on} />
             {o.testo}
           </Link>
         ))}

@@ -1,3 +1,4 @@
+import type { RegoleFiscali } from "@telaio/core";
 import {
   asc,
   type Database,
@@ -9,8 +10,25 @@ import {
   moduloBasi,
   ragioniSociali,
 } from "@telaio/db";
-import type { ListinoCfg } from "@/app/(app)/configuratore/configuratore";
 import { regoleDa } from "./regole";
+
+export interface VoceCfg {
+  id: string;
+  nome: string;
+  descrizione: string | null;
+  unaTantumCent: number;
+  canoneAnnuoCent: number;
+  canoneMensileCent: number;
+}
+export interface ListinoCfg {
+  id: string;
+  nome: string;
+  ragioneSocialeId: string;
+  ragioneSociale: string;
+  regole: RegoleFiscali;
+  basi: VoceCfg[];
+  moduli: (VoceCfg & { baseIds: string[] })[];
+}
 
 /** Listini con basi, moduli e compatibilità, nella forma usata da configuratore ed editor. */
 export async function caricaListiniCfg(db: Database): Promise<ListinoCfg[]> {

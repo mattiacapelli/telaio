@@ -102,7 +102,7 @@ export function SezioneRagioniSociali({ elenco }: { elenco: RagioneSocialeRow[] 
         <Card key={rs.id} className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-xl font-semibold">{rs.nome}</h2>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-fg-2">
               {[
                 rs.partitaIva && `P.IVA ${rs.partitaIva}`,
                 rs.codiceFiscale && `CF ${rs.codiceFiscale}`,

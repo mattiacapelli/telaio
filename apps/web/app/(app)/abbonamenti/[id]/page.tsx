@@ -21,12 +21,16 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IncassoModal } from "@/components/domain/incasso-modal";
-import { DetailBar } from "@/components/shell/topbar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatsRow } from "@/components/ui/stats";
+import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { formatData, oggi } from "@/lib/date";
 import { regoleDa } from "@/lib/regole";
 import { STATO_ABBONAMENTO, STATO_RATA } from "@/lib/stati";
-import { st } from "@/lib/utils";
 import { cambiaStatoAbbonamentoAction } from "../actions";
 
 export const metadata = { title: "Abbonamento" };
@@ -38,14 +42,14 @@ const PERIODI: Record<string, string> = {
   semestrale: "Semestrale",
   annuale: "Annuale",
 };
-const AZIONI: Record<string, { stato: string; label: string; avviso?: boolean }[]> = {
+const AZIONI: Record<string, { stato: string; label: string; pericolosa?: boolean }[]> = {
   attivo: [
     { stato: "sospeso", label: "Sospendi" },
-    { stato: "cessato", label: "Disdici", avviso: true },
+    { stato: "cessato", label: "Disdici", pericolosa: true },
   ],
   sospeso: [
     { stato: "attivo", label: "Riattiva" },
-    { stato: "cessato", label: "Disdici", avviso: true },
+    { stato: "cessato", label: "Disdici", pericolosa: true },
   ],
   cessato: [],
 };
@@ -88,6 +92,7 @@ export default async function AbbonamentoPage({ params }: { params: Promise<{ id
   const pagate = lista.filter(({ r }) => r.stato === "incassata").length;
   const prossima = lista.find(({ r }) => r.scadenza >= dataOggi && r.stato === "da_incassare")?.r;
   const stato = STATO_ABBONAMENTO[a.stato];
+  const iva = regole.ivaAttiva ? `IVA ${formatAliquota(regole.aliquotaIvaBp)}` : "senza IVA";
   const cronologia = [
     ...versati.map(({ i }) => ({
       d: i.data,
@@ -95,257 +100,161 @@ export default async function AbbonamentoPage({ params }: { params: Promise<{ id
     })),
     { d: a.createdAt.toISOString().slice(0, 10), t: "Abbonamento creato" },
   ].sort((x, y) => (x.d < y.d ? 1 : -1));
-  const iva = regole.ivaAttiva ? `IVA ${formatAliquota(regole.aliquotaIvaBp)}` : "senza IVA";
-
-  const kpi = [
-    ["Rata netta", formatEuro(a.importoRataCent), PERIODI[a.periodicita]?.toLowerCase() ?? ""],
-    [
-      "Rata con IVA",
-      v.lordoCent !== null ? formatEuro(v.lordoCent) : "—",
-      v.ivaCent !== null ? `${iva} ${formatEuro(v.ivaCent)}` : "senza IVA",
-    ],
-    [
-      "Valore annuo",
-      formatEuro(annuo),
-      annuoV.lordoCent !== null ? `${formatEuro(annuoV.lordoCent)} con IVA` : "senza IVA",
-    ],
-    [
-      "Incassato finora",
-      formatEuro(incassato),
-      `${pagate} rat${pagate === 1 ? "a pagata" : "e pagate"}`,
-    ],
-    [
-      "Prossima rata",
-      prossima ? formatData(prossima.scadenza).slice(0, 5) : "—",
-      prossima ? formatEuro(prossima.importoCent) : "nessuna in programma",
-    ],
-  ];
 
   return (
     <>
-      <DetailBar indietro={{ label: "Abbonamenti", href: "/abbonamenti" }}>
-        <Link href={`/clienti/${cliente.twentyCompanyId ?? ""}`} className="bg sm bare">
-          Scheda cliente
-        </Link>
-      </DetailBar>
-
-      <section style={st("display:flex;flex-direction:column;gap:14px")}>
-        <span className="eb">09 — Abbonamento</span>
-        <h1
-          className="d"
-          style={st(
-            "margin:0;font-weight:500;font-size:clamp(2.4rem,4.4vw,3.8rem);line-height:1.04;letter-spacing:-.032em",
-          )}
-        >
-          {cliente.nome}
-        </h1>
-        <p style={st("margin:0;font-size:17px;color:#3a372f")}>{a.descrizione}</p>
-        <div style={st("display:flex;flex-wrap:wrap;gap:8px")}>
-          <Tag tone={a.stato === "attivo" ? "ink" : "orange"}>{stato?.label ?? a.stato}</Tag>
-          <span className="tag">{PERIODI[a.periodicita]}</span>
-          <span className="tag">
-            {rs.nome} · {iva}
-          </span>
-        </div>
-      </section>
-
-      <section
-        className="card"
-        style={st(
-          "padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))",
-        )}
-      >
-        {kpi.map(([e, val, sub], i) => (
-          <div
-            key={e}
-            style={{
-              padding: "22px 26px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              borderRight: i < kpi.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-            }}
-          >
-            <span className="eb">{e}</span>
-            <b className="d num" style={st("font-weight:600;font-size:28px;letter-spacing:-.02em")}>
-              {val}
-            </b>
-            <span className="num" style={st("font-size:13px;color:#3a372f")}>
-              {sub}
-            </span>
-          </div>
-        ))}
-      </section>
-
-      <section style={st("display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start")}>
-        <div style={st("flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px")}>
-          <div className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-            <div
-              style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-            >
-              <h2 className="h2">Rate</h2>
-              <Link
-                href="/scadenzario"
-                style={st("font-size:13px;text-decoration:underline;text-underline-offset:3px")}
-              >
-                Scadenzario
-              </Link>
-            </div>
-            <div className="tw">
-              <table className="tbl" style={{ minWidth: 560 }}>
-                <thead>
-                  <tr>
-                    <th>Scadenza</th>
-                    <th>N.</th>
-                    <th>Fattura</th>
-                    <th className="r">Importo</th>
-                    <th>Stato</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {lista.map(({ r, fattura }) => {
-                    const s = STATO_RATA[r.stato];
-                    const aperta = ["da_incassare", "scaduta", "parziale"].includes(r.stato);
-                    const rv = prezzoVisualizzato(r.importoCent, regole);
-                    return (
-                      <tr key={r.id}>
-                        <td className="num">{formatData(r.scadenza)}</td>
-                        <td className="num">{r.numero}</td>
-                        <td>{fattura ?? "—"}</td>
-                        <td className="r num" style={st("font-weight:600;color:#17150f")}>
-                          {formatEuro(rv.lordoCent ?? r.importoCent)}
-                          {rv.lordoCent !== null && (
-                            <span className="sub">
-                              {formatEuro(r.importoCent)} + IVA {formatEuro(rv.ivaCent ?? 0)}
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <Tag tone={s?.tone}>{s?.label ?? r.stato}</Tag>
-                        </td>
-                        <td className="r">
-                          {aperta && (
-                            <IncassoModal
-                              conti={contiAttivi}
-                              rataId={r.id}
-                              importoCent={r.importoCent}
-                              descrizione={r.descrizione}
-                              trigger="Incassa"
-                              triggerVariant="glass"
-                              triggerSize="sm"
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-            <div
-              style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-            >
-              <h2 className="h2">Piano</h2>
-              <span style={st("font-size:13px;color:#6b675c")}>
-                dal {formatData(a.inizio)}
-                {a.fine ? ` al ${formatData(a.fine)}` : " · senza scadenza"}
-              </span>
-            </div>
-            <div
-              style={st(
-                "display:flex;flex-direction:column;border-top:1px solid rgba(23,21,15,.14)",
-              )}
-            >
-              <div
-                style={st(
-                  "display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid rgba(23,21,15,.08)",
-                )}
-              >
-                <span>
-                  <b>{a.descrizione}</b>
-                  <span className="sub">{PERIODI[a.periodicita]?.toLowerCase()}</span>
-                </span>
-                <span className="num" style={{ textAlign: "right" }}>
-                  {formatEuro(v.nettoCent)}
-                  {v.lordoCent !== null && (
-                    <span className="sub">{formatEuro(v.lordoCent)} con IVA</span>
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-            <h2 className="h2">Cronologia</h2>
-            <div style={st("border-top:1px solid rgba(23,21,15,.14)")}>
-              {cronologia.map((c, i) => (
-                <div
-                  key={`${c.d}-${i}`}
-                  style={st(
-                    "display:flex;gap:18px;padding:12px 0;border-bottom:1px solid rgba(23,21,15,.08);font-size:14px",
-                  )}
-                >
-                  <span className="num" style={st("color:#6b675c;flex:none")}>
-                    {formatData(c.d)}
-                  </span>
-                  <span>{c.t}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="ink"
-          style={st("flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px")}
-        >
-          <span
-            style={st(
-              "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7)",
+      <PageHeader
+        titolo={cliente.nome}
+        descrizione={`${a.descrizione} · ${PERIODI[a.periodicita]} · ${rs.nome} · ${iva}`}
+        stato={
+          <Tag tone={a.stato === "attivo" ? "green" : "orange"}>{stato?.label ?? a.stato}</Tag>
+        }
+        azioni={
+          <>
+            {cliente.twentyCompanyId && (
+              <Button asChild variant="secondary">
+                <Link href={`/clienti/${cliente.twentyCompanyId}`}>Scheda cliente</Link>
+              </Button>
             )}
-          >
-            Gestione
-          </span>
-          <p style={st("margin:0;font-size:13px;line-height:1.6;color:rgba(244,243,240,.78)")}>
-            Sospendere o disdire annulla le rate future ancora da incassare. Riattivando tornano da
-            incassare e si rigenerano quelle mancanti.
-          </p>
-          <div style={st("display:flex;flex-wrap:wrap;gap:8px")}>
             {(AZIONI[a.stato] ?? []).map((az) => (
               <form key={az.stato} action={cambiaStatoAbbonamentoAction}>
                 <input type="hidden" name="id" value={a.id} />
                 <input type="hidden" name="stato" value={az.stato} />
-                <button
-                  type="submit"
-                  style={{
-                    minHeight: 44,
-                    padding: "0 18px",
-                    borderRadius: 999,
-                    border: az.avviso
-                      ? "1px solid rgba(180,83,42,.6)"
-                      : "1px solid rgba(244,243,240,.28)",
-                    background: "none",
-                    color: az.avviso ? "#e0916f" : "#f4f3f0",
-                    font: "500 14px/1 Inter,sans-serif",
-                    cursor: "pointer",
-                  }}
-                >
+                <Button type="submit" variant={az.pericolosa ? "danger" : "secondary"}>
                   {az.label}
-                </button>
+                </Button>
               </form>
             ))}
-            {(AZIONI[a.stato] ?? []).length === 0 && (
-              <span style={st("font-size:13px;color:rgba(244,243,240,.7)")}>
-                Abbonamento cessato.
-              </span>
-            )}
-          </div>
+          </>
+        }
+      />
+      <p className="-mt-4 text-sm text-fg-2">
+        Sospendere o disdire annulla le rate future ancora da incassare; riattivando tornano da
+        incassare e si rigenerano quelle mancanti.
+      </p>
+
+      <StatsRow
+        dati={[
+          {
+            etichetta: "Rata netta",
+            valore: formatEuro(a.importoRataCent),
+            nota: PERIODI[a.periodicita]?.toLowerCase(),
+          },
+          {
+            etichetta: "Rata con IVA",
+            valore: v.lordoCent !== null ? formatEuro(v.lordoCent) : "—",
+            nota: v.ivaCent !== null ? `${iva} ${formatEuro(v.ivaCent)}` : "senza IVA",
+          },
+          {
+            etichetta: "Valore annuo",
+            valore: formatEuro(annuo),
+            nota:
+              annuoV.lordoCent !== null ? `${formatEuro(annuoV.lordoCent)} con IVA` : "senza IVA",
+          },
+          {
+            etichetta: "Incassato finora",
+            valore: formatEuro(incassato),
+            nota: `${pagate} rat${pagate === 1 ? "a pagata" : "e pagate"}`,
+          },
+          {
+            etichetta: "Prossima rata",
+            valore: prossima ? formatData(prossima.scadenza).slice(0, 5) : "—",
+            nota: prossima ? formatEuro(prossima.importoCent) : "nessuna in programma",
+          },
+        ]}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="flex min-w-0 flex-col gap-3">
+          <h2 className="text-base font-semibold">Rate</h2>
+          <Table minLarghezza={560}>
+            <thead>
+              <tr>
+                <Th>Scadenza</Th>
+                <Th>N.</Th>
+                <Th>Fattura</Th>
+                <Th destra>Importo</Th>
+                <Th>Stato</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(({ r, fattura }) => {
+                const s = STATO_RATA[r.stato];
+                const aperta = ["da_incassare", "scaduta", "parziale"].includes(r.stato);
+                const rv = prezzoVisualizzato(r.importoCent, regole);
+                return (
+                  <tr key={r.id} className="group">
+                    <Td className="tabular-nums">{formatData(r.scadenza)}</Td>
+                    <Td className="tabular-nums text-fg-2">{r.numero}</Td>
+                    <Td className="text-fg-2">{fattura ?? "—"}</Td>
+                    <Td destra>
+                      <div className="flex flex-col items-end leading-tight">
+                        <span className="font-medium">
+                          {formatEuro(rv.lordoCent ?? r.importoCent)}
+                        </span>
+                        {rv.lordoCent !== null && (
+                          <span className="text-xs text-fg-3">
+                            {formatEuro(r.importoCent)} + IVA {formatEuro(rv.ivaCent ?? 0)}
+                          </span>
+                        )}
+                      </div>
+                    </Td>
+                    <Td>
+                      <Tag tone={s?.tone}>{s?.label ?? r.stato}</Tag>
+                    </Td>
+                    <Td destra>
+                      {aperta && (
+                        <IncassoModal
+                          conti={contiAttivi}
+                          rataId={r.id}
+                          importoCent={r.importoCent}
+                          descrizione={r.descrizione}
+                          trigger="Incassa"
+                          triggerVariant="secondary"
+                          triggerSize="sm"
+                        />
+                      )}
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
         </div>
-      </section>
+
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader
+              title="Piano"
+              description={`Dal ${formatData(a.inizio)}${a.fine ? ` al ${formatData(a.fine)}` : " · senza scadenza"}`}
+            />
+            <div className="flex items-start justify-between gap-3 text-sm">
+              <span className="flex flex-col leading-tight">
+                <b className="font-medium">{a.descrizione}</b>
+                <span className="text-xs text-fg-3">{PERIODI[a.periodicita]?.toLowerCase()}</span>
+              </span>
+              <span className="text-right tabular-nums">
+                {formatEuro(v.nettoCent)}
+                {v.lordoCent !== null && (
+                  <span className="block text-xs text-fg-3">{formatEuro(v.lordoCent)} con IVA</span>
+                )}
+              </span>
+            </div>
+          </Card>
+          <Card>
+            <CardHeader title="Cronologia" />
+            <ul className="divide-y divide-line text-sm">
+              {cronologia.map((c, i) => (
+                <li key={`${c.d}-${i}`} className="flex gap-3 py-2">
+                  <span className="shrink-0 text-fg-3 tabular-nums">{formatData(c.d)}</span>
+                  <span>{c.t}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      </div>
     </>
   );
 }

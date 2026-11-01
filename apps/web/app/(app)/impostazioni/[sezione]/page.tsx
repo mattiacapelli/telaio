@@ -20,9 +20,10 @@ import {
 import { twentyDaEnv } from "@telaio/twenty";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { TopBar } from "@/components/shell/topbar";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
-import { cn, st } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { SezioneApi } from "../_sezioni/api";
 import { SezioneDati } from "../_sezioni/dati";
 import { SezioneIva } from "../_sezioni/iva";
@@ -157,15 +158,12 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
         gruppo={voce.gruppo}
         descrizione={STUB[sezione] ?? ""}
       >
-        <div
-          className="card"
-          style={st("display:flex;flex-direction:column;gap:8px;align-items:flex-start")}
-        >
-          <h2 className="h2">Sezione in arrivo</h2>
-          <p style={st("margin:0;font-size:14px;line-height:1.6;color:#3a372f;max-width:62ch")}>
+        <Card>
+          <h2 className="text-base font-semibold">Sezione in arrivo</h2>
+          <p className="mt-1 max-w-prose text-sm text-fg-2">
             La struttura è pronta: mancano le opzioni di questa sezione.
           </p>
-        </div>
+        </Card>
       </Guscio>
     );
   }
@@ -186,46 +184,38 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
 function Guscio({
   sezione,
   titolo,
-  gruppo,
   descrizione,
   children,
 }: {
   sezione: string;
   titolo: string;
-  gruppo: string;
+  gruppo?: string;
   descrizione: string;
   children: React.ReactNode;
 }) {
   const gruppi = [...new Set(SEZIONI_IMPOSTAZIONI.map((s) => s.gruppo))];
   return (
     <>
-      <TopBar placeholder="Cerca un'impostazione…" />
-      <section style={st("display:flex;flex-direction:column;gap:14px")}>
-        <span className="eb">14 — Impostazioni · {gruppo}</span>
-        <h1
-          className="d"
-          style={st(
-            "margin:0;font-weight:500;font-size:clamp(2.4rem,4.4vw,3.8rem);line-height:1.04;letter-spacing:-.032em",
-          )}
-        >
-          {titolo}
-        </h1>
-      </section>
-      <div style={st("display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start")}>
+      <PageHeader titolo={titolo} descrizione={descrizione || undefined} />
+      <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <nav
           aria-label="Sezioni delle impostazioni"
-          className="card"
-          style={st("flex:0 0 220px;display:flex;flex-direction:column;padding:10px")}
+          className="flex shrink-0 flex-col gap-3 md:sticky md:top-4 md:w-52"
         >
           {gruppi.map((g) => (
-            <div key={g} style={st("display:flex;flex-direction:column")}>
-              <span className="sng">{g}</span>
+            <div key={g} className="flex flex-col gap-0.5">
+              <p className="px-2 pb-0.5 text-xs font-medium text-fg-3">{g}</p>
               {SEZIONI_IMPOSTAZIONI.filter((s) => s.gruppo === g).map((s) => (
                 <Link
                   key={s.slug}
                   href={`/impostazioni/${s.slug}`}
                   aria-current={s.slug === sezione ? "page" : undefined}
-                  className={cn("sn", s.slug === sezione && "on")}
+                  className={cn(
+                    "flex h-8 items-center rounded-md px-2 text-sm transition-colors duration-150",
+                    s.slug === sezione
+                      ? "bg-hover font-medium text-fg"
+                      : "text-fg-2 hover:bg-hover hover:text-fg",
+                  )}
                 >
                   {s.titolo}
                 </Link>
@@ -233,10 +223,7 @@ function Guscio({
             </div>
           ))}
         </nav>
-        <div style={st("flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px")}>
-          {descrizione && <p className="lead">{descrizione}</p>}
-          {children}
-        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
       </div>
     </>
   );

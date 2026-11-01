@@ -49,12 +49,12 @@ export default async function AzioniInAttesaPage() {
             <Card key={a.id} className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="eyebrow">{a.origine}</p>
+                  <p className="text-xs font-medium text-fg-3">{a.origine}</p>
                   <h2 className="font-mono text-lg font-semibold">{a.tipo}</h2>
                 </div>
                 <Tag tone="orange">In attesa</Tag>
               </div>
-              <pre className="overflow-x-auto rounded-2xl bg-paper-2 p-4 text-xs">
+              <pre className="overflow-x-auto rounded-lg bg-subtle p-4 text-xs">
                 {JSON.stringify(a.payload, null, 2)}
               </pre>
               <form action={decidiAzione} className="flex justify-end gap-3">
@@ -80,14 +80,14 @@ export default async function AzioniInAttesaPage() {
                 return (
                   <li
                     key={a.id}
-                    className="flex flex-wrap items-center justify-between gap-3 border-b border-grey-2/60 px-3 py-3 text-sm last:border-b-0"
+                    className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-3 py-3 text-sm last:border-b-0"
                   >
                     <span className="font-mono">{a.tipo}</span>
                     <span className="flex items-center gap-3">
-                      {a.errore && <span className="text-orange-2">{a.errore}</span>}
+                      {a.errore && <span className="text-bad">{a.errore}</span>}
                       {a.tipo === "crea_preventivo" && risultato?.id && (
                         <Link
-                          className="text-blue underline-offset-4 hover:underline"
+                          className="text-brand underline-offset-4 hover:underline"
                           href={`/preventivi/${risultato.id}`}
                         >
                           Apri preventivo

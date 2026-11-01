@@ -95,9 +95,6 @@ export default async function PreventiviPage() {
         descrizione="Ogni preventivo parte da un listino ed è emesso da una delle tue ragioni sociali."
         azioni={
           <>
-            <Button asChild variant="secondary">
-              <Link href="/configuratore">Preventivo rapido</Link>
-            </Button>
             <Button asChild>
               <Link href="/preventivi/nuovo">Nuovo preventivo</Link>
             </Button>

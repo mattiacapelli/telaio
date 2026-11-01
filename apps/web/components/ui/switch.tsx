@@ -22,3 +22,23 @@ export function Switch({
     </SwitchPrimitive.Root>
   );
 }
+
+/** Aspetto di un interruttore senza comportamento: da mettere dentro un bottone o un link. */
+export function InterruttoreVisivo({ attivo }: { attivo: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "relative block h-5 w-9 rounded-full transition-colors duration-150",
+        attivo ? "bg-brand" : "bg-line-strong",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 size-4 rounded-full bg-white shadow-xs transition-all duration-150",
+          attivo ? "left-[18px]" : "left-0.5",
+        )}
+      />
+    </span>
+  );
+}

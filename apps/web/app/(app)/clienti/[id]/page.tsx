@@ -11,28 +11,33 @@ import {
   eq,
   getDb,
   incassi,
-  isNull,
   preventivi,
   ragioniSociali,
   sql,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DetailBar } from "@/components/shell/topbar";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { DefList } from "@/components/ui/def-list";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatsRow } from "@/components/ui/stats";
+import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { formatData } from "@/lib/date";
 import { sqlCanoneAnnuo, sqlUnaTantum } from "@/lib/queries";
 import { STATO_PREVENTIVO } from "@/lib/stati";
-import { st } from "@/lib/utils";
 
 export const metadata = { title: "Cliente" };
 export const dynamic = "force-dynamic";
 
 const FASI = ["Nuovo lead", "Qualificato", "Proposta inviata", "Negoziazione", "Vinto"];
 const norm = (s: string | null) => (s ?? "").toLowerCase().replace(/_/g, " ");
-const COLORE_CONTO = { bonifico: "#17150f", contante: "#969184", carta: "#2b5ea7" } as const;
-const NOME_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Credito" } as const;
+const NOME_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Carta" } as const;
 
 export default async function ClientePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -76,378 +81,222 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     .filter(({ p }) => p.stato === "accettato")
     .reduce((s, { p }) => s + p.imponibileCent, 0);
   const incassato = versati.reduce((s, { i }) => s + i.importoCent, 0);
-  const kpi = [
-    ["Preventivato", formatEuroCompatto(preventivato)],
-    ["Accettato", formatEuroCompatto(accettato)],
-    ["Incassato", formatEuroCompatto(incassato)],
-    ["Da incassare", formatEuroCompatto(somme[0]?.da_incassare ?? 0)],
-    ["Canoni attivi", formatEuroCompatto(somme[0]?.canoni ?? 0), "/anno"],
-  ] as const;
-  const dati: [string, string | null, boolean?][] = [
-    ["Ragione sociale", cliente.nome],
-    ["P.IVA", cliente.partitaIva, true],
-    ["Codice fiscale", cliente.codiceFiscale, true],
-    ["PEC", cliente.pec],
-    ["Codice SDI", cliente.codiceSdi, true],
-    ["Sede", cliente.citta],
-  ];
   const opp = opportunita[0];
   const faseIdx = opp ? FASI.findIndex((f) => norm(f) === norm(opp.fase)) : -1;
-  const iniziali = (n: string) =>
-    n
-      .split(" ")
-      .map((x) => x[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
 
   return (
     <>
-      <DetailBar indietro={{ label: "Clienti", href: "/clienti" }}>
-        <Link href="/configuratore" className="bg sm bare">
-          Configuratore
-        </Link>
-        <Link href={`/configuratore?cliente=${cliente.id}`} className="bp sm">
-          Nuovo preventivo <span aria-hidden="true">→</span>
-        </Link>
-      </DetailBar>
-
-      <section
-        style={st(
-          "display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between",
-        )}
-      >
-        <div style={st("display:flex;flex-direction:column;gap:14px")}>
-          <span className="eb">02 — Cliente · da Twenty</span>
-          <h1
-            className="d"
-            style={st(
-              "margin:0;font-weight:500;font-size:clamp(2.4rem,4.4vw,3.8rem);line-height:1.04;letter-spacing:-.032em",
-            )}
-          >
-            {cliente.nome}
-          </h1>
-          <div style={st("display:flex;flex-wrap:wrap;gap:8px")}>
-            <Tag tone="ink">{ref ? "Cliente" : "Prospect"}</Tag>
-            {cliente.pa && <span className="tag">Pubblica amministrazione</span>}
-            {cliente.citta && <span className="tag">{cliente.citta}</span>}
-          </div>
-        </div>
-        <div style={st("display:flex;flex-wrap:wrap;gap:8px")}>
-          {cliente.sito && (
-            <a
-              href={cliente.sito.startsWith("http") ? cliente.sito : `https://${cliente.sito}`}
-              className="bg"
-            >
-              Sito <span aria-hidden="true">↗</span>
-            </a>
-          )}
-          <Link href="/incassi" className="bg">
-            Registra incasso
-          </Link>
-          <Link href={`/configuratore?cliente=${cliente.id}`} className="bp">
-            Nuovo preventivo <span aria-hidden="true">→</span>
-          </Link>
-        </div>
-      </section>
-
-      <section
-        className="card"
-        style={st(
-          "padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))",
-        )}
-      >
-        {kpi.map(([e, v, per], i) => (
-          <div
-            key={e}
-            style={{
-              padding: "22px 26px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              borderRight: i < kpi.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-            }}
-          >
-            <span className="eb">{e}</span>
-            <b className="d num" style={st("font-weight:600;font-size:28px;letter-spacing:-.02em")}>
-              {v}
-              {per && <span style={st("font-size:15px;color:#6b675c;font-weight:500")}>{per}</span>}
-            </b>
-          </div>
-        ))}
-      </section>
-
-      <section
-        style={st("display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px")}
-      >
-        <div className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-          <div
-            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-          >
-            <h2 className="h2">Anagrafica</h2>
-            <span style={st("font-size:12px;color:#6b675c")}>Sola lettura · Company</span>
-          </div>
-          <dl style={st("margin:0;border-top:1px solid rgba(23,21,15,.14)")}>
-            {dati.map(([k, v, num], i) => (
-              <div
-                key={k}
-                className="kv"
-                style={i === dati.length - 1 ? { borderBottom: 0 } : undefined}
-              >
-                <dt>{k}</dt>
-                <dd className={num ? "num" : undefined}>{v ?? "—"}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-
-        <div className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-          <div
-            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-          >
-            <h2 className="h2">Contatti</h2>
-            <span style={st("font-size:12px;color:#6b675c")}>People · {persone.length}</span>
-          </div>
-          <div
-            style={st("display:flex;flex-direction:column;border-top:1px solid rgba(23,21,15,.14)")}
-          >
-            {persone.length === 0 && (
-              <p style={st("margin:16px 0 0;font-size:14px;color:#6b675c")}>
-                Nessuna persona collegata.
-              </p>
-            )}
-            {persone.map((p, i) => (
-              <div
-                key={p.id}
-                style={{
-                  display: "flex",
-                  gap: 14,
-                  padding: "16px 0",
-                  borderBottom: i < persone.length - 1 ? "1px solid rgba(23,21,15,.08)" : undefined,
-                }}
-              >
-                <span
-                  className="d"
-                  style={st(
-                    "flex:none;width:42px;height:42px;border-radius:50%;background:#eceae5;display:grid;place-items:center;font-weight:600;font-size:14px",
-                  )}
+      <PageHeader
+        titolo={cliente.nome}
+        descrizione={
+          [cliente.citta, cliente.pa ? "Pubblica amministrazione" : null]
+            .filter(Boolean)
+            .join(" · ") || undefined
+        }
+        stato={
+          <Badge variant={ref ? "ok" : "brand"} dot>
+            {ref ? "Cliente" : "Prospect"}
+          </Badge>
+        }
+        azioni={
+          <>
+            {cliente.sito && (
+              <Button asChild variant="secondary">
+                <a
+                  href={cliente.sito.startsWith("http") ? cliente.sito : `https://${cliente.sito}`}
                 >
-                  {iniziali(p.nome)}
-                </span>
-                <div style={st("display:flex;flex-direction:column;gap:4px;font-size:14px")}>
-                  <span style={{ fontWeight: 600 }}>{p.nome}</span>
-                  {p.ruolo && <span style={st("color:#6b675c;font-size:13px")}>{p.ruolo}</span>}
-                  {p.email && <span>{p.email}</span>}
-                  {p.telefono && <span className="num">{p.telefono}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                  Sito <ExternalLink />
+                </a>
+              </Button>
+            )}
+            <Button asChild variant="secondary">
+              <Link href="/incassi">Registra incasso</Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/preventivi/nuovo?cliente=${cliente.id}`}>Nuovo preventivo</Link>
+            </Button>
+          </>
+        }
+      />
 
-        <div className="ink" style={st("display:flex;flex-direction:column;gap:18px")}>
-          <div
-            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-          >
-            <span
-              style={st(
-                "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7)",
-              )}
-            >
-              Opportunità · Twenty
-            </span>
-          </div>
-          {opp ? (
-            <>
-              <div style={st("display:flex;flex-direction:column;gap:8px")}>
-                <span
-                  className="d"
-                  style={st(
-                    "font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.15;color:rgba(244,243,240,.94)",
-                  )}
-                >
-                  {opp.nome}
-                </span>
-                {opp.importoCent !== null && (
-                  <b
-                    className="d num"
-                    style={st(
-                      "font-size:40px;font-weight:600;letter-spacing:-.03em;color:rgba(244,243,240,.94)",
-                    )}
-                  >
-                    {formatEuroCompatto(opp.importoCent)}
-                  </b>
-                )}
-              </div>
-              <ol
-                style={st(
-                  "list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;border-top:1px solid rgba(244,243,240,.16)",
-                )}
-              >
-                {FASI.map((f, i) => {
-                  const attuale = i === faseIdx;
-                  const passata = faseIdx >= 0 && i < faseIdx;
-                  return (
-                    <li
-                      key={f}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "9px 0",
-                        fontSize: 14,
-                        color: attuale ? "#f4f3f0" : "rgba(244,243,240,.62)",
-                        fontWeight: attuale ? 600 : 400,
-                      }}
-                    >
-                      <i
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          display: "block",
-                          background: attuale
-                            ? "#f4f3f0"
-                            : passata
-                              ? "rgba(244,243,240,.4)"
-                              : undefined,
-                          border:
-                            !attuale && !passata ? "1px solid rgba(244,243,240,.4)" : undefined,
-                          boxShadow: attuale ? "0 0 0 4px rgba(244,243,240,.18)" : undefined,
-                        }}
-                      />
-                      {f}
-                    </li>
-                  );
-                })}
-              </ol>
-            </>
+      <StatsRow
+        dati={[
+          { etichetta: "Preventivato", valore: formatEuroCompatto(preventivato) },
+          { etichetta: "Accettato", valore: formatEuroCompatto(accettato) },
+          { etichetta: "Incassato", valore: formatEuroCompatto(incassato) },
+          { etichetta: "Da incassare", valore: formatEuroCompatto(somme[0]?.da_incassare ?? 0) },
+          {
+            etichetta: "Canoni attivi",
+            valore: (
+              <>
+                {formatEuroCompatto(somme[0]?.canoni ?? 0)}
+                <span className="text-sm font-normal text-fg-2">/anno</span>
+              </>
+            ),
+          },
+        ]}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader title="Anagrafica" description="Sola lettura · Twenty" />
+          <DefList
+            voci={[
+              { etichetta: "Ragione sociale", valore: cliente.nome },
+              { etichetta: "P.IVA", valore: cliente.partitaIva ?? "—", numerico: true },
+              { etichetta: "Codice fiscale", valore: cliente.codiceFiscale ?? "—", numerico: true },
+              { etichetta: "PEC", valore: cliente.pec ?? "—" },
+              { etichetta: "Codice SDI", valore: cliente.codiceSdi ?? "—", numerico: true },
+              { etichetta: "Sede", valore: cliente.citta ?? "—" },
+            ]}
+          />
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Contatti"
+            description={`${persone.length} person${persone.length === 1 ? "a" : "e"}`}
+          />
+          {persone.length === 0 ? (
+            <p className="text-sm text-fg-2">Nessuna persona collegata.</p>
           ) : (
-            <p style={st("margin:0;font-size:14px;color:rgba(244,243,240,.78)")}>
-              Nessuna opportunità aperta su Twenty.
-            </p>
+            <ul className="divide-y divide-line">
+              {persone.map((p) => (
+                <li key={p.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                  <Avatar name={p.nome} />
+                  <div className="flex min-w-0 flex-col text-sm leading-snug">
+                    <span className="font-medium">{p.nome}</span>
+                    {p.ruolo && <span className="text-xs text-fg-3">{p.ruolo}</span>}
+                    {p.email && <span className="truncate text-fg-2">{p.email}</span>}
+                    {p.telefono && <span className="text-fg-2 tabular-nums">{p.telefono}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-      </section>
+        </Card>
 
-      <section className="card" style={st("display:flex;flex-direction:column;gap:18px")}>
-        <div style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}>
-          <h2 className="h2">Preventivi</h2>
-          <Link href={`/configuratore?cliente=${cliente.id}`} className="bg sm">
-            Nuovo
-          </Link>
+        <Card>
+          <CardHeader title="Opportunità" description="Da Twenty" />
+          {opp ? (
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="text-sm font-medium">{opp.nome}</p>
+                {opp.importoCent !== null && (
+                  <p className="text-xl font-semibold tracking-tight tabular-nums">
+                    {formatEuroCompatto(opp.importoCent)}
+                  </p>
+                )}
+              </div>
+              <ol className="flex flex-col text-sm">
+                {FASI.map((f, i) => (
+                  <li
+                    key={f}
+                    className={`flex items-center gap-2.5 py-1 ${i === faseIdx ? "font-medium text-fg" : "text-fg-3"}`}
+                  >
+                    <i
+                      className={`size-2 rounded-full ${i === faseIdx ? "bg-brand ring-4 ring-brand/15" : i < faseIdx ? "bg-fg-3" : "border border-line-strong"}`}
+                    />
+                    {f}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : (
+            <p className="text-sm text-fg-2">Nessuna opportunità aperta su Twenty.</p>
+          )}
+        </Card>
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">Preventivi</h2>
+          <Button asChild variant="secondary" size="sm">
+            <Link href={`/preventivi/nuovo?cliente=${cliente.id}`}>Nuovo</Link>
+          </Button>
         </div>
         {prev.length === 0 ? (
-          <p style={st("margin:0;font-size:14px;color:#6b675c")}>
-            Nessun preventivo per questo cliente.
-          </p>
+          <p className="text-sm text-fg-2">Nessun preventivo per questo cliente.</p>
         ) : (
-          <div className="tw">
-            <table className="tbl" style={{ minWidth: 620 }}>
-              <thead>
-                <tr>
-                  <th>Numero</th>
-                  <th>Oggetto</th>
-                  <th>Emittente</th>
-                  <th className="r">Una tantum netto</th>
-                  <th className="r">Canone netto</th>
-                  <th>Stato</th>
-                  <th>Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {prev.map(({ p, emittente, unaTantum, canone }) => {
-                  const regole = p.snapshot.regole as unknown as RegoleFiscali;
-                  const ut = prezzoVisualizzato(unaTantum, regole);
-                  const cn = prezzoVisualizzato(canone, regole);
-                  const s = STATO_PREVENTIVO[p.stato];
-                  return (
-                    <tr key={p.id}>
-                      <td>
-                        <Link href={`/preventivi/${p.id}`} style={{ fontWeight: 600 }}>
-                          {p.numero ?? "Bozza"}
-                        </Link>
-                      </td>
-                      <td>{p.oggetto}</td>
-                      <td>{emittente}</td>
-                      <td className="r num">
-                        {unaTantum > 0 ? (
-                          <>
-                            {formatEuro(ut.nettoCent)}
-                            {ut.lordoCent !== null && (
-                              <span className="sub">{formatEuro(ut.lordoCent)} ivato</span>
-                            )}
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="r num">
-                        {canone > 0 ? (
-                          <>
-                            {formatEuro(cn.nettoCent)}/a
-                            {cn.lordoCent !== null && (
-                              <span className="sub">{formatEuro(cn.lordoCent)} ivato</span>
-                            )}
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td>
-                        <Tag tone={s?.tone}>{s?.label ?? p.stato}</Tag>
-                      </td>
-                      <td className="num">{formatData(p.createdAt.toISOString())}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Table minLarghezza={620}>
+            <thead>
+              <tr>
+                <Th>Numero</Th>
+                <Th>Oggetto</Th>
+                <Th>Emittente</Th>
+                <Th destra>Una tantum netto</Th>
+                <Th destra>Canone netto</Th>
+                <Th>Stato</Th>
+                <Th>Data</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {prev.map(({ p, emittente, unaTantum, canone }) => {
+                const regole = p.snapshot.regole as unknown as RegoleFiscali;
+                const ut = prezzoVisualizzato(unaTantum, regole);
+                const cn = prezzoVisualizzato(canone, regole);
+                const s = STATO_PREVENTIVO[p.stato];
+                return (
+                  <tr key={p.id} className="group">
+                    <Td>
+                      <Link href={`/preventivi/${p.id}`} className="font-medium hover:underline">
+                        {p.numero ?? "Bozza"}
+                      </Link>
+                    </Td>
+                    <Td>{p.oggetto}</Td>
+                    <Td className="text-fg-2">{emittente}</Td>
+                    <Td destra>{unaTantum > 0 ? formatEuro(ut.nettoCent) : "—"}</Td>
+                    <Td destra>{canone > 0 ? `${formatEuro(cn.nettoCent)}/a` : "—"}</Td>
+                    <Td>
+                      <Tag tone={s?.tone}>{s?.label ?? p.stato}</Tag>
+                    </Td>
+                    <Td className="tabular-nums text-fg-2">
+                      {formatData(p.createdAt.toISOString())}
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
         )}
       </section>
 
-      <section className="card" style={st("display:flex;flex-direction:column;gap:18px")}>
-        <div style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}>
-          <h2 className="h2">Incassi</h2>
-          <Link href="/incassi" className="bg sm">
-            Registra incasso
-          </Link>
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">Incassi</h2>
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/incassi">Registra incasso</Link>
+          </Button>
         </div>
         {versati.length === 0 ? (
-          <p style={st("margin:0;font-size:14px;color:#6b675c")}>Nessun incasso registrato.</p>
+          <p className="text-sm text-fg-2">Nessun incasso registrato.</p>
         ) : (
-          <div className="tw">
-            <table className="tbl" style={{ minWidth: 620 }}>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Causale</th>
-                  <th>Conto</th>
-                  <th>Metodo</th>
-                  <th className="r">Importo</th>
+          <Table minLarghezza={560}>
+            <thead>
+              <tr>
+                <Th>Data</Th>
+                <Th>Causale</Th>
+                <Th>Conto</Th>
+                <Th>Metodo</Th>
+                <Th destra>Importo</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {versati.map(({ i, conto, tipo }) => (
+                <tr key={i.id} className="group">
+                  <Td className="tabular-nums">{formatData(i.data)}</Td>
+                  <Td>{i.descrizione ?? "Incasso"}</Td>
+                  <Td className="text-fg-2">{conto}</Td>
+                  <Td>
+                    <Badge dot>{NOME_CONTO[tipo]}</Badge>
+                  </Td>
+                  <Td destra className="font-medium">
+                    {formatEuro(i.importoCent)}
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {versati.map(({ i, conto, tipo }) => (
-                  <tr key={i.id}>
-                    <td className="num">{formatData(i.data)}</td>
-                    <td>{i.descrizione ?? "Incasso"}</td>
-                    <td>{conto}</td>
-                    <td>
-                      <span className="tag">
-                        <i style={{ background: COLORE_CONTO[tipo] }} />
-                        {NOME_CONTO[tipo]}
-                      </span>
-                    </td>
-                    <td className="r num" style={st("font-weight:600;color:#17150f")}>
-                      {formatEuro(i.importoCent)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Table>
         )}
       </section>
     </>

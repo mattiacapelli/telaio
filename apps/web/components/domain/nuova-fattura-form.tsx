@@ -7,13 +7,17 @@ import {
   parseEuro,
   type RegoleFiscali,
 } from "@telaio/core";
+import { Check, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { salvaFatturaLiberaAction } from "@/app/(app)/fatture/actions";
-import { Button } from "@/components/ui/button";
-import { Card, InkPanel } from "@/components/ui/card";
-import { Input, Select } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { Field, Input, Select } from "@/components/ui/field";
 import { initialState } from "@/components/ui/form-modal";
+import { PageHeader } from "@/components/ui/page-header";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 interface Emittente {
@@ -32,7 +36,7 @@ interface Conto extends Opt {
 interface Voce extends Opt {
   prezzoCent: number;
 }
-interface Riga {
+interface RigaForm {
   k: number;
   d: string;
   q: string;
@@ -45,7 +49,7 @@ const MODI: { id: Modo; label: string }[] = [
   { id: "occasionale", label: "Azienda occasionale" },
   { id: "privato", label: "Privato" },
 ];
-const METODI = ["bonifico", "contanti", "carta"] as const;
+const METODI = ["bonifico", "contante", "carta"] as const;
 const SCADENZE = [
   { giorni: 30, label: "30 giorni data fattura" },
   { giorni: 0, label: "A vista" },
@@ -58,19 +62,17 @@ function Segmenti<T extends string>({
   opzioni,
   valore,
   onChange,
-  className,
 }: {
   etichetta: string;
   opzioni: { id: T; label: string }[];
   valore: T;
   onChange: (v: T) => void;
-  className?: string;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label={etichetta}
-      className={cn("flex gap-1 rounded-full border border-ink/16 bg-white/60 p-1", className)}
+      className="inline-flex gap-0.5 rounded-md border border-line bg-subtle p-0.5"
     >
       {opzioni.map((o) => (
         <button
@@ -80,8 +82,8 @@ function Segmenti<T extends string>({
           aria-checked={valore === o.id}
           onClick={() => onChange(o.id)}
           className={cn(
-            "min-h-11 flex-1 rounded-full text-[13px] leading-none font-medium",
-            valore === o.id ? "bg-ink text-paper" : "text-ink-2",
+            "h-7 cursor-pointer rounded-sm px-3 text-sm font-medium transition-colors duration-150",
+            valore === o.id ? "bg-surface text-fg shadow-xs" : "text-fg-2 hover:text-fg",
           )}
         >
           {o.label}
@@ -91,8 +93,16 @@ function Segmenti<T extends string>({
   );
 }
 
-const Etichetta = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[13px] leading-tight font-medium text-ink-2">{children}</span>
+const Riga = ({ t, v, forte }: { t: string; v: string; forte?: boolean }) => (
+  <div
+    className={cn(
+      "flex justify-between gap-4 py-1.5 text-sm",
+      forte ? "font-semibold text-fg" : "text-fg-2",
+    )}
+  >
+    <span>{t}</span>
+    <span className="tabular-nums">{v}</span>
+  </div>
 );
 
 export function NuovaFatturaForm({
@@ -109,14 +119,13 @@ export function NuovaFatturaForm({
   const [state, azione, inCorso] = useActionState(salvaFatturaLiberaAction, initialState);
   const [emId, setEmId] = useState(emittenti[0]?.id ?? "");
   const [modo, setModo] = useState<Modo>("twenty");
-  const [righe, setRighe] = useState<Riga[]>([{ k: 1, d: "", q: "1", p: "" }]);
+  const [righe, setRighe] = useState<RigaForm[]>([{ k: 1, d: "", q: "1", p: "" }]);
   const [incassata, setIncassata] = useState(false);
   const [metodo, setMetodo] = useState<(typeof METODI)[number]>("bonifico");
   const [prossimaK, setProssimaK] = useState(2);
 
   const em = emittenti.find((e) => e.id === emId);
   const contiEm = conti.filter((c) => !c.ragioneSocialeId || c.ragioneSocialeId === emId);
-
   const totali = useMemo(() => {
     if (!em) return null;
     return calcolaTotali(
@@ -135,7 +144,6 @@ export function NuovaFatturaForm({
     setRighe((rs) => [...rs, { k: prossimaK, d, q: "1", p }]);
     setProssimaK((n) => n + 1);
   };
-
   const righeJson = JSON.stringify(
     righe
       .filter((r) => r.d.trim())
@@ -150,101 +158,89 @@ export function NuovaFatturaForm({
       <input type="hidden" name="metodo" value={metodo} />
       {incassata && <input type="hidden" name="incassata" value="on" />}
 
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <Link
-          href="/fatture"
-          className="glass-pill flex min-h-13 items-center gap-3 px-[18px] text-[15px] font-medium"
-        >
-          <span aria-hidden>←</span> Fatture
-        </Link>
-        <div className="glass-pill flex min-h-13 items-center gap-3 px-[18px] text-sm text-ink-2">
-          <i aria-hidden className="block size-[7px] rounded-full bg-grey-1" />
-          Bozza
-        </div>
-        <div className="glass-pill flex min-h-13 items-center gap-1.5 pr-1.5 pl-1.5">
-          <Button
-            type="submit"
-            name="azione"
-            value="bozza"
-            variant="ghost"
-            size="sm"
-            disabled={inCorso}
-          >
-            Salva bozza
-          </Button>
-          <Button type="submit" name="azione" value="emetti" size="sm" disabled={inCorso}>
-            Emetti fattura <span aria-hidden>→</span>
-          </Button>
-        </div>
-      </header>
-
-      <section className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-end gap-6">
-        <div className="flex flex-col gap-3.5">
-          <span className="eyebrow">06 — Fattura libera</span>
-          <h1 className="font-display text-[clamp(2.4rem,4.4vw,3.8rem)] leading-[1.04] font-medium tracking-[-0.032em]">
-            Nuova fattura
-          </h1>
-        </div>
-        <p className="max-w-[46ch] text-base leading-[1.7] text-ink-2">
-          Nessun preventivo, nessuna rata: scrivi le righe a mano o pescale dal listino. Il cliente
-          può essere in Twenty, occasionale o un privato. Il numero arriva solo all&apos;emissione.
-        </p>
-      </section>
+      <PageHeader
+        titolo="Nuova fattura"
+        descrizione="Nessun preventivo, nessuna rata: scrivi le righe a mano o pescale dal listino. Il numero arriva solo all'emissione."
+        stato={<Badge dot>Bozza</Badge>}
+        azioni={
+          <>
+            <Button asChild variant="ghost">
+              <Link href="/fatture">Annulla</Link>
+            </Button>
+            <Button
+              type="submit"
+              name="azione"
+              value="bozza"
+              variant="secondary"
+              disabled={inCorso}
+            >
+              Salva bozza
+            </Button>
+            <Button type="submit" name="azione" value="emetti" disabled={inCorso}>
+              Emetti fattura
+            </Button>
+          </>
+        }
+      />
 
       {state.message && !state.ok && (
-        <p role="alert" className="rounded-2xl bg-ink px-[18px] py-3.5 text-[15px] text-paper">
+        <p
+          role="alert"
+          className="rounded-md border border-bad/20 bg-bad-soft px-3 py-2 text-sm text-bad"
+        >
           {state.message}
         </p>
       )}
 
-      <section className="flex flex-col gap-3.5">
-        <span className="eyebrow">Emittente</span>
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-medium">Emittente</h2>
         <div
           role="radiogroup"
           aria-label="Ragione sociale emittente"
-          className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3"
+          className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
         >
-          {emittenti.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              role="radio"
-              aria-checked={emId === e.id}
-              onClick={() => setEmId(e.id)}
-              className={cn(
-                "flex items-center justify-between gap-3 rounded-[18px] border px-5 py-[18px] text-left",
-                emId === e.id
-                  ? "border-ink bg-ink text-paper"
-                  : "border-white/75 bg-white/55 text-ink",
-              )}
-            >
-              <span className="flex flex-col gap-1">
-                <span className="font-display text-[17px] font-semibold">{e.nome}</span>
-                <span className="text-[13px] opacity-80">es. {e.sezionale}</span>
-              </span>
-              <span className="flex-none rounded-full border border-current px-2.5 py-1.5 text-xs leading-none font-medium whitespace-nowrap opacity-85">
-                {e.regole.ivaAttiva ? `IVA ${formatAliquota(e.regole.aliquotaIvaBp)}` : "Senza IVA"}
-              </span>
-            </button>
-          ))}
+          {emittenti.map((e) => {
+            const on = emId === e.id;
+            return (
+              <button
+                key={e.id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setEmId(e.id)}
+                className={cn(
+                  "flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-left transition-colors duration-150",
+                  on
+                    ? "border-brand bg-brand-soft ring-1 ring-brand"
+                    : "border-line bg-surface hover:bg-subtle",
+                )}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{e.nome}</span>
+                  {on && <Check className="size-4 text-brand" aria-hidden />}
+                </span>
+                <span className="text-xs text-fg-2">es. {e.sezionale}</span>
+                <span>
+                  <Badge variant={e.regole.ivaAttiva ? "neutral" : "warn"}>
+                    {e.regole.ivaAttiva
+                      ? `IVA ${formatAliquota(e.regole.aliquotaIvaBp)}`
+                      : "Senza IVA"}
+                  </Badge>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      <Card className="flex flex-col gap-[18px]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-[22px] font-medium tracking-[-0.015em]">Intestatario</h2>
-          <Segmenti
-            etichetta="Tipo di cliente"
-            opzioni={MODI}
-            valore={modo}
-            onChange={setModo}
-            className="flex-[0_1_520px]"
-          />
+      <Card>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">Intestatario</h2>
+          <Segmenti etichetta="Tipo di cliente" opzioni={MODI} valore={modo} onChange={setModo} />
         </div>
         {modo === "twenty" && (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3.5">
-            <label className="flex flex-col gap-2">
-              <Etichetta>Azienda in Twenty</Etichetta>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Azienda in Twenty" hint="P.IVA, SDI e indirizzo arrivano da Twenty.">
               <Select name="clienteRefId" defaultValue="" required>
                 <option value="" disabled>
                   Scegli…
@@ -255,70 +251,60 @@ export function NuovaFatturaForm({
                   </option>
                 ))}
               </Select>
-            </label>
-            <p className="self-end text-[13px] leading-relaxed text-ink-2">
-              P.IVA, SDI e indirizzo arrivano da Twenty.
-            </p>
+            </Field>
           </div>
         )}
         {modo === "occasionale" && (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5">
-            <label className="flex flex-col gap-2">
-              <Etichetta>Ragione sociale</Etichetta>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Ragione sociale">
               <Input name="nome" required />
-            </label>
-            <label className="flex flex-col gap-2">
-              <Etichetta>P.IVA</Etichetta>
+            </Field>
+            <Field label="P.IVA">
               <Input name="partitaIva" inputMode="numeric" placeholder="11 cifre" />
-            </label>
-            <label className="flex flex-col gap-2">
-              <Etichetta>Codice SDI o PEC</Etichetta>
+            </Field>
+            <Field label="Codice SDI o PEC">
               <Input name="sdiPec" placeholder="7 caratteri oppure PEC" />
-            </label>
-            <label className="col-span-full flex flex-col gap-2">
-              <Etichetta>Indirizzo</Etichetta>
+            </Field>
+            <Field label="Indirizzo">
               <Input name="indirizzo" placeholder="Via, CAP, Città" />
-            </label>
+            </Field>
           </div>
         )}
         {modo === "privato" && (
           <>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5">
-              <label className="flex flex-col gap-2">
-                <Etichetta>Nome e cognome</Etichetta>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Nome e cognome">
                 <Input name="nome" required />
-              </label>
-              <label className="flex flex-col gap-2">
-                <Etichetta>Codice fiscale</Etichetta>
+              </Field>
+              <Field label="Codice fiscale">
                 <Input name="codiceFiscale" placeholder="16 caratteri" />
-              </label>
-              <label className="flex flex-col gap-2">
-                <Etichetta>Indirizzo</Etichetta>
+              </Field>
+              <Field label="Indirizzo">
                 <Input name="indirizzo" placeholder="Via, CAP, Città" />
-              </label>
+              </Field>
             </div>
-            <p className="text-[13px] text-ink-2">
+            <p className="mt-3 text-sm text-fg-2">
               Privato: codice destinatario 0000000, la fattura resta nel cassetto fiscale.
             </p>
           </>
         )}
       </Card>
 
-      <section className="flex flex-wrap items-start gap-5">
-        <Card className="flex min-w-0 flex-[999_1_560px] flex-col gap-3.5">
+      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        <Card className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-[22px] font-medium tracking-[-0.015em]">Righe</h2>
+            <h2 className="text-base font-semibold">Righe</h2>
             {voci.length > 0 && (
-              <label className="flex items-center gap-2.5 text-[13px] text-ink-2">
+              <label className="flex items-center gap-2 text-sm text-fg-2">
                 Dal listino
-                <select
+                <Select
                   aria-label="Aggiungi voce dal listino"
                   value=""
                   onChange={(e) => {
                     const v = voci.find((x) => x.id === e.target.value);
                     if (v) aggiungi(v.nome, formatEuro(v.prezzoCent).replace(/[^\d,]/g, ""));
                   }}
-                  className="min-h-10 rounded-full border border-ink/16 bg-white/60 px-3.5 text-[13px] font-medium"
+                  className="h-7 w-auto"
                 >
                   <option value="">Scegli…</option>
                   {voci.map((v) => (
@@ -326,13 +312,13 @@ export function NuovaFatturaForm({
                       {v.nome} · {formatEuro(v.prezzoCent)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
           </div>
           <div className="overflow-x-auto">
-            <div className="flex min-w-[560px] flex-col gap-3.5">
-              <div className="grid grid-cols-[minmax(0,1fr)_76px_120px_36px] gap-2.5 border-b border-ink/14 pb-2 text-[11px] leading-tight font-medium tracking-[0.12em] text-muted uppercase">
+            <div className="flex min-w-[520px] flex-col gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_72px_112px_32px] gap-2 border-b border-line pb-1.5 text-xs font-medium text-fg-2">
                 <span>Descrizione</span>
                 <span>Qtà</span>
                 <span>Prezzo netto</span>
@@ -341,7 +327,7 @@ export function NuovaFatturaForm({
               {righe.map((r) => (
                 <div
                   key={r.k}
-                  className="grid grid-cols-[minmax(0,1fr)_76px_120px_36px] items-center gap-2.5"
+                  className="grid grid-cols-[minmax(0,1fr)_72px_112px_32px] items-center gap-2"
                 >
                   <Input
                     aria-label="Descrizione"
@@ -362,35 +348,31 @@ export function NuovaFatturaForm({
                     value={r.p}
                     onChange={(e) => aggiorna(r.k, "p", e.target.value)}
                   />
-                  <button
-                    type="button"
-                    aria-label="Rimuovi riga"
+                  <IconButton
+                    label="Rimuovi riga"
                     disabled={righe.length === 1}
                     onClick={() => setRighe((rs) => rs.filter((x) => x.k !== r.k))}
-                    className="grid size-9 place-items-center rounded-full text-base hover:bg-ink hover:text-paper disabled:opacity-30"
+                    type="button"
                   >
-                    ×
-                  </button>
+                    <X />
+                  </IconButton>
                 </div>
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 pt-1.5">
-            <Button type="button" variant="glass" size="sm" onClick={() => aggiungi()}>
-              Aggiungi riga <span aria-hidden>+</span>
+          <div>
+            <Button type="button" variant="secondary" size="sm" onClick={() => aggiungi()}>
+              <Plus /> Aggiungi riga
             </Button>
           </div>
-          <label className="mt-1.5 flex flex-col gap-2">
-            <Etichetta>Note in fattura</Etichetta>
+          <Field label="Note in fattura">
             <Input name="note" placeholder="Es. intervento del 22/10, rif. vostro ordine…" />
-          </label>
+          </Field>
         </Card>
 
-        <div className="flex min-w-0 flex-[1_1_340px] flex-col gap-5">
-          <InkPanel className="flex flex-col gap-0.5">
-            <span className="mb-2 text-[11px] leading-tight font-medium tracking-[0.14em] text-paper/70 uppercase">
-              Totali
-            </span>
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader title="Totali" />
             <Riga t="Imponibile" v={formatEuro(totali?.imponibileCent ?? 0)} />
             {em?.regole.ivaAttiva && (
               <Riga
@@ -402,38 +384,22 @@ export function NuovaFatturaForm({
             {!!totali?.ritenutaCent && (
               <Riga t="Ritenuta" v={`− ${formatEuro(totali.ritenutaCent)}`} />
             )}
-            <div className="mt-2 flex items-end justify-between gap-4 border-t border-paper/16 pt-4">
-              <span className="text-sm text-paper/80">Totale documento</span>
-              <b className="money text-4xl leading-none font-semibold tracking-[-0.03em]">
+            <div className="my-1 border-t border-line" />
+            <div className="flex items-baseline justify-between gap-4 py-1">
+              <span className="text-sm font-medium">Totale documento</span>
+              <b className="text-2xl font-semibold tracking-tight tabular-nums">
                 {formatEuro(totali?.totaleCent ?? 0)}
               </b>
             </div>
-          </InkPanel>
+          </Card>
 
-          <Card className="flex flex-col gap-3.5">
+          <Card className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold">Già incassata</span>
-                <span className="text-[13px] text-ink-2">Registra subito anche l&apos;incasso</span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-sm font-medium">Già incassata</span>
+                <span className="text-xs text-fg-2">Registra subito anche l&apos;incasso</span>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={incassata}
-                aria-label="Già incassata"
-                onClick={() => setIncassata((v) => !v)}
-                className={cn(
-                  "relative h-7 w-[46px] flex-none rounded-full transition-colors",
-                  incassata ? "bg-ink" : "bg-grey-2",
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute top-[3px] size-[22px] rounded-full bg-paper shadow transition-[left]",
-                    incassata ? "left-[21px]" : "left-[3px]",
-                  )}
-                />
-              </button>
+              <Switch label="Già incassata" checked={incassata} onCheckedChange={setIncassata} />
             </div>
             {incassata ? (
               <>
@@ -443,8 +409,7 @@ export function NuovaFatturaForm({
                   valore={metodo}
                   onChange={setMetodo}
                 />
-                <label className="flex flex-col gap-2">
-                  <Etichetta>Conto</Etichetta>
+                <Field label="Conto">
                   <Select name="contoId" required defaultValue={contiEm[0]?.id}>
                     {contiEm.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -452,12 +417,11 @@ export function NuovaFatturaForm({
                       </option>
                     ))}
                   </Select>
-                </label>
+                </Field>
               </>
             ) : (
               <>
-                <label className="flex flex-col gap-2">
-                  <Etichetta>Scadenza pagamento</Etichetta>
+                <Field label="Scadenza pagamento">
                   <Select name="giorniScadenza" defaultValue="30">
                     {SCADENZE.map((s) => (
                       <option key={s.giorni} value={s.giorni}>
@@ -465,24 +429,15 @@ export function NuovaFatturaForm({
                       </option>
                     ))}
                   </Select>
-                </label>
-                <span className="text-[13px] text-ink-2">
+                </Field>
+                <p className="text-xs text-fg-2">
                   Finisce nello scadenzario, con promemoria e solleciti da confermare.
-                </span>
+                </p>
               </>
             )}
           </Card>
         </div>
-      </section>
+      </div>
     </form>
-  );
-}
-
-function Riga({ t, v }: { t: string; v: string }) {
-  return (
-    <div className="flex justify-between gap-4 py-2 text-sm text-paper/82">
-      <span>{t}</span>
-      <span className="tabular-nums">{v}</span>
-    </div>
   );
 }

@@ -11,7 +11,6 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
       { numero: "01", titolo: "Dashboard", href: "/" },
       { numero: "02", titolo: "Clienti", href: "/clienti" },
       { numero: "03", titolo: "Preventivi", href: "/preventivi" },
-      { numero: "04", titolo: "Configuratore", href: "/configuratore" },
       { numero: "05", titolo: "Listini", href: "/listini" },
     ],
   },
@@ -44,13 +43,12 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
 
 export const AZIONI_PRINCIPALI: Record<string, { label: string; href: string }> = {
   "/preventivi": { label: "Nuovo preventivo", href: "/preventivi/nuovo" },
-  "/configuratore": { label: "Nuovo preventivo", href: "/configuratore" },
   "/fatture": { label: "Nuova fattura", href: "/fatture/nuova" },
   "/incassi": { label: "Registra incasso", href: "/incassi" },
   "/abbonamenti": { label: "Nuovo abbonamento", href: "/abbonamenti" },
 };
 
-export const AZIONE_DEFAULT = { label: "Nuovo preventivo", href: "/configuratore" };
+export const AZIONE_DEFAULT = { label: "Nuovo preventivo", href: "/preventivi/nuovo" };
 
 export const SEZIONI_IMPOSTAZIONI = [
   { slug: "ragioni-sociali", titolo: "Ragioni sociali", gruppo: "Azienda" },

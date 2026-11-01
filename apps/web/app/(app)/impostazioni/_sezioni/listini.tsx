@@ -71,19 +71,19 @@ function CampiVoce({
       </div>
       {basi && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-[13px] font-medium text-ink-2">Basi compatibili</legend>
-          {basi.length === 0 && <p className="text-sm text-muted">Crea prima almeno una base.</p>}
+          <legend className="mb-1 text-[13px] font-medium text-fg">Basi compatibili</legend>
+          {basi.length === 0 && <p className="text-sm text-fg-2">Crea prima almeno una base.</p>}
           {basi.map((b) => (
             <label
               key={b.id}
-              className="flex min-h-11 items-center gap-3 rounded-2xl border border-grey-2 bg-white/50 px-4"
+              className="flex min-h-11 items-center gap-3 rounded-lg border border-line bg-surface px-4"
             >
               <input
                 type="checkbox"
                 name="baseIds[]"
                 value={b.id}
                 defaultChecked={modulo?.some((a) => a.baseId === b.id)}
-                className="size-4 accent-[var(--ink)]"
+                className="size-4 accent-[var(--brand)]"
               />
               <span className="text-sm">{b.nome}</span>
             </label>
@@ -156,9 +156,9 @@ export function SezioneListini({
           <Card key={l.id} className="flex flex-col gap-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="eyebrow">{rs?.nome}</p>
+                <p className="text-xs font-medium text-fg-3">{rs?.nome}</p>
                 <h2 className="font-display text-2xl font-semibold">{l.nome}</h2>
-                {l.descrizione && <p className="mt-1 text-sm text-muted">{l.descrizione}</p>}
+                {l.descrizione && <p className="mt-1 text-sm text-fg-2">{l.descrizione}</p>}
               </div>
               <div className="flex flex-wrap gap-2">
                 <FormModal
@@ -228,13 +228,13 @@ export function SezioneListini({
             {b.length > 0 && m.length > 0 && (
               <div>
                 <h3 className="font-display text-lg font-semibold">Compatibilità modulo ↔ base</h3>
-                <p className="mb-3 text-sm text-muted">
+                <p className="mb-3 text-sm text-fg-2">
                   Il configuratore propone solo i moduli assegnati alla base scelta.
                 </p>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[480px] text-sm">
                     <thead>
-                      <tr className="text-left text-xs text-muted">
+                      <tr className="text-left text-xs text-fg-2">
                         <th className="px-3 py-2 font-medium">Modulo</th>
                         {b.map((x) => (
                           <th key={x.id} className="px-3 py-2 text-center font-medium">
@@ -245,7 +245,7 @@ export function SezioneListini({
                     </thead>
                     <tbody>
                       {m.map((mod) => (
-                        <tr key={mod.id} className="border-t border-grey-2/60">
+                        <tr key={mod.id} className="border-t border-line">
                           <td className="px-3 py-1 font-medium">{mod.nome}</td>
                           {b.map((base) => {
                             const attiva = assegnazioni.some(
@@ -260,7 +260,7 @@ export function SezioneListini({
                                     type="submit"
                                     aria-pressed={attiva}
                                     aria-label={`${mod.nome} su ${base.nome}: ${attiva ? "assegnato" : "non assegnato"}`}
-                                    className={`inline-grid size-11 place-items-center rounded-full border transition-colors ${attiva ? "border-ink bg-ink text-paper" : "border-grey-2 bg-white/60 text-transparent hover:border-ink"}`}
+                                    className={`inline-grid size-11 place-items-center rounded-full border transition-colors ${attiva ? "border-fg bg-fg text-white" : "border-line bg-subtle text-transparent hover:border-fg"}`}
                                   >
                                     <Check className="size-4" aria-hidden />
                                   </button>
@@ -299,12 +299,12 @@ function TabellaVoci<V extends Base | Modulo>({
     <div>
       <h3 className="font-display text-lg font-semibold">{titolo}</h3>
       {voci.length === 0 ? (
-        <p className="mt-1 text-sm text-muted">Nessuna voce.</p>
+        <p className="mt-1 text-sm text-fg-2">Nessuna voce.</p>
       ) : (
         <div className="mt-2 overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="text-left text-xs text-muted">
+              <tr className="text-left text-xs text-fg-2">
                 <th className="px-3 py-2 font-medium">Voce</th>
                 <th className="px-3 py-2 font-medium">Una tantum</th>
                 <th className="px-3 py-2 font-medium">Canone annuo</th>
@@ -314,7 +314,7 @@ function TabellaVoci<V extends Base | Modulo>({
             </thead>
             <tbody>
               {voci.map((v) => (
-                <tr key={v.id} className="border-t border-grey-2/60 align-middle">
+                <tr key={v.id} className="border-t border-line align-middle">
                   <td className="px-3 py-3 font-medium">{v.nome}</td>
                   <td className="px-3 py-3">
                     <Prezzo nettoCent={v.unaTantumCent} regole={regole} />

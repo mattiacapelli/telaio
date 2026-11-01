@@ -8,18 +8,36 @@ import {
   prezzoVisualizzato,
   totaliConfiguratore,
 } from "@telaio/core";
+import { Check, Copy, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { creaPreventivoAction } from "@/app/(app)/configuratore/actions";
-import type { ListinoCfg } from "@/app/(app)/configuratore/configuratore";
-import { DetailBar } from "@/components/shell/topbar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, EmptyState } from "@/components/ui/card";
+import { Field, Input, Select } from "@/components/ui/field";
 import { initialState } from "@/components/ui/form-modal";
-import { cn, st } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { toast } from "@/components/ui/toast";
+import type { ListinoCfg } from "@/lib/listini-cfg";
+import { cn } from "@/lib/utils";
 
 const SCONTI = [0, 5, 10, 15];
 const VALIDITA = [15, 30, 60, 90];
 
-/** Editor del preventivo da listino: emittente, cliente, voci, sconto e riepilogo. */
+const Riga = ({ t, v, forte }: { t: string; v: string; forte?: boolean }) => (
+  <div
+    className={cn(
+      "flex justify-between gap-4 py-1.5 text-sm",
+      forte ? "font-semibold text-fg" : "text-fg-2",
+    )}
+  >
+    <span>{t}</span>
+    <span className="tabular-nums">{v}</span>
+  </div>
+);
+
+/** Editor del preventivo da listino: emittente, cliente, voci, sconto e riepilogo. Salva una bozza. */
 export function PreventivoEditor({
   listini,
   clienti,
@@ -49,6 +67,7 @@ export function PreventivoEditor({
         : [],
     [listino, baseId],
   );
+  const descModulo = (id: string) => listino?.moduli.find((x) => x.id === id)?.descrizione;
   const scelti = compatibili.filter((m) => moduloIds.includes(m.id));
   const voci = base ? [base, ...scelti] : [];
   const tot = totaliConfiguratore(voci.map((v) => ({ ...v, tipo: "base" as const })));
@@ -71,26 +90,39 @@ export function PreventivoEditor({
     setModuloIds([]);
   }
 
-  const riga = (t: string, v: string, forte = false) => (
-    <div
-      className="row"
-      style={{ color: forte ? "#f4f3f0" : "rgba(244,243,240,.82)", fontWeight: forte ? 600 : 400 }}
-    >
-      <span>{t}</span>
-      <span className="num">{v}</span>
-    </div>
-  );
+  const copiaRiepilogo = async () => {
+    const testo = [
+      `Offerta · ${listino?.ragioneSociale ?? ""}`,
+      ...voci.map((v) => `- ${v.nome}`),
+      `Una tantum netto: ${formatEuro(tot.unaTantumCent)}`,
+      doc ? `Totale una tantum: ${formatEuro(doc.totaleCent)}` : "",
+      canoneAnno ? `Canone annuo netto: ${formatEuro(canoneAnno)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    await navigator.clipboard?.writeText(testo);
+    toast("Riepilogo copiato");
+  };
 
   if (listini.length === 0) {
     return (
-      <p className="card" style={st("margin:0;font-size:14px;color:#6b675c")}>
-        Non ci sono listini: creane uno in Impostazioni → Listini e moduli.
-      </p>
+      <Card className="p-0">
+        <EmptyState
+          title="Nessun listino"
+          action={
+            <Button asChild>
+              <Link href="/impostazioni/listini">Crea un listino</Link>
+            </Button>
+          }
+        >
+          Serve almeno un listino con una base per comporre un preventivo.
+        </EmptyState>
+      </Card>
     );
   }
 
   return (
-    <form action={azione} style={{ display: "contents" }}>
+    <form action={azione} className="contents">
       <input type="hidden" name="ragioneSocialeId" value={listino?.ragioneSocialeId ?? ""} />
       <input type="hidden" name="baseId" value={baseId} />
       <input type="hidden" name="scontoBp" value={sconto * 100} />
@@ -99,66 +131,37 @@ export function PreventivoEditor({
         <input key={m} type="hidden" name="moduloIds" value={m} />
       ))}
 
-      <DetailBar
-        indietro={{ label: "Preventivi", href: "/preventivi" }}
-        stato={
+      <PageHeader
+        titolo="Nuovo preventivo"
+        descrizione="L'emittente decide numerazione e IVA. Ogni prezzo è mostrato netto e, dove c'è IVA, anche ivato. Il numero arriva quando lo invii al cliente."
+        stato={<Badge dot>Bozza</Badge>}
+        azioni={
           <>
-            <i
-              style={st("width:7px;height:7px;border-radius:50%;background:#969184;display:block")}
-            />
-            Nuova bozza
+            <Button asChild variant="ghost">
+              <Link href="/preventivi">Annulla</Link>
+            </Button>
+            <Button type="submit" disabled={!base || pending}>
+              {pending ? "Creazione…" : "Salva bozza"}
+            </Button>
           </>
         }
-      >
-        <Link href="/configuratore" className="bg sm bare">
-          Configuratore rapido
-        </Link>
-        <button type="submit" className="bp sm" disabled={!base || pending}>
-          {pending ? "Creazione…" : "Salva bozza"} <span aria-hidden="true">→</span>
-        </button>
-      </DetailBar>
+      />
 
-      <section
-        style={st(
-          "display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;align-items:end",
-        )}
-      >
-        <div style={st("display:flex;flex-direction:column;gap:14px")}>
-          <span className="eb">03 — Preventivo da listino</span>
-          <h1
-            className="d"
-            style={st(
-              "margin:0;font-weight:500;font-size:clamp(2.4rem,4.4vw,3.8rem);line-height:1.04;letter-spacing:-.032em",
-            )}
-          >
-            Nuovo preventivo
-          </h1>
-        </div>
-        <p style={st("margin:0;max-width:46ch;font-size:16px;line-height:1.7;color:#3a372f")}>
-          L&apos;emittente decide numerazione, IBAN e IVA. Ogni prezzo è mostrato netto e, dove
-          c&apos;è IVA, anche ivato. Il numero arriva quando lo invii al cliente.
-        </p>
-      </section>
-
-      {stato.message && (
+      {stato.message && !stato.ok && (
         <p
           role="alert"
-          style={st(
-            "margin:0;padding:14px 18px;border-radius:16px;background:#17150f;color:#f4f3f0;font-size:15px",
-          )}
+          className="rounded-md border border-bad/20 bg-bad-soft px-3 py-2 text-sm text-bad"
         >
           {stato.message}
         </p>
       )}
 
-      <section style={st("display:flex;flex-direction:column;gap:14px")}>
-        <span className="eb">Emittente</span>
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-medium text-fg">Emittente</h2>
         <div
           role="radiogroup"
           aria-label="Ragione sociale emittente"
-          style={st(
-            "display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px",
-          )}
+          className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
         >
           {listini.map((l) => {
             const on = l.id === listinoId;
@@ -169,56 +172,24 @@ export function PreventivoEditor({
                 role="radio"
                 aria-checked={on}
                 onClick={() => cambiaListino(l.id)}
-                style={{
-                  textAlign: "left",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                  padding: "20px 22px",
-                  borderRadius: 20,
-                  fontFamily: "Inter, sans-serif",
-                  ...(on
-                    ? st("background:#17150f;color:#f4f3f0;border:1px solid #17150f")
-                    : st(
-                        "background:rgba(255,255,255,.55);color:#17150f;border:1px solid rgba(23,21,15,.16)",
-                      )),
-                }}
+                className={cn(
+                  "flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-left transition-colors duration-150",
+                  on
+                    ? "border-brand bg-brand-soft ring-1 ring-brand"
+                    : "border-line bg-surface hover:bg-subtle",
+                )}
               >
-                <span
-                  style={st(
-                    "display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%",
-                  )}
-                >
-                  <span
-                    className="d"
-                    style={st("font-size:18px;font-weight:600;letter-spacing:-.01em")}
-                  >
-                    {l.ragioneSociale}
-                  </span>
-                  <span
-                    style={st(
-                      "width:18px;height:18px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;flex:none",
-                    )}
-                  >
-                    {on && (
-                      <span
-                        style={st(
-                          "width:8px;height:8px;border-radius:50%;background:currentColor;display:block",
-                        )}
-                      />
-                    )}
-                  </span>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{l.ragioneSociale}</span>
+                  {on && <Check className="size-4 text-brand" aria-hidden />}
                 </span>
-                <span style={st("font-size:13px;opacity:.8")}>Listino {l.nome}</span>
-                <span
-                  style={st(
-                    "align-self:flex-start;font:500 12px/1 Inter,sans-serif;padding:6px 10px;border-radius:999px;border:1px solid currentColor;opacity:.85",
-                  )}
-                >
-                  {l.regole.ivaAttiva
-                    ? `IVA ${formatAliquota(l.regole.aliquotaIvaBp)}`
-                    : "Senza IVA"}
+                <span className="text-xs text-fg-2">Listino {l.nome}</span>
+                <span>
+                  <Badge variant={l.regole.ivaAttiva ? "neutral" : "warn"}>
+                    {l.regole.ivaAttiva
+                      ? `IVA ${formatAliquota(l.regole.aliquotaIvaBp)}`
+                      : "Senza IVA"}
+                  </Badge>
                 </span>
               </button>
             );
@@ -226,266 +197,197 @@ export function PreventivoEditor({
         </div>
       </section>
 
-      <section
-        style={st("display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px")}
-      >
-        <div className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-          <div
-            style={st("display:flex;justify-content:space-between;align-items:baseline;gap:12px")}
-          >
-            <h2 className="h2">Cliente</h2>
-            <span style={st("font-size:12px;color:#6b675c")}>da Twenty</span>
-          </div>
-          <div className="f">
-            <label className="lbl" htmlFor="pe-cli">
-              Azienda
-            </label>
-            <select
-              id="pe-cli"
-              name="clienteTwentyId"
-              className="in"
-              defaultValue={clienteIniziale ?? ""}
-            >
-              <option value="">Da assegnare</option>
-              {clienti.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="card" style={st("display:flex;flex-direction:column;gap:14px")}>
-          <h2 className="h2">Dettagli</h2>
-          <div className="f">
-            <label className="lbl" htmlFor="pe-og">
-              Oggetto
-            </label>
-            <input
-              id="pe-og"
-              name="oggetto"
-              className="in"
-              placeholder="Se vuoto usa il nome della base"
+      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card className="grid gap-4 sm:grid-cols-2">
+            <Field label="Cliente (da Twenty)" hint="Puoi assegnarlo anche dopo">
+              <Select name="clienteTwentyId" defaultValue={clienteIniziale ?? ""}>
+                <option value="">Da assegnare</option>
+                {clienti.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Validità">
+              <Select value={validita} onChange={(e) => setValidita(Number(e.target.value))}>
+                {VALIDITA.map((g) => (
+                  <option key={g} value={g}>
+                    {g} giorni
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Oggetto" hint="Se vuoto usa il nome della base" className="sm:col-span-2">
+              <Input name="oggetto" />
+            </Field>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Voci"
+              description="Scegli una base: ti propongo solo i moduli compatibili."
             />
-          </div>
-          <div className="f">
-            <label className="lbl" htmlFor="pe-val">
-              Validità
-            </label>
-            <select
-              id="pe-val"
-              className="in"
-              value={validita}
-              onChange={(e) => setValidita(Number(e.target.value))}
-            >
-              {VALIDITA.map((g) => (
-                <option key={g} value={g}>
-                  {g} giorni
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <section style={st("display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start")}>
-        <div
-          className="card"
-          style={st("flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:18px")}
-        >
-          <div
-            style={st(
-              "display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px",
-            )}
-          >
-            <h2 className="h2">Voci</h2>
-            <span style={st("font-size:13px;color:#6b675c")}>
-              una base, poi i moduli compatibili
-            </span>
-          </div>
-
-          <div
-            role="radiogroup"
-            aria-label="Base"
-            style={st(
-              "display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px",
-            )}
-          >
-            {listino?.basi.map((b) => {
-              const on = b.id === baseId;
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  className="opt"
-                  onClick={() => {
-                    setBaseId(b.id);
-                    setModuloIds((p) =>
-                      p.filter((m) =>
-                        listino.moduli.find((x) => x.id === m)?.baseIds.includes(b.id),
-                      ),
-                    );
-                  }}
-                  style={
-                    on
-                      ? st("background:#17150f;color:#f4f3f0;border:1px solid #17150f")
-                      : st(
-                          "background:rgba(255,255,255,.55);color:#17150f;border:1px solid rgba(23,21,15,.16)",
-                        )
-                  }
-                >
-                  <span className="d" style={st("font-size:17px;font-weight:600")}>
-                    {b.nome}
-                  </span>
-                  <span className="num" style={st("font-size:13px;font-weight:500")}>
-                    {formatEuro(b.unaTantumCent)}
-                    {b.canoneAnnuoCent > 0 && ` + ${formatEuro(b.canoneAnnuoCent)}/anno`}
-                    {b.canoneMensileCent > 0 && ` + ${formatEuro(b.canoneMensileCent)}/mese`}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {base && (
-            <div
-              style={st(
-                "display:flex;flex-direction:column;border-top:1px solid rgba(23,21,15,.14)",
+            <div role="radiogroup" aria-label="Base" className="grid gap-2 sm:grid-cols-2">
+              {listino?.basi.length === 0 && (
+                <p className="text-sm text-fg-2">Questo listino non ha ancora basi.</p>
               )}
-            >
-              {compatibili.length === 0 && (
-                <p style={st("margin:14px 0 0;font-size:14px;color:#6b675c")}>
-                  Nessun modulo è assegnato a questa base.
-                </p>
-              )}
-              {compatibili.map((m) => {
-                const on = moduloIds.includes(m.id);
-                const v = regole
-                  ? prezzoVisualizzato(
-                      m.unaTantumCent || m.canoneAnnuoCent || m.canoneMensileCent,
-                      regole,
-                    )
-                  : null;
+              {listino?.basi.map((b) => {
+                const on = b.id === baseId;
                 return (
-                  <div
-                    key={m.id}
-                    style={st(
-                      "display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(23,21,15,.08)",
+                  <button
+                    key={b.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => {
+                      setBaseId(b.id);
+                      setModuloIds((p) =>
+                        p.filter((m) =>
+                          listino.moduli.find((x) => x.id === m)?.baseIds.includes(b.id),
+                        ),
+                      );
+                    }}
+                    className={cn(
+                      "flex cursor-pointer flex-col gap-0.5 rounded-lg border p-3 text-left transition-colors duration-150",
+                      on
+                        ? "border-brand bg-brand-soft ring-1 ring-brand"
+                        : "border-line hover:bg-subtle",
                     )}
                   >
-                    <div style={st("flex:1;display:flex;flex-direction:column;gap:3px")}>
-                      <span style={st("font-weight:600")}>{m.nome}</span>
-                      <span className="sub num" style={{ marginTop: 0 }}>
-                        {formatEuro(m.unaTantumCent)}
-                        {v?.lordoCent != null &&
-                          m.unaTantumCent > 0 &&
-                          ` · ${formatEuro(v.lordoCent)} ivato`}
-                        {m.canoneAnnuoCent > 0 && ` · ${formatEuro(m.canoneAnnuoCent)}/a`}
-                        {m.canoneMensileCent > 0 && ` · ${formatEuro(m.canoneMensileCent)}/m`}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      aria-pressed={on}
-                      aria-label={on ? `Rimuovi ${m.nome}` : `Aggiungi ${m.nome}`}
-                      onClick={() =>
-                        setModuloIds((p) => (on ? p.filter((x) => x !== m.id) : [...p, m.id]))
-                      }
-                      className={cn("step", on && "on")}
-                      style={on ? st("background:#17150f;color:#f4f3f0") : undefined}
-                    >
-                      {on ? "−" : "+"}
-                    </button>
-                  </div>
+                    <span className="text-sm font-semibold">{b.nome}</span>
+                    {b.descrizione && <span className="text-xs text-fg-2">{b.descrizione}</span>}
+                    <span className="text-xs text-fg-2 tabular-nums">
+                      {formatEuro(b.unaTantumCent)}
+                      {b.canoneAnnuoCent > 0 && ` + ${formatEuro(b.canoneAnnuoCent)}/anno`}
+                      {b.canoneMensileCent > 0 && ` + ${formatEuro(b.canoneMensileCent)}/mese`}
+                    </span>
+                  </button>
                 );
               })}
             </div>
-          )}
 
-          <div
-            style={st(
-              "display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-top:1px solid rgba(23,21,15,.08);padding-top:16px",
+            {base && (
+              <div className="mt-4 border-t border-line pt-3">
+                <h3 className="mb-1 text-sm font-medium">Moduli compatibili</h3>
+                {compatibili.length === 0 && (
+                  <p className="text-sm text-fg-2">Nessun modulo è assegnato a questa base.</p>
+                )}
+                <ul className="divide-y divide-line">
+                  {compatibili.map((m) => {
+                    const on = moduloIds.includes(m.id);
+                    const lordo =
+                      regole && m.unaTantumCent > 0
+                        ? prezzoVisualizzato(m.unaTantumCent, regole).lordoCent
+                        : null;
+                    return (
+                      <li key={m.id} className="flex items-center gap-3 py-2.5">
+                        <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                          <span className="text-sm font-medium">{m.nome}</span>
+                          <span className="text-xs text-fg-3 tabular-nums">
+                            {descModulo(m.id) ? `${descModulo(m.id)} · ` : ""}
+                            {formatEuro(m.unaTantumCent)}
+                            {lordo !== null && ` (${formatEuro(lordo)} ivato)`}
+                            {m.canoneAnnuoCent > 0 && ` · ${formatEuro(m.canoneAnnuoCent)}/a`}
+                            {m.canoneMensileCent > 0 && ` · ${formatEuro(m.canoneMensileCent)}/m`}
+                          </span>
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={on ? "primary" : "secondary"}
+                          aria-pressed={on}
+                          aria-label={on ? `Rimuovi ${m.nome}` : `Aggiungi ${m.nome}`}
+                          onClick={() =>
+                            setModuloIds((p) => (on ? p.filter((x) => x !== m.id) : [...p, m.id]))
+                          }
+                        >
+                          {on ? <X /> : <Plus />}
+                          {on ? "Rimuovi" : "Aggiungi"}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             )}
-          >
-            <span style={st("font-size:14px;color:#3a372f")}>Sconto una tantum</span>
-            <div role="group" aria-label="Sconto" style={st("display:flex;flex-wrap:wrap;gap:8px")}>
-              {SCONTI.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={cn("chip", sconto === s && "on")}
-                  onClick={() => setSconto(s)}
-                >
-                  {s === 0 ? "Nessuno" : `${s}%`}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section
-        className="ink"
-        style={st("display:flex;flex-direction:column;gap:2px")}
-        aria-live="polite"
-      >
-        <span
-          style={st(
-            "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7);margin-bottom:8px",
-          )}
-        >
-          Riepilogo · {iva}
-        </span>
-        {riga("Una tantum netto", formatEuro(tot.unaTantumCent))}
-        {sconto > 0 && riga(`Sconto ${sconto}%`, `− ${formatEuro(scontoCent)}`)}
-        {regole?.ivaAttiva && doc && riga(iva, formatEuro(doc.ivaCent))}
-        {doc && doc.bolloCent > 0 && riga("Marca da bollo", formatEuro(doc.bolloCent))}
-        <div style={st("border-top:1px solid rgba(244,243,240,.16);margin:4px 0")} />
-        {riga("Totale una tantum", formatEuro(doc?.totaleCent ?? 0), true)}
-        {canoneAnno > 0 && (
-          <>
-            <div style={{ height: 10 }} />
-            {riga("Canone annuo netto", formatEuro(canoneAnno))}
-            {canoneV?.lordoCent != null &&
-              riga("Canone annuo IVA inclusa", formatEuro(canoneV.lordoCent))}
-          </>
-        )}
-        <div
-          style={st(
-            "display:flex;flex-wrap:wrap;gap:24px;border-top:1px solid rgba(244,243,240,.16);padding-top:16px;margin-top:14px",
-          )}
-        >
-          <div style={st("display:flex;flex-direction:column;gap:6px;flex:1 1 200px")}>
-            <span style={st("font-size:13px;color:rgba(244,243,240,.78)")}>Primo anno netto</span>
-            <b
-              className="d num"
-              style={st("font-size:32px;font-weight:600;letter-spacing:-.03em;line-height:1")}
-            >
-              {formatEuro(primoNetto)}
-            </b>
-          </div>
-          {regole?.ivaAttiva && (
-            <div style={st("display:flex;flex-direction:column;gap:6px;flex:1 1 200px")}>
-              <span style={st("font-size:13px;color:rgba(244,243,240,.78)")}>
-                Primo anno IVA inclusa
-              </span>
-              <b
-                className="d num"
-                style={st("font-size:32px;font-weight:600;letter-spacing:-.03em;line-height:1")}
-              >
-                {formatEuro(primoLordo)}
-              </b>
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+              <span className="text-sm text-fg-2">Sconto una tantum</span>
+              <div role="group" aria-label="Sconto" className="flex gap-1.5">
+                {SCONTI.map((s) => (
+                  <Button
+                    key={s}
+                    type="button"
+                    size="sm"
+                    variant={sconto === s ? "primary" : "secondary"}
+                    onClick={() => setSconto(s)}
+                  >
+                    {s === 0 ? "Nessuno" : `${s}%`}
+                  </Button>
+                ))}
+              </div>
             </div>
-          )}
+          </Card>
         </div>
-        {regole && !regole.ivaAttiva && regole.diciturSenzaIva && (
-          <p style={st("margin:12px 0 0;font-size:12px;color:rgba(244,243,240,.7)")}>
-            {regole.diciturSenzaIva}
-          </p>
-        )}
-      </section>
+
+        <Card className="h-fit lg:sticky lg:top-4" aria-live="polite">
+          <CardHeader title="Riepilogo" description={iva} />
+          {voci.length === 0 ? (
+            <p className="text-sm text-fg-2">Scegli una base per iniziare.</p>
+          ) : (
+            <ul className="mb-2 divide-y divide-line border-y border-line text-sm">
+              {voci.map((v) => (
+                <li key={v.id} className="flex justify-between gap-3 py-1.5">
+                  <span>{v.nome}</span>
+                  <span className="text-fg-2 tabular-nums">
+                    {formatEuro(v.unaTantumCent || v.canoneAnnuoCent || v.canoneMensileCent)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Riga t="Una tantum netto" v={formatEuro(tot.unaTantumCent)} />
+          {sconto > 0 && <Riga t={`Sconto ${sconto}%`} v={`− ${formatEuro(scontoCent)}`} />}
+          {regole?.ivaAttiva && doc && <Riga t={iva} v={formatEuro(doc.ivaCent)} />}
+          {doc && doc.bolloCent > 0 && <Riga t="Marca da bollo" v={formatEuro(doc.bolloCent)} />}
+          <div className="my-1 border-t border-line" />
+          <Riga t="Totale una tantum" v={formatEuro(doc?.totaleCent ?? 0)} forte />
+          {canoneAnno > 0 && (
+            <>
+              <Riga t="Canone annuo netto" v={formatEuro(canoneAnno)} />
+              {canoneV?.lordoCent != null && (
+                <Riga t="Canone annuo IVA inclusa" v={formatEuro(canoneV.lordoCent)} />
+              )}
+            </>
+          )}
+          <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-fg-2">Primo anno netto</span>
+              <b className="font-semibold tabular-nums">{formatEuro(primoNetto)}</b>
+            </div>
+            {regole?.ivaAttiva && (
+              <div className="flex justify-between text-sm">
+                <span className="text-fg-2">Primo anno IVA inclusa</span>
+                <b className="font-semibold tabular-nums">{formatEuro(primoLordo)}</b>
+              </div>
+            )}
+          </div>
+          {regole && !regole.ivaAttiva && regole.diciturSenzaIva && (
+            <p className="mt-3 text-xs text-fg-2">{regole.diciturSenzaIva}</p>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-4 w-full"
+            disabled={!base}
+            onClick={copiaRiepilogo}
+          >
+            <Copy /> Copia riepilogo
+          </Button>
+        </Card>
+      </div>
     </form>
   );
 }

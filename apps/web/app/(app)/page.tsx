@@ -263,9 +263,6 @@ export default async function Dashboard({
         descrizione="Come sta andando lo studio, e cosa richiede attenzione oggi."
         azioni={
           <>
-            <Button asChild variant="secondary">
-              <Link href="/configuratore">Configuratore</Link>
-            </Button>
             <Button asChild>
               <Link href="/preventivi/nuovo">Nuovo preventivo</Link>
             </Button>

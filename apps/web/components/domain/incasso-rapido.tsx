@@ -1,12 +1,14 @@
 "use client";
 
 import { formatEuro } from "@telaio/core";
+import { Check, Delete, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { registraIncassoAction } from "@/app/(app)/incassi/actions";
+import { Button, IconButton } from "@/components/ui/button";
 import { initialState } from "@/components/ui/form-modal";
 import { oggi } from "@/lib/date";
-import { cn, st } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface Conto {
   id: string;
@@ -89,66 +91,24 @@ export function IncassoRapido({
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 430,
-        margin: "0 auto",
-        minHeight: "100dvh",
-        position: "relative",
-        overflow: "hidden",
-        background: "radial-gradient(420px 320px at 100% 0%, #ddd9cf, transparent 70%), #f4f3f0",
-        padding: "22px 20px 20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-      }}
-    >
-      <div style={st("display:flex;align-items:center;justify-content:space-between")}>
-        <div style={st("display:flex;flex-direction:column;gap:4px")}>
-          <span
-            style={st(
-              "font:500 11px/1 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6b675c",
-            )}
-          >
-            Incasso al volo
-          </span>
-          <span className="d" style={st("font-size:22px;font-weight:600;letter-spacing:-.02em")}>
-            Nuovo incasso
-          </span>
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col gap-3 overflow-hidden bg-surface px-4 pt-5 pb-4">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col leading-tight">
+          <span className="text-xs text-fg-3">Incasso al volo</span>
+          <span className="text-xl font-semibold tracking-tight">Nuovo incasso</span>
         </div>
-        <Link
-          href="/incassi"
-          aria-label="Chiudi"
-          style={st(
-            "width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.7);border:1px solid rgba(23,21,15,.12)",
-          )}
-        >
-          <svg
-            aria-hidden="true"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          >
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </Link>
+        <IconButton label="Chiudi" variant="secondary" asChild>
+          <Link href="/incassi">
+            <X />
+          </Link>
+        </IconButton>
       </div>
 
       {clienti.length > 0 && (
         <div
           role="radiogroup"
           aria-label="Cliente"
-          style={{
-            display: "flex",
-            gap: 6,
-            overflowX: "auto",
-            margin: "0 -20px",
-            padding: "0 20px 2px",
-          }}
+          className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5"
         >
           {clienti.map((c) => (
             <button
@@ -156,7 +116,12 @@ export function IncassoRapido({
               type="button"
               role="radio"
               aria-checked={c.id === clienteId}
-              className={cn("cc", c.id === clienteId && "on")}
+              className={cn(
+                "h-8 shrink-0 cursor-pointer rounded-md border px-3 text-sm whitespace-nowrap transition-colors duration-150",
+                c.id === clienteId
+                  ? "border-transparent bg-fg text-white"
+                  : "border-line bg-surface text-fg-2",
+              )}
               onClick={() => {
                 setClienteId(c.id);
                 setRataId(null);
@@ -169,22 +134,20 @@ export function IncassoRapido({
       )}
 
       {proposta && (
-        <div
-          style={st(
-            "display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.8)",
-          )}
-        >
-          <div style={st("flex:1;display:flex;flex-direction:column;gap:3px")}>
-            <span style={st("font-size:13px;font-weight:600")}>
+        <div className="flex items-center gap-3 rounded-lg border border-line bg-subtle p-3">
+          <div className="flex flex-1 flex-col leading-tight">
+            <span className="text-sm font-medium">
               {proposta.descrizione}
               {proposta.scaduta ? " · scaduta" : ""}
             </span>
-            <span style={st("font-size:12px;color:#3a372f")}>
+            <span className="text-xs text-fg-2 tabular-nums">
               {formatEuro(proposta.importoCent)}
             </span>
           </div>
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant={rataId === proposta.id ? "secondary" : "primary"}
             onClick={() => {
               setRataId(proposta.id);
               setTesto(
@@ -193,153 +156,95 @@ export function IncassoRapido({
                   .replace(/,00$/, ""),
               );
             }}
-            style={st(
-              "min-height:40px;padding:0 14px;border-radius:999px;border:0;background:#17150f;color:#f4f3f0;font:500 13px/1 Inter,sans-serif;cursor:pointer",
-            )}
           >
             {rataId === proposta.id ? "In uso" : "Usa"}
-          </button>
+          </Button>
         </div>
       )}
 
-      <div
-        style={st("display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0")}
-      >
-        <span
-          className="d"
-          style={st(
-            "font-size:54px;font-weight:600;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums",
-          )}
-        >
-          € {importo}
-        </span>
-        <span style={st("font-size:13px;color:#3a372f")}>
+      <div className="flex flex-col items-center gap-1 py-2">
+        <span className="text-5xl font-semibold tracking-tight tabular-nums">€ {importo}</span>
+        <span className="text-sm text-fg-2">
           {rata ? `Chiude: ${rata.descrizione}` : "Digita l'importo ricevuto"}
         </span>
       </div>
 
-      <div role="radiogroup" aria-label="Metodo" className="segs">
+      <div
+        role="radiogroup"
+        aria-label="Metodo"
+        className="flex gap-0.5 rounded-md border border-line bg-subtle p-0.5"
+      >
         {METODI.map(([id, l]) => (
           <button
             key={id}
             type="button"
             role="radio"
             aria-checked={metodo === id}
-            className={cn("seg", metodo === id && "on")}
+            className={cn(
+              "h-9 flex-1 cursor-pointer rounded-sm text-sm font-medium transition-colors duration-150",
+              metodo === id ? "bg-surface text-fg shadow-xs" : "text-fg-2",
+            )}
             onClick={() => setMetodo(id)}
           >
             {l}
           </button>
         ))}
       </div>
-      <span style={st("text-align:center;font-size:13px;color:#3a372f;margin-top:-4px")}>
-        Va su <b style={{ color: "#17150f" }}>{conto?.nome ?? "—"}</b>
+      <span className="text-center text-sm text-fg-2">
+        Va su <b className="font-medium text-fg">{conto?.nome ?? "—"}</b>
       </span>
 
-      <div
-        style={st(
-          "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto",
-        )}
-      >
+      <div className="mt-auto grid grid-cols-3 gap-2">
         {TASTI.map((k) => (
           <button
             key={k}
             type="button"
-            className="key"
             aria-label={k === "⌫" ? "Cancella" : k}
             onClick={() => premi(k)}
+            className="grid h-14 cursor-pointer place-items-center rounded-lg border border-line bg-surface text-xl font-medium transition-colors duration-100 active:bg-hover"
           >
-            {k}
+            {k === "⌫" ? <Delete className="size-5" aria-hidden /> : k}
           </button>
         ))}
       </div>
       {errore && (
-        <p
-          role="alert"
-          style={st("margin:0;text-align:center;font-size:13px;font-weight:500;color:#8f3f1d")}
-        >
+        <p role="alert" className="text-center text-sm font-medium text-bad">
           {errore}
         </p>
       )}
-      <button
+      <Button
         type="button"
         onClick={conferma}
         disabled={pending || importo === "0,00"}
-        style={{
-          minHeight: 56,
-          borderRadius: 999,
-          border: 0,
-          background: "#17150f",
-          color: "#f4f3f0",
-          font: "500 16px/1 Inter,sans-serif",
-          cursor: "pointer",
-          opacity: pending || importo === "0,00" ? 0.5 : 1,
-        }}
+        className="h-12 w-full text-base"
       >
         {pending ? "Registro…" : `Registra € ${importo}`}
-      </button>
+      </Button>
 
       {fatto && (
         <div
           role="status"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "#17150f",
-            color: "#f4f3f0",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 16,
-            padding: 32,
-            textAlign: "center",
-          }}
+          className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface p-8 text-center"
         >
-          <span
-            style={st(
-              "width:72px;height:72px;border-radius:50%;border:1.5px solid rgba(244,243,240,.4);display:grid;place-items:center",
-            )}
-          >
-            <svg
-              aria-hidden="true"
-              width="30"
-              height="30"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#f4f3f0"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12.5l4.5 4.5L19 7.5" />
-            </svg>
+          <span className="grid size-14 place-items-center rounded-full bg-ok-soft text-ok">
+            <Check className="size-7" aria-hidden />
           </span>
-          <span className="d" style={st("font-size:34px;font-weight:600;letter-spacing:-.03em")}>
+          <span className="text-3xl font-semibold tracking-tight tabular-nums">
             € {fatto.importo}
           </span>
-          <span style={st("font-size:15px;line-height:1.55;color:rgba(244,243,240,.85)")}>
-            Registrato su {fatto.conto}
-          </span>
-          <button
+          <span className="text-sm text-fg-2">Registrato su {fatto.conto}</span>
+          <Button
             type="button"
+            className="mt-3"
             onClick={() => {
               setFatto(null);
               setTesto("");
               setRataId(null);
             }}
-            style={st(
-              "margin-top:12px;min-height:50px;padding:0 26px;border-radius:999px;border:0;background:#f4f3f0;color:#17150f;font:500 15px/1 Inter,sans-serif;cursor:pointer",
-            )}
           >
             Nuovo incasso
-          </button>
-          <Link
-            href="/incassi"
-            style={st(
-              "color:rgba(244,243,240,.8);font-size:14px;text-decoration:underline;text-underline-offset:3px",
-            )}
-          >
+          </Button>
+          <Link href="/incassi" className="text-sm text-fg-2 underline underline-offset-4">
             Vai agli incassi
           </Link>
         </div>

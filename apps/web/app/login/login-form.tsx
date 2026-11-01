@@ -1,7 +1,10 @@
 "use client";
 
+import { KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 
 export function LoginForm() {
@@ -42,124 +45,54 @@ export function LoginForm() {
   }
 
   return (
-    <form
-      action={accedi}
-      style={{
-        width: "100%",
-        maxWidth: 420,
-        alignSelf: "center",
-        display: "flex",
-        flexDirection: "column",
-        gap: 22,
-      }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <span className="eb">Accedi</span>
-        <h1
-          className="d"
-          style={{
-            margin: 0,
-            fontWeight: 500,
-            fontSize: 44,
-            lineHeight: 1.04,
-            letterSpacing: "-.03em",
-          }}
-        >
-          Bentornato.
-        </h1>
+    <form action={accedi} className="flex w-full max-w-sm flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Accedi a Telaio</h1>
+        <p className="text-sm text-fg-2">Il gestionale commerciale. Accesso riservato.</p>
       </div>
       {richiede2fa ? (
-        <div className="f">
-          <label className="lbl" htmlFor="codice">
-            Codice di verifica (TOTP)
-          </label>
-          <input
-            id="codice"
+        <Field label="Codice di verifica (TOTP)">
+          <Input
             name="codice"
-            className="in"
             inputMode="numeric"
             autoComplete="one-time-code"
             required
+            autoFocus
           />
-        </div>
+        </Field>
       ) : (
         <>
-          <div className="f">
-            <label className="lbl" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              className="in"
-              type="email"
-              autoComplete="username webauthn"
-              required
-            />
-          </div>
-          <div className="f">
-            <label className="lbl" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
+          <Field label="Email">
+            <Input name="email" type="email" autoComplete="username webauthn" required autoFocus />
+          </Field>
+          <Field label="Password">
+            <Input
               name="password"
-              className="in"
               type="password"
               autoComplete="current-password webauthn"
               required
             />
-          </div>
+          </Field>
         </>
       )}
       {errore && (
-        <p role="alert" style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#8f3f1d" }}>
+        <p role="alert" className="text-sm font-medium text-bad">
           {errore}
         </p>
       )}
-      <button type="submit" className="bp" disabled={pending} style={{ padding: "16px 22px" }}>
-        {pending ? "Accesso…" : richiede2fa ? "Verifica" : "Accedi"}{" "}
-        <span aria-hidden="true">→</span>
-      </button>
+      <Button type="submit" disabled={pending} className="h-9">
+        {pending ? "Accesso…" : richiede2fa ? "Verifica" : "Accedi"}
+      </Button>
       {!richiede2fa && (
         <>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              color: "#6b675c",
-              fontSize: 13,
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: "rgba(23,21,15,.14)" }} />
+          <div className="flex items-center gap-3 text-xs text-fg-3">
+            <span className="h-px flex-1 bg-line" />
             oppure
-            <span style={{ flex: 1, height: 1, background: "rgba(23,21,15,.14)" }} />
+            <span className="h-px flex-1 bg-line" />
           </div>
-          <button
-            type="button"
-            className="bg"
-            onClick={conPasskey}
-            style={{ padding: "16px 22px" }}
-          >
-            <svg
-              aria-hidden="true"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="9" cy="8" r="4" />
-              <path d="M2 21c0-3.9 3.1-7 7-7 1.5 0 2.9.5 4 1.3" />
-              <circle cx="18" cy="15" r="2.5" />
-              <path d="M18 17.5V22M18 20h2" />
-            </svg>
-            Continua con passkey
-          </button>
+          <Button type="button" variant="secondary" onClick={conPasskey} className="h-9">
+            <KeyRound /> Continua con passkey
+          </Button>
         </>
       )}
     </form>

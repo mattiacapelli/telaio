@@ -25,8 +25,8 @@ export function AnteprimaIva({
   ];
   const daPagare = t.nettoDaPagareCent !== t.totaleCent;
   return (
-    <div className="ink-panel p-5" aria-live="polite">
-      <p className="eyebrow !text-grey-2">Anteprima su {formatEuro(baseCent)}</p>
+    <div className="rounded-lg bg-fg text-white p-5" aria-live="polite">
+      <p className="text-xs font-medium text-white/70">Anteprima su {formatEuro(baseCent)}</p>
       <dl className="mt-3 flex flex-col gap-1.5 text-sm tabular-nums">
         {righe.map(([k, v, forte]) => (
           <div
@@ -40,12 +40,12 @@ export function AnteprimaIva({
         {daPagare && (
           <div className="mt-1 flex justify-between border-t border-white/20 pt-2 font-semibold">
             <dt>Netto da incassare</dt>
-            <dd className="money text-xl">{formatEuro(t.nettoDaPagareCent)}</dd>
+            <dd className="tabular-nums text-xl">{formatEuro(t.nettoDaPagareCent)}</dd>
           </div>
         )}
       </dl>
       {!regole.ivaAttiva && regole.diciturSenzaIva && (
-        <p className="mt-3 text-xs text-grey-2">
+        <p className="mt-3 text-xs text-white/70">
           {regole.naturaSenzaIva ? `${regole.naturaSenzaIva} · ` : ""}
           {regole.diciturSenzaIva}
         </p>

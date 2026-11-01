@@ -21,7 +21,7 @@ const AZIONI_RAPIDE = [
   {
     titolo: "Nuovo preventivo",
     sub: "Dal listino o dal configuratore",
-    href: "/configuratore",
+    href: "/preventivi/nuovo",
     icona: "+",
   },
   { titolo: "Nuova fattura", sub: "Libera, anche per privati", href: "/fatture/nuova", icona: "+" },

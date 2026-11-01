@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/button";
+import { Checkbox, Field, Input } from "@/components/ui/field";
 import { EVENTI_WEBHOOK } from "@/lib/eventi-webhook";
-import { st } from "@/lib/utils";
 import { creaWebhook } from "../actions";
 
 /** Nuovo webhook: il segreto di firma compare una sola volta, subito dopo la creazione. */
@@ -12,79 +13,47 @@ export function NuovoWebhook() {
 
   if (stato.ok && stato.secret) {
     return (
-      <div className="ink" style={st("display:flex;flex-direction:column;gap:10px")}>
-        <span
-          style={st(
-            "font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,243,240,.7)",
-          )}
-        >
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-subtle p-4">
+        <p className="text-sm font-medium">
           Copia ora il segreto di firma: non verrà mostrato di nuovo
-        </span>
-        <code
-          className="mono"
-          style={st(
-            "overflow-x:auto;padding:12px 14px;border-radius:12px;background:rgba(244,243,240,.1)",
-          )}
-        >
+        </p>
+        <code className="overflow-x-auto rounded-md border border-line bg-surface px-3 py-2 font-mono text-xs">
           {stato.secret}
         </code>
-        <span style={st("font-size:13px;color:rgba(244,243,240,.75)")}>
-          Ogni consegna ha l&apos;intestazione <code>x-telaio-signature: sha256=…</code>{" "}
-          (HMAC-SHA256 del corpo).
-        </span>
+        <p className="text-xs text-fg-2">
+          Ogni consegna ha l&apos;intestazione{" "}
+          <code className="font-mono">x-telaio-signature: sha256=…</code> (HMAC-SHA256 del corpo).
+        </p>
       </div>
     );
   }
 
   return (
-    <form action={azione} style={st("display:flex;flex-direction:column;gap:14px")}>
-      <div className="f">
-        <label className="lbl" htmlFor="wh-url">
-          Indirizzo che riceve gli eventi
-        </label>
-        <input
-          id="wh-url"
-          name="url"
-          className="in"
-          type="url"
-          placeholder="https://esempio.it/telaio/webhook"
-          required
-        />
-        {e.url && (
-          <span className="err" role="alert">
-            {e.url}
-          </span>
-        )}
-      </div>
-      <fieldset
-        style={st(
-          "border:0;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 16px",
-        )}
-      >
-        <legend className="lbl" style={{ marginBottom: 6 }}>
-          Eventi
-        </legend>
+    <form action={azione} className="flex flex-col gap-4">
+      <Field label="Indirizzo che riceve gli eventi" error={e.url}>
+        <Input name="url" type="url" placeholder="https://esempio.it/telaio/webhook" required />
+      </Field>
+      <fieldset className="grid gap-x-6 gap-y-1 border-0 p-0 sm:grid-cols-2">
+        <legend className="mb-1.5 text-sm font-medium">Eventi</legend>
         {EVENTI_WEBHOOK.map((ev) => (
-          <label key={ev.nome} className="ck" style={{ minHeight: 40 }}>
-            <input type="checkbox" name="eventi[]" value={ev.nome} />
-            <span>
-              <span className="mono">{ev.nome}</span>
-              <span className="sub" style={{ marginTop: 0 }}>
-                {ev.descrizione}
-              </span>
+          <label key={ev.nome} className="flex min-h-10 items-start gap-2.5 py-1.5 text-sm">
+            <Checkbox name="eventi[]" value={ev.nome} className="mt-0.5" />
+            <span className="flex flex-col leading-snug">
+              <span className="font-mono text-xs font-medium">{ev.nome}</span>
+              <span className="text-xs text-fg-2">{ev.descrizione}</span>
             </span>
           </label>
         ))}
         {e.eventi && (
-          <span className="err" role="alert">
+          <span role="alert" className="text-xs font-medium text-bad sm:col-span-2">
             {e.eventi}
           </span>
         )}
       </fieldset>
       <div>
-        <button type="submit" className="bp sm" disabled={pending}>
+        <Button type="submit" size="sm" disabled={pending}>
           Aggiungi webhook
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -149,10 +149,10 @@ function SwitchControllato({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-grey-2 bg-white/50 px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3">
       <div>
         <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted">{description}</p>
+        <p className="text-xs text-fg-2">{description}</p>
       </div>
       <button
         type="button"
@@ -160,7 +160,7 @@ function SwitchControllato({
         aria-checked={checked}
         aria-label={label}
         onClick={() => onChange(!checked)}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors after:absolute after:-inset-2 after:content-[''] ${checked ? "bg-ink" : "bg-grey-2"}`}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors after:absolute after:-inset-2 after:content-[''] ${checked ? "bg-fg" : "bg-grey-2"}`}
       >
         <span
           className={`block size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`}
