@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Sei offline · Telaio</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: #f7f8fa; color: #202124; font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+      main { width: 100%; max-width: 380px; padding: 24px; background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; }
+      .logo { display: grid; place-items: center; width: 28px; height: 28px; margin-bottom: 16px; border-radius: 6px; background: #202124; color: #fff; font-weight: 600; font-size: 13px; }
+      h1 { margin: 0 0 8px; font-size: 20px; letter-spacing: -0.01em; }
+      p { margin: 0 0 16px; color: #777; }
+      button { height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: #3e63dd; color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
+      button:hover { background: #3555c4; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="logo" aria-hidden="true">T</div>
+      <h1>Sei offline</h1>
+      <p>Telaio ha bisogno della connessione per mostrare e registrare i dati contabili. Nessuna operazione è stata eseguita: quando torni online riprova.</p>
+      <button type="button" onclick="location.reload()">Riprova</button>
+    </main>
+    <script>
+      window.addEventListener("online", function () { location.reload(); });
+    </script>
+  </body>
+</html>

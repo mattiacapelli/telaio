@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
+import { pulisciCache } from "@/lib/pwa";
 import { cn } from "@/lib/utils";
 
 /** Profilo in fondo al menu: nome, impostazioni e uscita. */
@@ -56,6 +57,7 @@ export function UserMenu({
         <DropdownMenuItem
           onSelect={async () => {
             await authClient.signOut();
+            await pulisciCache();
             router.replace("/login");
           }}
         >

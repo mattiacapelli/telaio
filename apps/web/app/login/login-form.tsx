@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
+import { pulisciCache } from "@/lib/pwa";
 
 export function LoginForm() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export function LoginForm() {
           code: String(formData.get("codice")),
         });
         if (error) return setErrore("Codice non valido");
+        await pulisciCache();
         return router.replace("/");
       }
       const { data, error } = await authClient.signIn.email({
@@ -31,6 +33,7 @@ export function LoginForm() {
       if (error) return setErrore("Email o password non corretti");
       if (data && "twoFactorRedirect" in data && data.twoFactorRedirect)
         return setRichiede2fa(true);
+      await pulisciCache();
       router.replace("/");
     } finally {
       setPending(false);
@@ -41,6 +44,7 @@ export function LoginForm() {
     setErrore(null);
     const { error } = await authClient.signIn.passkey();
     if (error) return setErrore("Accesso con passkey non riuscito");
+    await pulisciCache();
     router.replace("/");
   }
 
