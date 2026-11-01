@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +9,26 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 export const metadata: Metadata = {
   title: { default: "Telaio", template: "%s · Telaio" },
   description: "Il gestionale commerciale di Mattia Capelli",
+  applicationName: "Telaio",
+  // Il manifest è collegato in automatico da app/manifest.ts.
+  icons: {
+    icon: [
+      { url: "/icons/logo.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // iOS: a schermo intero quando aggiunta alla schermata Home.
+  appleWebApp: { capable: true, title: "Telaio", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+  // Usa tutta l'area dello schermo (notch compreso): i margini sicuri si gestiscono con env(safe-area-inset-*).
+  viewportFit: "cover",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
