@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { AggiornamentoPwa } from "@/components/pwa/aggiornamento-pwa";
+import { RilevaInstallazione } from "@/components/pwa/rileva-installazione";
 import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SCRIPT_TEMA } from "@/lib/tema";
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster />
         <AggiornamentoPwa />
+        <RilevaInstallazione />
       </body>
     </html>
   );
