@@ -29,3 +29,4 @@ test-results/
 
 .claude/settings.local.json
 .next-e2e/
+.next-e2e-setup/

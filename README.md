@@ -29,7 +29,7 @@ Accesso: l'utente creato dal seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, d
 | `pnpm test:e2e`                    | smoke test Playwright sul login (richiede `npx playwright install chromium`) |
 | `pnpm lint` / `pnpm format`        | Biome                                                                        |
 | `pnpm db:generate`                 | genera una migrazione Drizzle dopo aver cambiato lo schema                   |
-| `pnpm db:migrate` / `pnpm db:seed` | applica le migrazioni / dati di esempio (idempotente)                        |
+| `pnpm db:migrate` / `pnpm db:seed` | applica le migrazioni / dati di esempio, solo sviluppo (idempotente)         |
 | `pnpm --filter @telaio/worker job` | esegue una volta la generazione rate                                         |
 
 ## Variabili d'ambiente
@@ -87,3 +87,5 @@ senza dipendenze di sviluppo.
   immagini su GHCR con il commit SHA come tag e deploy via GitHub Actions. Salute dell'app su `/api/health`.
   Guida completa (DNS, VPS, secrets, primo deploy, backup, rollback, troubleshooting): [docs/deploy.md](docs/deploy.md).
 - Le variabili di produzione sono in `.env.production.example`; il file vero sta solo sul VPS.
+- **Primo avvio:** su un database nuovo l'app porta da sola alla configurazione guidata (`/setup`: azienda, primo
+  amministratore, sicurezza, preferenze); in produzione serve il `SETUP_TOKEN`. Niente script, niente utenti demo.

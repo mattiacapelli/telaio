@@ -17,7 +17,7 @@ Internet ──443──▶ Nginx (host, Let's Encrypt)
 ```
 
 - Un solo `Dockerfile` (multi-stage) con due immagini: `telaio-web` (Next.js standalone) e `telaio-worker`
-  (job BullMQ; con un altro comando esegue anche migrazioni e creazione dell'admin).
+  (job BullMQ; con un altro comando esegue anche le migrazioni).
 - Postgres e Redis non hanno porte pubbliche e stanno su una rete Docker interna. Solo `web` e `worker`
   hanno anche accesso a internet (Twenty, SMTP, webhook in uscita).
 - Lo sviluppo locale resta separato: `docker-compose.yml` e `.env` non cambiano.
@@ -30,7 +30,6 @@ Internet ──443──▶ Nginx (host, Let's Encrypt)
 | `deploy/deploy.sh`                      | pull → backup → migrazioni → aggiornamento → verifica (con rollback automatico) |
 | `deploy/compose.sh`                     | `docker compose` con file di variabili e versione corrente già impostati        |
 | `deploy/backup.sh`, `deploy/restore.sh` | backup, verifica e ripristino                                                   |
-| `deploy/crea-admin.sh`                  | crea l'utente amministratore                                                    |
 | `deploy/nginx/*.conf`                   | virtual host Nginx (e versione provvisoria per il certificato)                  |
 | `deploy/cron/*`                         | backup notturno e verifica settimanale                                          |
 | `.github/workflows/`                    | `ci-cd.yml`, `deploy-manuale.yml`, `_deploy.yml`                                |
@@ -103,21 +102,23 @@ Modifica `/opt/telaio/.env.production` e sostituisci ogni `CAMBIA-…`:
 
 ```bash
 openssl rand -hex 32   # BETTER_AUTH_SECRET
+openssl rand -hex 16   # SETUP_TOKEN
 openssl rand -hex 24   # POSTGRES_PASSWORD, poi un altro per REDIS_PASSWORD
 ```
 
-| Variabile                             | Note                                                                                                                                                            |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_URL`                     | `https://telaio.mattiacapelli.it`. Da qui derivano cookie, origini consentite e **passkey** (rpID = hostname): se cambia, le passkey registrate non valgono più |
-| `BETTER_AUTH_SECRET`                  | firma i cookie e **cifra i segreti 2FA**: se lo perdi, la 2FA non è più utilizzabile. Si salva nel backup (cifrato)                                             |
-| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | solo caratteri esadecimali: finiscono dentro un URL                                                                                                             |
-| `DATABASE_URL`, `REDIS_URL`           | già costruiti dalle password; host `postgres` e `redis` della rete Docker                                                                                       |
-| `TWENTY_API_URL`, `TWENTY_API_KEY`    | opzionali; senza, `/clienti` usa dati finti                                                                                                                     |
-| `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit)                                                                                          |
-| `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                           |
-| `WEB_PORT`                            | 3000 salvo conflitti                                                                                                                                            |
-| `*_MEM_LIMIT`, `*_CPUS`               | limiti di risorse, opzionali                                                                                                                                    |
-| `BACKUP_*`                            | vedi sezione Backup                                                                                                                                             |
+| Variabile                             | Note                                                                                                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_URL`                     | `https://telaio.mattiacapelli.it`. Da qui derivano cookie, origini consentite e **passkey** (rpID = hostname): se cambia, le passkey registrate non valgono più                                        |
+| `SETUP_TOKEN`                         | codice per la **prima configurazione** (`/setup`), almeno 16 caratteri (`openssl rand -hex 16`). In produzione il wizard non parte senza, e rifiuta il valore di esempio. Dopo il setup puoi toglierlo |
+| `BETTER_AUTH_SECRET`                  | firma i cookie e **cifra i segreti 2FA**: se lo perdi, la 2FA non è più utilizzabile. Si salva nel backup (cifrato)                                                                                    |
+| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | solo caratteri esadecimali: finiscono dentro un URL                                                                                                                                                    |
+| `DATABASE_URL`, `REDIS_URL`           | già costruiti dalle password; host `postgres` e `redis` della rete Docker                                                                                                                              |
+| `TWENTY_API_URL`, `TWENTY_API_KEY`    | opzionali; senza, `/clienti` usa dati finti                                                                                                                                                            |
+| `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit)                                                                                                                                 |
+| `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                  |
+| `WEB_PORT`                            | 3000 salvo conflitti                                                                                                                                                                                   |
+| `*_MEM_LIMIT`, `*_CPUS`               | limiti di risorse, opzionali                                                                                                                                                                           |
+| `BACKUP_*`                            | vedi sezione Backup                                                                                                                                                                                    |
 
 `TELAIO_VERSION` non va scritta: la imposta il deploy.
 
@@ -209,19 +210,38 @@ allo SHA del commit.
 5. Fai il merge su `main` (o lancia _Deploy manuale_ con lo SHA di un commit già costruito). La pipeline:
    costruisce e pubblica le immagini → copia gli script → `deploy.sh`: scarica le immagini, avvia Postgres e Redis,
    applica le migrazioni, avvia web e worker, controlla `/api/health`.
-6. **Crea l'utente amministratore** (una volta sola, serve un terminale interattivo):
-
-   ```bash
-   ssh -t deploy@<host> "cd /opt/telaio && ./deploy/crea-admin.sh"
-   ```
-
-7. Apri `https://telaio.mattiacapelli.it`, accedi, poi in _Impostazioni → Profilo e sicurezza_ attiva la 2FA e
-   registra una passkey.
+6. **Prima configurazione dal browser.** Apri `https://telaio.mattiacapelli.it`: il database è vuoto, quindi
+   l'app ti porta da sola su `/setup`. Inserisci il `SETUP_TOKEN` e segui i sei passi (azienda, primo amministratore,
+   sicurezza, preferenze, conferma). Non servono script né accesso SSH. Vedi la sezione «Prima configurazione».
+7. Accedi con l'email e la password scelte. Se hai lasciato attiva la guida, ti porta in _Profilo e sicurezza_ per
+   attivare la 2FA e registrare una passkey.
 8. **Attiva i backup** (sezione 9): cron e copia offsite. Fallo subito: il primo deploy non ha avuto un backup
    precedente da cui ripartire.
 
 Per fare tutto a mano senza GitHub (diagnosi): copia `docker-compose.prod.yml` e `deploy/` in `/opt/telaio` e
 lancia `./deploy/deploy.sh <sha>` dopo il login a GHCR.
+
+## Prima configurazione (wizard)
+
+Al primo avvio con un database senza stato di configurazione, ogni indirizzo dell'app rimanda a `/setup`.
+
+- **Stato nel database**, non negli utenti: la riga `setup` della tabella `impostazioni` (`setup_completed`,
+  `setup_version`, `setup_completed_at`, `origine`, `admin_id`). Cancellare gli utenti **non** riapre il setup.
+- **Una sola volta**: l'inizializzazione crea azienda, primo amministratore e impostazioni in un'unica transazione, sotto
+  un blocco di Postgres che serializza le richieste concorrenti. Una seconda richiesta, anche simultanea, viene
+  rifiutata; con utenti già presenti non si crea mai un altro amministratore.
+- **Protezione**: in produzione serve il `SETUP_TOKEN` (confronto a tempo costante, cookie httpOnly firmato, valido 2
+  ore sul solo percorso `/setup`). Le richieste devono arrivare dall'origine di `BETTER_AUTH_URL`. La password non viene
+  mai salvata in chiaro: nella bozza resta solo l'hash di Better Auth e non torna mai al browser.
+- **Ripresa**: ogni passo si salva sul server; dopo un refresh il wizard riparte dal punto in cui eri (la password va
+  eventualmente riscritta solo se vuoi cambiarla).
+- **Che dati crea**: una ragione sociale (nome, tipo, partita IVA, IVA e formati di numerazione), l'utente `admin`, e le
+  impostazioni `generali` (paese, fuso orario, valuta, lingua), `sicurezza` (lunghezza minima delle password, guida a 2FA e
+  passkey) e, se caricato, `azienda.logo`. Nessun dato demo, nessuna password predefinita.
+- **Installazioni già esistenti** (per esempio un ambiente di sviluppo con utenti): una migrazione le segna come
+  configurate, senza passare dal wizard. In sviluppo `pnpm db:seed` fa lo stesso.
+- **Account perso o dimenticato**: il wizard non si riapre. Se hai perso l'unico accesso, recuperalo dal database
+  (reimposta l'hash della password dell'utente) o ripristina un backup.
 
 ## 8. Deploy successivi, migrazioni e verifica
 
@@ -345,27 +365,30 @@ Da un backup offsite: copia il `.dump.age` sul VPS e usa `BACKUP_AGE_IDENTITY` c
 
 Nuovo VPS → sezioni 2-6 → recupera `env-<data>.age` dalla copia offsite e decifralo con la chiave age
 (`age -d -i telaio-backup.key env-<data>.age > /opt/telaio/.env.production`: contiene **lo stesso**
-`BETTER_AUTH_SECRET`) → primo deploy **senza** creare l'admin → `restore.sh --ripristina` con l'ultimo backup.
+`BETTER_AUTH_SECRET`) → primo deploy → **non** completare il wizard: `restore.sh --ripristina` con l'ultimo backup riporta anche lo stato di
+configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 
 ## 11. Troubleshooting
 
-| Sintomo                                                      | Causa probabile e rimedio                                                                                                                     |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `required variable … is missing`                             | manca una variabile in `.env.production`, o `TELAIO_VERSION`: usa sempre `deploy/compose.sh` e `deploy/deploy.sh`                             |
-| La pipeline fallisce su «Le immagini esistono su GHCR»       | il job `immagini` non è riuscito, o la versione non è mai stata pubblicata: controlla la scheda Actions                                       |
-| `denied` / `unauthorized` al pull                            | login a GHCR mancante o pacchetto non accessibile al repository (_Package settings → Manage Actions access_)                                  |
-| `Host key verification failed`                               | `VPS_SSH_KNOWN_HOSTS` mancante o non corrispondente al server                                                                                 |
-| Il deploy riesce ma la verifica esterna fallisce             | Nginx o certificato: `sudo nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS; porta dell'`upstream` diversa da `WEB_PORT`  |
-| `502 Bad Gateway`                                            | il web non è in ascolto: `./deploy/compose.sh ps` e `logs web`                                                                                |
-| `/api/health` risponde 503                                   | guarda quale tra `database` e `redis` è `errore`: `./deploy/compose.sh ps`, `logs postgres` o `logs redis`                                    |
-| `port is already allocated` su 3000                          | porta occupata: cambia `WEB_PORT` e l'upstream Nginx                                                                                          |
-| Migrazioni fallite                                           | il deploy si ferma prima di toccare web e worker. Leggi l'errore (`./deploy/compose.sh logs migrate`), correggi e ripubblica                  |
-| Login che non funziona dietro Nginx, errore «Invalid origin» | `BETTER_AUTH_URL` diverso dall'indirizzo reale (http/https, dominio)                                                                          |
-| Le passkey smettono di funzionare                            | è cambiato il dominio in `BETTER_AUTH_URL`: vanno registrate di nuovo                                                                         |
-| La 2FA non accetta più i codici                              | `BETTER_AUTH_SECRET` cambiato: ripristina quello originale (sta nel backup cifrato). Come ultima risorsa, i codici di recupero                |
-| La PWA mostra una versione vecchia                           | il Service Worker si aggiorna su richiesta dell'utente: compare l'avviso «È disponibile un aggiornamento»                                     |
-| Disco pieno                                                  | `docker system df`; `docker image prune -f` rimuove le immagini non più usate (solo quelle senza tag); vecchi backup in `/var/backups/telaio` |
-| Il worker non esegue i job                                   | `./deploy/compose.sh logs worker`; Redis raggiungibile? Il worker si riconnette da solo quando Redis torna                                    |
+| Sintomo                                                      | Causa probabile e rimedio                                                                                                                                                  |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `required variable … is missing`                             | manca una variabile in `.env.production`, o `TELAIO_VERSION`: usa sempre `deploy/compose.sh` e `deploy/deploy.sh`                                                          |
+| La pipeline fallisce su «Le immagini esistono su GHCR»       | il job `immagini` non è riuscito, o la versione non è mai stata pubblicata: controlla la scheda Actions                                                                    |
+| `denied` / `unauthorized` al pull                            | login a GHCR mancante o pacchetto non accessibile al repository (_Package settings → Manage Actions access_)                                                               |
+| `Host key verification failed`                               | `VPS_SSH_KNOWN_HOSTS` mancante o non corrispondente al server                                                                                                              |
+| Il deploy riesce ma la verifica esterna fallisce             | Nginx o certificato: `sudo nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS; porta dell'`upstream` diversa da `WEB_PORT`                               |
+| `502 Bad Gateway`                                            | il web non è in ascolto: `./deploy/compose.sh ps` e `logs web`                                                                                                             |
+| `/api/health` risponde 503                                   | guarda quale tra `database` e `redis` è `errore`: `./deploy/compose.sh ps`, `logs postgres` o `logs redis`                                                                 |
+| `port is already allocated` su 3000                          | porta occupata: cambia `WEB_PORT` e l'upstream Nginx                                                                                                                       |
+| Migrazioni fallite                                           | il deploy si ferma prima di toccare web e worker. Leggi l'errore (`./deploy/compose.sh logs migrate`), correggi e ripubblica                                               |
+| Login che non funziona dietro Nginx, errore «Invalid origin» | `BETTER_AUTH_URL` diverso dall'indirizzo reale (http/https, dominio)                                                                                                       |
+| `/setup` mostra «Configurazione non disponibile»             | in produzione manca `SETUP_TOKEN`, è troppo corto (< 16 caratteri) o è ancora il valore di esempio: correggi `.env.production` e riavvia (`./deploy/compose.sh up -d web`) |
+| `/setup` chiede un codice che non ricordo                    | è il `SETUP_TOKEN` di `/opt/telaio/.env.production`                                                                                                                        |
+| Le passkey smettono di funzionare                            | è cambiato il dominio in `BETTER_AUTH_URL`: vanno registrate di nuovo                                                                                                      |
+| La 2FA non accetta più i codici                              | `BETTER_AUTH_SECRET` cambiato: ripristina quello originale (sta nel backup cifrato). Come ultima risorsa, i codici di recupero                                             |
+| La PWA mostra una versione vecchia                           | il Service Worker si aggiorna su richiesta dell'utente: compare l'avviso «È disponibile un aggiornamento»                                                                  |
+| Disco pieno                                                  | `docker system df`; `docker image prune -f` rimuove le immagini non più usate (solo quelle senza tag); vecchi backup in `/var/backups/telaio`                              |
+| Il worker non esegue i job                                   | `./deploy/compose.sh logs worker`; Redis raggiungibile? Il worker si riconnette da solo quando Redis torna                                                                 |
 
 ## 12. Note operative
 

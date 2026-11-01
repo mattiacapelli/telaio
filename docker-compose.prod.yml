@@ -85,6 +85,8 @@ services:
       NODE_ENV: production
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?imposta BETTER_AUTH_URL in .env.production}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?imposta BETTER_AUTH_SECRET in .env.production}
+      # Codice per la prima configurazione (/setup). Dopo il completamento non serve più.
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:?imposta REDIS_URL in .env.production}
       TWENTY_API_URL: ${TWENTY_API_URL:-}
