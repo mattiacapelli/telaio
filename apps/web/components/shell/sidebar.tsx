@@ -24,9 +24,7 @@ export function voceAttiva(pathname: string, href: string) {
 export function Logo({ compatto = false }: { compatto?: boolean }) {
   return (
     <Link href="/" aria-label="Telaio" className="flex items-center gap-2 rounded-md px-1 py-1">
-      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-fg text-xs font-semibold text-white">
-        T
-      </span>
+      <img src="/icons/icon-192.png" alt="" width={24} height={24} className="size-6 shrink-0" />
       {!compatto && <span className="text-base font-semibold tracking-tight text-fg">Telaio</span>}
     </Link>
   );

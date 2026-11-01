@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 /**
  * Web App Manifest: rende Telaio installabile (Chrome, Edge e browser compatibili).
  * Servito a /manifest.webmanifest, anche prima del login (vedi il matcher di proxy.ts).
- * Le icone sono provvisorie: si rigenerano da public/icons/logo.svg (vedi docs/pwa.md).
+ * Le icone si rigenerano da public/icons/logo.png (vedi docs/pwa.md).
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {

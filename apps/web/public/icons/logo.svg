@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Telaio">
-  <!-- Segnaposto: la «T» della barra laterale su sfondo scuro. Per cambiare logo, sostituire questo file e lanciare `pnpm --filter @telaio/web icone`. -->
-  <rect width="512" height="512" rx="112" fill="#202124"/>
-  <path fill="#fff" d="M136 140h240v64H288v184h-64V204h-88z"/>
-</svg>
