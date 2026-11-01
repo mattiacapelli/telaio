@@ -32,12 +32,13 @@ services:
       - "8026:8025"
 
   # ── App (profilo "app"): `docker compose --profile app up --build` ─────────────────────────────
-  # Un'unica immagine per web, worker e migrazioni: cambia solo il comando.
+  # Prova locale delle immagini di produzione (stesso Dockerfile, target web e worker); la migrazione
+  # usa l'immagine del worker. Per la produzione vera vedi docker-compose.prod.yml e docs/deploy.md.
   migrate:
     profiles: ["app"]
-    build: .
-    image: telaio-app
-    command: ["pnpm", "db:migrate"]
+    build: { context: ., target: worker }
+    image: telaio-worker
+    command: ["node_modules/.bin/tsx", "node_modules/@telaio/db/src/migrate.ts"]
     environment: &app_env
       DATABASE_URL: postgres://telaio:telaio@postgres:5432/telaio
       REDIS_URL: redis://redis:6379
@@ -50,8 +51,8 @@ services:
 
   web:
     profiles: ["app"]
-    image: telaio-app
-    command: ["pnpm", "--filter", "@telaio/web", "start"]
+    build: { context: ., target: web }
+    image: telaio-web
     environment: *app_env
     env_file: [{ path: .env, required: false }]
     ports:
@@ -62,8 +63,7 @@ services:
 
   worker:
     profiles: ["app"]
-    image: telaio-app
-    command: ["pnpm", "--filter", "@telaio/worker", "start"]
+    image: telaio-worker
     environment:
       <<: *app_env
       BACKUP_DIR: /backups

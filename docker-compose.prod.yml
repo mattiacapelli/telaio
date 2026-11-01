@@ -1,0 +1,139 @@
+# Telaio in produzione (VPS). Il reverse proxy è Nginx sull'host: il web ascolta solo su 127.0.0.1.
+# Non si usa a mano: `deploy/deploy.sh <versione>` pubblica una versione e `deploy/compose.sh` lancia
+# docker compose con il file di variabili e la versione corrente. Vedi docs/deploy.md.
+#
+# Separato dal compose di sviluppo: stesso nome di progetto solo qui (telaio-prod), quindi volumi,
+# reti e container non si mescolano con quelli di sviluppo.
+name: telaio-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-hardening: &hardening
+  init: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: telaio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?imposta POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: telaio
+    volumes:
+      - pgdata:/var/lib/postgresql
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telaio -d telaio"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    mem_limit: ${POSTGRES_MEM_LIMIT:-1g}
+    cpus: ${POSTGRES_CPUS:-1.0}
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # noeviction: BullMQ non deve perdere chiavi; appendonly: le code sopravvivono a un riavvio.
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --maxmemory-policy noeviction --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?imposta REDIS_PASSWORD in .env.production}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes:
+      - redisdata:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    mem_limit: ${REDIS_MEM_LIMIT:-256m}
+    cpus: ${REDIS_CPUS:-0.5}
+    logging: *logging
+
+  # Job una tantum: applica le migrazioni prima che parta la nuova versione di web e worker.
+  migrate:
+    image: ${TELAIO_REGISTRY:-ghcr.io/mattiacapelli}/telaio-worker:${TELAIO_VERSION:?imposta TELAIO_VERSION}
+    <<: *hardening
+    command: ["node_modules/.bin/tsx", "node_modules/@telaio/db/src/migrate.ts"]
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?imposta DATABASE_URL in .env.production}
+    networks: [backend]
+    depends_on:
+      postgres: { condition: service_healthy }
+    logging: *logging
+
+  web:
+    image: ${TELAIO_REGISTRY:-ghcr.io/mattiacapelli}/telaio-web:${TELAIO_VERSION:?imposta TELAIO_VERSION}
+    <<: *hardening
+    restart: unless-stopped
+    # Solo loopback: il traffico pubblico arriva da Nginx sull'host (HTTPS).
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?imposta BETTER_AUTH_URL in .env.production}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?imposta BETTER_AUTH_SECRET in .env.production}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:?imposta REDIS_URL in .env.production}
+      TWENTY_API_URL: ${TWENTY_API_URL:-}
+      TWENTY_API_KEY: ${TWENTY_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_FROM: ${SMTP_FROM:-}
+    # backend è interna (senza uscita verso internet): edge serve per Twenty, SMTP e webhook in uscita.
+    networks: [backend, edge]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    mem_limit: ${WEB_MEM_LIMIT:-768m}
+    cpus: ${WEB_CPUS:-1.0}
+    logging: *logging
+
+  worker:
+    image: ${TELAIO_REGISTRY:-ghcr.io/mattiacapelli}/telaio-worker:${TELAIO_VERSION:?imposta TELAIO_VERSION}
+    <<: *hardening
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      TWENTY_API_URL: ${TWENTY_API_URL:-}
+      TWENTY_API_KEY: ${TWENTY_API_KEY:-}
+      BACKUP_DIR: /backups
+      BACKUP_KEEP: ${WORKER_BACKUP_KEEP:-7}
+    volumes:
+      - backups:/backups
+    networks: [backend, edge]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    mem_limit: ${WORKER_MEM_LIMIT:-512m}
+    cpus: ${WORKER_CPUS:-0.5}
+    logging: *logging
+
+networks:
+  # Database e Redis vivono solo qui: nessun accesso da fuori e nessuna uscita verso internet.
+  backend:
+    internal: true
+  edge: {}
+
+volumes:
+  pgdata:
+  redisdata:
+  backups:

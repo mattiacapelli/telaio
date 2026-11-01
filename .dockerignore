@@ -6,7 +6,12 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
 design
 backups
 apps/web/test-results
 apps/web/playwright-report
+deploy
+.github
+docs
+*.md

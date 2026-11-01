@@ -25,6 +25,7 @@ test-results/
 # env: solo il template pubblico entra nel repository
 .env*
 !.env.example
+!.env.production.example
 
 .claude/settings.local.json
 .next-e2e/
