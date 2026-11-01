@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
 // Il .env sta nella radice del monorepo, non in apps/web.
@@ -6,6 +7,10 @@ try {
 } catch {}
 
 const config: NextConfig = {
+  // Immagine Docker: output autonomo (solo il necessario a runtime). In sviluppo resta il build normale.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
+  // Nel monorepo la traccia dei file deve partire dalla radice, non da apps/web.
+  outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
   // Permette un secondo dev server (es. per i test e2e) senza il lock su .next.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   // I pacchetti del monorepo sono TypeScript sorgente: li compila Next.

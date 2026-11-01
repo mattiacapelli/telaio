@@ -1,9 +1,7 @@
-import { randomUUID } from "node:crypto";
-import { hashPassword } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
+import { creaAdmin } from "./admin";
 import { createDb } from "./client";
 import {
-  accounts,
   clientiRef,
   conti,
   listini,
@@ -11,32 +9,18 @@ import {
   listinoModuli,
   moduloBasi,
   ragioniSociali,
-  users,
 } from "./schema";
 
 const { db, client } = createDb();
 
 async function seedAdmin() {
   const email = process.env.SEED_ADMIN_EMAIL ?? "mattia@telaio.local";
-  const password = process.env.SEED_ADMIN_PASSWORD ?? "telaio-dev-2026";
-  const [esistente] = await db.select().from(users).where(eq(users.email, email));
-  if (esistente) return console.log(`Utente ${email} già presente`);
-  const userId = randomUUID();
-  await db.insert(users).values({
-    id: userId,
-    name: process.env.SEED_ADMIN_NAME ?? "Mattia",
+  const creato = await creaAdmin(db, {
     email,
-    emailVerified: true,
-    role: "admin",
+    password: process.env.SEED_ADMIN_PASSWORD ?? "telaio-dev-2026",
+    name: process.env.SEED_ADMIN_NAME ?? "Mattia",
   });
-  await db.insert(accounts).values({
-    id: randomUUID(),
-    accountId: userId,
-    providerId: "credential",
-    userId,
-    password: await hashPassword(password),
-  });
-  console.log(`Utente creato: ${email}`);
+  console.log(creato ? `Utente creato: ${email}` : `Utente ${email} già presente`);
 }
 
 async function seedRagioniSociali() {
