@@ -260,7 +260,7 @@ export function SezioneListini({
                                     type="submit"
                                     aria-pressed={attiva}
                                     aria-label={`${mod.nome} su ${base.nome}: ${attiva ? "assegnato" : "non assegnato"}`}
-                                    className={`inline-grid size-11 place-items-center rounded-full border transition-colors ${attiva ? "border-fg bg-fg text-white" : "border-line bg-subtle text-transparent hover:border-fg"}`}
+                                    className={`inline-grid size-11 place-items-center rounded-full border transition-colors ${attiva ? "border-fg bg-fg text-on-fg" : "border-line bg-subtle text-transparent hover:border-fg"}`}
                                   >
                                     <Check className="size-4" aria-hidden />
                                   </button>

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { AggiornamentoPwa } from "@/components/pwa/aggiornamento-pwa";
 import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SCRIPT_TEMA } from "@/lib/tema";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -22,7 +23,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#191a1c" },
+  ],
   // Usa tutta l'area dello schermo (notch compreso): i margini sicuri si gestiscono con env(safe-area-inset-*).
   viewportFit: "cover",
   width: "device-width",
@@ -31,7 +35,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" className={inter.variable}>
+    <html lang="it" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster />

@@ -5,6 +5,7 @@
    Unica fonte dei token: i componenti usano le utility Tailwind generate da @theme.
    ─────────────────────────────────────────────────────────────────────────────── */
 :root {
+  color-scheme: light;
   /* Superfici */
   --surface: #ffffff;
   --subtle: #f7f8fa;
@@ -22,6 +23,8 @@
   --brand-hover: #3555c4;
   --brand-soft: #eef2fd;
   --brand-fg: #ffffff;
+  /* Testo sulle superfici invertite (bg-fg): bianco nel chiaro, quasi nero nello scuro */
+  --on-fg: #ffffff;
   /* Stati, desaturati */
   --ok: #2f7d5b;
   --ok-soft: #eaf5ef;
@@ -41,6 +44,60 @@
   --header-h: 48px;
 }
 
+/* Tema scuro: segue il sistema, salvo scelta esplicita (attributo data-theme impostato da lib/tema). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #191a1c;
+    --subtle: #1f2023;
+    --hover: #26272b;
+    --selected: #1e2848;
+    --line: #2e2f34;
+    --line-strong: #404148;
+    --fg: #ececee;
+    --fg-2: #a0a0a6;
+    --fg-3: #74747a;
+    --brand: #6b87f2;
+    --brand-hover: #839bf5;
+    --brand-soft: #1e2848;
+    --brand-fg: #ffffff;
+    --on-fg: #191a1c;
+    --ok: #4cb98a;
+    --ok-soft: #14291f;
+    --warn: #e0a13a;
+    --warn-soft: #2c2312;
+    --bad: #f0746d;
+    --bad-soft: #2f1917;
+    --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.06);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #191a1c;
+  --subtle: #1f2023;
+  --hover: #26272b;
+  --selected: #1e2848;
+  --line: #2e2f34;
+  --line-strong: #404148;
+  --fg: #ececee;
+  --fg-2: #a0a0a6;
+  --fg-3: #74747a;
+  --brand: #6b87f2;
+  --brand-hover: #839bf5;
+  --brand-soft: #1e2848;
+  --brand-fg: #ffffff;
+  --on-fg: #191a1c;
+  --ok: #4cb98a;
+  --ok-soft: #14291f;
+  --warn: #e0a13a;
+  --warn-soft: #2c2312;
+  --bad: #f0746d;
+  --bad-soft: #2f1917;
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
 @theme inline {
   --color-surface: var(--surface);
   --color-subtle: var(--subtle);
@@ -55,6 +112,7 @@
   --color-brand-hover: var(--brand-hover);
   --color-brand-soft: var(--brand-soft);
   --color-brand-fg: var(--brand-fg);
+  --color-on-fg: var(--on-fg);
   --color-ok: var(--ok);
   --color-ok-soft: var(--ok-soft);
   --color-warn: var(--warn);

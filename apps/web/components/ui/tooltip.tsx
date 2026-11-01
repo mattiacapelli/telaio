@@ -25,7 +25,7 @@ export function Tooltip({
         <TooltipPrimitive.Content
           side={side}
           sideOffset={6}
-          className="z-50 max-w-60 rounded-md bg-fg px-2 py-1 text-xs text-white shadow-pop data-[state=delayed-open]:animate-[fade-in_120ms_ease-out]"
+          className="z-50 max-w-60 rounded-md bg-fg px-2 py-1 text-xs text-on-fg shadow-pop data-[state=delayed-open]:animate-[fade-in_120ms_ease-out]"
         >
           {content}
         </TooltipPrimitive.Content>

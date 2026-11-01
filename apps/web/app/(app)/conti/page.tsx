@@ -85,7 +85,7 @@ export default async function ContiPage({
             className={cn(
               "inline-flex h-7 items-center rounded-md border px-2.5 text-sm transition-colors duration-150",
               (em ?? "") === e.id
-                ? "border-transparent bg-fg text-white"
+                ? "border-transparent bg-fg text-on-fg"
                 : "border-line bg-surface text-fg-2 hover:bg-hover",
             )}
           >

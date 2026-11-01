@@ -48,7 +48,11 @@ const MESI_LUNGHI = [
   "Novembre",
   "Dicembre",
 ];
-const COLORI_CONTO = { bonifico: "#3e63dd", contante: "#a0a0a0", carta: "#202124" } as const;
+const COLORI_CONTO = {
+  bonifico: "var(--brand)",
+  contante: "var(--fg-3)",
+  carta: "var(--fg)",
+} as const;
 const ETICHETTA_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Carta" } as const;
 const TIPO_CONTO = { bonifico: "Bonifico", contante: "Contante", carta: "Carta" } as const;
 

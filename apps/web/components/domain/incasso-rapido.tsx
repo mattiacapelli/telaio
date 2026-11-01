@@ -119,7 +119,7 @@ export function IncassoRapido({
               className={cn(
                 "h-8 shrink-0 cursor-pointer rounded-md border px-3 text-sm whitespace-nowrap transition-colors duration-150",
                 c.id === clienteId
-                  ? "border-transparent bg-fg text-white"
+                  ? "border-transparent bg-fg text-on-fg"
                   : "border-line bg-surface text-fg-2",
               )}
               onClick={() => {

@@ -1,19 +1,23 @@
 "use client";
 
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Monitor, Moon, Settings, Sun } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { pulisciCache } from "@/lib/pwa";
+import { impostaTema, leggiTema, type Tema } from "@/lib/tema";
 import { cn } from "@/lib/utils";
 
 /** Profilo in fondo al menu: nome, impostazioni e uscita. */
@@ -29,6 +33,8 @@ export function UserMenu({
   lato?: "right" | "bottom";
 }) {
   const router = useRouter();
+  const [tema, setTema] = useState<Tema>("sistema");
+  useEffect(() => setTema(leggiTema()), []);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -53,6 +59,25 @@ export function UserMenu({
             <Settings /> Profilo e sicurezza
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Tema</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={tema}
+          onValueChange={(v) => {
+            setTema(v as Tema);
+            impostaTema(v as Tema);
+          }}
+        >
+          <DropdownMenuRadioItem value="sistema">
+            <Monitor /> Sistema
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="chiaro">
+            <Sun /> Chiaro
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="scuro">
+            <Moon /> Scuro
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={async () => {

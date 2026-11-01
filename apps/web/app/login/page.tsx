@@ -10,7 +10,7 @@ export default async function LoginPage() {
     <main className="grid min-h-dvh place-items-center bg-subtle px-4 py-10">
       <div className="flex w-full max-w-sm flex-col items-center gap-6">
         <div className="flex items-center gap-2">
-          <span className="grid size-7 place-items-center rounded-md bg-fg text-sm font-semibold text-white">
+          <span className="grid size-7 place-items-center rounded-md bg-fg text-sm font-semibold text-on-fg">
             T
           </span>
           <span className="text-lg font-semibold tracking-tight">Telaio</span>

@@ -8,7 +8,7 @@ const STILI: Record<VarianteBadge, { box: string; dot: string }> = {
   ok: { box: "bg-ok-soft text-ok border-transparent", dot: "bg-ok" },
   warn: { box: "bg-warn-soft text-warn border-transparent", dot: "bg-warn" },
   bad: { box: "bg-bad-soft text-bad border-transparent", dot: "bg-bad" },
-  solid: { box: "bg-fg text-white border-transparent", dot: "bg-white" },
+  solid: { box: "bg-fg text-on-fg border-transparent", dot: "bg-on-fg" },
 };
 
 /** Etichetta di stato: sfondo tenue, testo nello stesso colore, pallino opzionale. */

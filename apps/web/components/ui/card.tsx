@@ -32,7 +32,7 @@ export function CardHeader({
 
 /** Pannello scuro: usato finché le pagine non sono migrate; le nuove preferiscono `Card`. */
 export function InkPanel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-lg bg-fg p-5 text-white", className)} {...props} />;
+  return <div className={cn("rounded-lg bg-fg p-5 text-on-fg", className)} {...props} />;
 }
 
 export function EmptyState({

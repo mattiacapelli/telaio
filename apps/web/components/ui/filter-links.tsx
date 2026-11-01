@@ -21,13 +21,13 @@ export function FilterLinks({
           className={cn(
             "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-sm transition-colors duration-150",
             v.id === attiva
-              ? "border-transparent bg-fg text-white"
+              ? "border-transparent bg-fg text-on-fg"
               : "border-line bg-surface text-fg-2 hover:bg-hover hover:text-fg",
           )}
         >
           {v.label}
           {v.conteggio !== undefined && (
-            <span className={v.id === attiva ? "text-white/70" : "text-fg-3"}>{v.conteggio}</span>
+            <span className={v.id === attiva ? "text-on-fg/70" : "text-fg-3"}>{v.conteggio}</span>
           )}
         </Link>
       ))}

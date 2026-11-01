@@ -10,7 +10,7 @@ import { MovimentiTabella, type RigaMovimento } from "./movimenti-tabella";
 export const metadata = { title: "Prima nota" };
 export const dynamic = "force-dynamic";
 
-const GRIGI = ["#202124", "#3e63dd", "#777777", "#a0a0a0", "#d4d4d8"];
+const GRIGI = ["var(--fg)", "var(--brand)", "var(--fg-2)", "var(--fg-3)", "var(--line-strong)"];
 
 export default async function PrimaNotaPage() {
   const db = getDb();
