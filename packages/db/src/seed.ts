@@ -10,6 +10,16 @@ import {
   moduloBasi,
   ragioniSociali,
 } from "./schema";
+import { marcaSetupCompletato } from "./setup";
+
+// Il seed è solo per lo sviluppo: crea un utente con password nota e dati demo. In produzione la prima
+// configurazione passa dal wizard (/setup), che non crea né dati demo né password predefinite.
+if (process.env.NODE_ENV === "production") {
+  console.error(
+    "Il seed è solo per lo sviluppo: in produzione usa la configurazione guidata su /setup.",
+  );
+  process.exit(1);
+}
 
 const { db, client } = createDb();
 
@@ -21,6 +31,8 @@ async function seedAdmin() {
     name: process.env.SEED_ADMIN_NAME ?? "Mattia",
   });
   console.log(creato ? `Utente creato: ${email}` : `Utente ${email} già presente`);
+  // L'ambiente di sviluppo non passa dal wizard: l'installazione risulta già configurata.
+  await marcaSetupCompletato(db, "seed-sviluppo");
 }
 
 async function seedRagioniSociali() {

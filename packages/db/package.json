@@ -11,8 +11,8 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
-    "crea-admin": "tsx --env-file-if-exists=../../.env src/crea-admin.ts",
     "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -25,6 +25,7 @@
     "@types/node": "^24.0.0",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5"
   }
 }

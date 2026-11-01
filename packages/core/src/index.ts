@@ -3,4 +3,5 @@ export * from "./money";
 export * from "./numerazione";
 export * from "./preventivo";
 export * from "./rate";
+export * from "./setup";
 export * from "./solleciti";
