@@ -13,7 +13,7 @@ VERSIONE="${1:-}"
 [[ "$VERSIONE" != "latest" ]] || errore "«latest» non identifica una release: usa lo SHA del commit"
 
 PRECEDENTE="$(cat .versione 2>/dev/null || true)"
-PORTA="$(leggi WEB_PORT 3000)"
+PORTA="$(leggi WEB_PORT 3100)"
 export TELAIO_VERSION="$VERSIONE"
 
 passo "Versione $VERSIONE (attuale: ${PRECEDENTE:-nessuna})"
