@@ -13,7 +13,8 @@ test("login, dashboard e logout", async ({ page }) => {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Accedi", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await page.getByRole("button", { name: "Esci" }).click();
+  await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
+  await page.getByRole("button", { name: "Menu dell'account" }).click();
+  await page.getByRole("menuitem", { name: "Esci" }).click();
   await expect(page).toHaveURL(/\/login/);
 });
