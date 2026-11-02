@@ -80,7 +80,7 @@ services:
     restart: unless-stopped
     # Solo loopback: il traffico pubblico arriva da Nginx sull'host (HTTPS).
     ports:
-      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_PORT:-3100}:3000"
     environment:
       NODE_ENV: production
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?imposta BETTER_AUTH_URL in .env.production}
