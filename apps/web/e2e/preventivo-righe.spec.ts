@@ -1,0 +1,114 @@
+import { createRequire } from "node:module";
+import { expect, type Page, test } from "@playwright/test";
+
+// Gira sul database di sviluppo con l'utente del seed, come le altre suite.
+try {
+  process.loadEnvFile(new URL("../../../.env", import.meta.url));
+} catch {}
+const postgres = createRequire(`${process.cwd()}/../../packages/db/package.json`)("postgres");
+const sql = postgres(process.env.DATABASE_URL as string, { max: 2, onnotice: () => {} });
+
+const email = process.env.SEED_ADMIN_EMAIL ?? "mattia@telaio.local";
+const password = process.env.SEED_ADMIN_PASSWORD ?? "telaio-dev-2026";
+const OGGETTO = "E2E righe libere";
+
+test.describe.configure({ mode: "serial" });
+
+async function accedi(page: Page) {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Accedi", exact: true }).click();
+  await expect(page).toHaveURL(/localhost:\d+\/$/);
+}
+
+async function pulisci() {
+  const ids = await sql`select id from preventivi where oggetto like ${`${OGGETTO}%`}`;
+  for (const { id } of ids) {
+    await sql`delete from preventivo_righe where preventivo_id = ${id}`;
+    await sql`delete from preventivi where id = ${id}`;
+  }
+}
+
+test.beforeAll(pulisci);
+test.afterAll(async () => {
+  await pulisci();
+  await sql.end({ timeout: 2 });
+});
+
+test("si può creare un preventivo con sole righe scritte a mano, senza listino", async ({
+  page,
+}) => {
+  await accedi(page);
+  await page.goto("/preventivi/nuovo");
+  await page.locator("input[name=oggetto]").fill(OGGETTO);
+  await page.getByLabel("Descrizione riga 1").fill("Consulenza una tantum");
+  await page.getByLabel("Quantità riga 1").fill("2");
+  await page.getByLabel("Prezzo riga 1").fill("150,00");
+  await page.getByRole("button", { name: /Riga libera/ }).click();
+  await page.getByLabel("Descrizione riga 2").fill("Assistenza");
+  await page.getByLabel("Tipo riga 2").selectOption("canone_mensile");
+  await page.getByLabel("Prezzo riga 2").fill("20");
+  await expect(page.getByRole("button", { name: "Salva bozza" })).toBeEnabled();
+  await page.getByRole("button", { name: "Salva bozza" }).click();
+  await expect(page).toHaveURL(/\/preventivi\/[0-9a-f-]{36}$/);
+
+  const righe = await sql`
+    select r.descrizione, r.tipo, r.quantita, r.prezzo_unitario_cent, r.importo_cent, r.voce_listino_id
+    from preventivo_righe r join preventivi p on p.id = r.preventivo_id
+    where p.oggetto = ${OGGETTO} order by r.posizione`;
+  expect(righe).toHaveLength(2);
+  expect(righe[0]).toMatchObject({
+    descrizione: "Consulenza una tantum",
+    tipo: "una_tantum",
+    quantita: 2,
+    prezzo_unitario_cent: 15000,
+    importo_cent: 30000,
+    voce_listino_id: null,
+  });
+  expect(righe[1]).toMatchObject({ tipo: "canone_mensile", prezzo_unitario_cent: 2000 });
+  const [p] = await sql`select imponibile_cent from preventivi where oggetto = ${OGGETTO}`;
+  expect(p.imponibile_cent).toBe(30000);
+});
+
+test("una riga incompleta blocca il salvataggio", async ({ page }) => {
+  await accedi(page);
+  await page.goto("/preventivi/nuovo");
+  await page.getByLabel("Descrizione riga 1").fill("Senza prezzo");
+  await expect(page.getByRole("button", { name: "Salva bozza" })).toBeDisabled();
+  await page.getByLabel("Prezzo riga 1").fill("abc");
+  await expect(page.getByRole("button", { name: "Salva bozza" })).toBeDisabled();
+  await page.getByLabel("Prezzo riga 1").fill("10,5");
+  await expect(page.getByRole("button", { name: "Salva bozza" })).toBeEnabled();
+});
+
+test("le righe del listino si mescolano con quelle libere", async ({ page }) => {
+  const [voce] = await sql`
+    select b.id, b.nome, b.una_tantum_cent from listino_basi b
+    join listini l on l.id = b.listino_id
+    where b.deleted_at is null and l.deleted_at is null and b.una_tantum_cent > 0
+    order by b.created_at limit 1`;
+  test.skip(!voce, "nessun listino con una base nel database di sviluppo");
+
+  await accedi(page);
+  await page.goto("/preventivi/nuovo");
+  await page.locator("input[name=oggetto]").fill(`${OGGETTO} listino`);
+  await page.getByRole("button", { name: /Dal listino/ }).click();
+  await page
+    .getByRole("button", { name: `Aggiungi ${voce.nome}` })
+    .first()
+    .click();
+  await expect(page.getByLabel("Descrizione riga 1")).toHaveValue(new RegExp(voce.nome));
+  // Una voce con più prezzi (una tantum + canoni) genera più righe: la riga libera è l'ultima.
+  const dalListino = await page.getByLabel(/^Descrizione riga/).count();
+  await page.getByRole("button", { name: /Riga libera/ }).click();
+  await page.getByLabel(`Descrizione riga ${dalListino + 1}`).fill("Extra a mano");
+  await page.getByLabel(`Prezzo riga ${dalListino + 1}`).fill("50");
+  await page.getByRole("button", { name: "Salva bozza" }).click();
+  await expect(page).toHaveURL(/\/preventivi\/[0-9a-f-]{36}$/);
+  const righe = await sql`
+    select r.voce_listino_id from preventivo_righe r join preventivi p on p.id = r.preventivo_id
+    where p.oggetto = ${`${OGGETTO} listino`} order by r.posizione`;
+  expect(righe[0].voce_listino_id).toBe(voce.id);
+  expect(righe.at(-1).voce_listino_id).toBeNull();
+});

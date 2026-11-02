@@ -43,6 +43,27 @@ export type CreaPreventivoInput = z.infer<typeof creaPreventivoSchema>;
 
 type TipoRiga = "una_tantum" | "canone_annuo" | "canone_mensile";
 
+export const rigaLiberaSchema = z.object({
+  descrizione: z.string().trim().min(1, "Scrivi la descrizione di ogni riga").max(500),
+  tipo: z.enum(["una_tantum", "canone_annuo", "canone_mensile"]).default("una_tantum"),
+  quantita: z.number().int().min(1).max(100000).default(1),
+  prezzoUnitarioCent: z.number().int().min(0).max(100_000_000),
+  scontoBp: z.number().int().min(0).max(10000).default(0),
+  /** voce di listino di origine, se la riga è stata scelta da un listino */
+  voceListinoId: z.uuid().optional(),
+});
+export type RigaLibera = z.infer<typeof rigaLiberaSchema>;
+
+export const creaPreventivoLiberoSchema = z.object({
+  ragioneSocialeId: z.uuid(),
+  clienteTwentyId: z.string().min(1).optional(),
+  righe: z.array(rigaLiberaSchema).min(1, "Aggiungi almeno una riga").max(200),
+  oggetto: z.string().trim().min(1).optional(),
+  note: z.string().trim().optional(),
+  validitaGiorni: z.number().int().min(1).max(365).optional(),
+});
+export type CreaPreventivoLiberoInput = z.infer<typeof creaPreventivoLiberoSchema>;
+
 interface VocePrezzi {
   nome: string;
   unaTantumCent: number;
@@ -145,6 +166,42 @@ export async function creaPreventivoDaListino(
       throw new Error("I moduli devono appartenere al listino della base");
   }
 
+  const righe: RigaLibera[] = [base.b, ...moduli]
+    .flatMap((v) => righeDaVoce(v))
+    .map((r) => ({
+      descrizione: r.descrizione,
+      tipo: r.tipo,
+      quantita: 1,
+      prezzoUnitarioCent: r.prezzoUnitarioCent,
+      scontoBp: r.tipo === "una_tantum" ? dati.scontoUnaTantumBp : 0,
+      voceListinoId: r.voceListinoId,
+    }));
+  return creaPreventivoLibero(db, {
+    ragioneSocialeId: rs.id,
+    clienteTwentyId: dati.clienteTwentyId,
+    righe,
+    oggetto: dati.oggetto ?? `${base.b.nome}${moduli.length ? ` + ${moduli.length} moduli` : ""}`,
+    note: dati.note,
+    validitaGiorni: dati.validitaGiorni,
+  });
+}
+
+/**
+ * Crea una bozza di preventivo da righe libere: ognuna può venire da un listino o essere scritta
+ * a mano, e il listino non è mai obbligatorio. Il totale riguarda le sole righe una tantum.
+ */
+export async function creaPreventivoLibero(
+  db: Database,
+  input: CreaPreventivoLiberoInput,
+): Promise<{ id: string }> {
+  const dati = creaPreventivoLiberoSchema.parse(input);
+
+  const [rs] = await db
+    .select()
+    .from(ragioniSociali)
+    .where(and(eq(ragioniSociali.id, dati.ragioneSocialeId), isNull(ragioniSociali.deletedAt)));
+  if (!rs) throw new Error("Ragione sociale non trovata");
+
   // Cliente: riferimento locale a Twenty (upsert), la fonte di verità resta Twenty.
   let clienteRefId: string | null = null;
   let clienteSnapshot: Record<string, unknown> = {};
@@ -171,17 +228,11 @@ export async function creaPreventivoDaListino(
   }
 
   const regole: RegoleFiscali = regoleDa(rs);
-  const righeVoci = [base.b, ...moduli].flatMap((v) => righeDaVoce(v));
-  const righe = righeVoci.map((r, i) => {
-    const scontoBp = r.tipo === "una_tantum" ? dati.scontoUnaTantumBp : 0;
-    return {
-      ...r,
-      posizione: i,
-      quantita: 1,
-      scontoBp,
-      importoCent: importoRiga({ quantita: 1, prezzoUnitarioCent: r.prezzoUnitarioCent, scontoBp }),
-    };
-  });
+  const righe = dati.righe.map((r, i) => ({
+    ...r,
+    posizione: i,
+    importoCent: importoRiga(r),
+  }));
   const totali = calcolaTotali(
     righe.filter((r) => r.tipo === "una_tantum"),
     regole,
@@ -195,8 +246,7 @@ export async function creaPreventivoDaListino(
         clienteRefId,
         anno: new Date().getFullYear(),
         stato: "bozza",
-        oggetto:
-          dati.oggetto ?? `${base.b.nome}${moduli.length ? ` + ${moduli.length} moduli` : ""}`,
+        oggetto: dati.oggetto ?? righe[0]?.descrizione.slice(0, 120) ?? "Preventivo",
         note: dati.note || null,
         validoFino: dati.validitaGiorni ? aggiungiGiorni(oggi(), dati.validitaGiorni) : null,
         snapshot: {
