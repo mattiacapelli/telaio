@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useActionState, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useActionState,
+  useContext,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
 import { Button, type ButtonProps } from "./button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "./dialog";
 import { toast } from "./toast";
@@ -42,12 +49,14 @@ export function FormModal({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(action, initialState);
+  const [state, formAction, pendingAzione] = useActionState(action, initialState);
+  const [inTransizione, avvia] = useTransition();
+  const pending = pendingAzione || inTransizione;
 
   useEffect(() => {
     if (state.ok) {
       setOpen(false);
-      toast("Salvato");
+      toast(state.message ?? "Salvato");
     }
   }, [state]);
 
@@ -59,7 +68,16 @@ export function FormModal({
         </Button>
       </DialogTrigger>
       <DialogContent title={title} description={description}>
-        <form action={formAction} className="flex flex-col gap-4">
+        {/* onSubmit e non action=: con action= React svuota i campi dopo ogni invio, anche in caso
+            d'errore, e chi sbaglia un campo perderebbe quello che ha scritto negli altri. */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const dati = new FormData(e.currentTarget);
+            avvia(() => formAction(dati));
+          }}
+          className="flex flex-col gap-4"
+        >
           <FormStateContext.Provider value={state}>{children}</FormStateContext.Provider>
           {state.message && !state.ok && (
             <p
