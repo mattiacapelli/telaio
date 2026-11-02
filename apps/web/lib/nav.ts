@@ -65,6 +65,9 @@ export const SEZIONI_IMPOSTAZIONI = [
   { slug: "dati", titolo: "Backup ed export dati", gruppo: "Account" },
 ] as const;
 
+/** Sezioni previste ma non ancora disponibili: restano nel menu, non cliccabili. */
+export const SEZIONI_DISATTIVATE: readonly string[] = ["fatturazione-elettronica", "pagamenti"];
+
 export interface Briciola {
   label: string;
   href?: string;

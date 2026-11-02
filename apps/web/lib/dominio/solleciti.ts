@@ -1,6 +1,6 @@
-import { and, type Database, eq, ragioniSociali, rate, solleciti } from "@telaio/db";
+import { and, type Database, eq, rate, solleciti } from "@telaio/db";
 import { z } from "zod";
-import { inviaEmail } from "../email";
+import { inviaEmailPerRagioneSociale } from "../email-ragione-sociale";
 
 export const confermaSollecitoSchema = z.object({
   id: z.uuid(),
@@ -34,11 +34,14 @@ export async function inviaSollecitoConfermato(
 
   try {
     const [r] = await db
-      .select({ rs: ragioniSociali.email })
+      .select({ rs: rate.ragioneSocialeId })
       .from(rate)
-      .innerJoin(ragioniSociali, eq(ragioniSociali.id, rate.ragioneSocialeId))
       .where(eq(rate.id, s.rataId));
-    await inviaEmail({ a: d.destinatario, da: r?.rs, oggetto: d.oggetto, testo: d.corpo });
+    await inviaEmailPerRagioneSociale(db, r?.rs, {
+      a: d.destinatario,
+      oggetto: d.oggetto,
+      testo: d.corpo,
+    });
   } catch (e) {
     await db
       .update(solleciti)

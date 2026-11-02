@@ -1,24 +1,35 @@
 "use server";
 
 import { createHash, randomBytes } from "node:crypto";
-import { formatoValido } from "@telaio/core";
+import {
+  decodificaLogo,
+  formatoValido,
+  LOGO_PDF_MAX_BYTE,
+  mittenteSchema,
+  modelloPdfSchema,
+} from "@telaio/core";
 import {
   and,
   apiKeys,
   eq,
   getDb,
   impostazioni,
+  leggiModelliPdfSalvati,
   listini,
   listinoBasi,
   listinoModuli,
   moduloBasi,
   ragioniSociali,
+  salvaFirmaEmail,
+  salvaMittente,
+  salvaModelloPdf,
   webhooks,
 } from "@telaio/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui/form-modal";
 import { audit } from "@/lib/audit";
+import { inviaEmailPerRagioneSociale } from "@/lib/email-ragione-sociale";
 import { EVENTI_WEBHOOK } from "@/lib/eventi-webhook";
 import { euroCent, flag, leggi, percentualeBp, testoOpt } from "@/lib/form";
 import { requireSession } from "@/lib/session";
@@ -402,4 +413,128 @@ export async function eliminaWebhook(form: FormData): Promise<void> {
     entitaId: id,
   });
   refresh();
+}
+
+// ── Email ────────────────────────────────────────────────────────────────────────────────────
+
+function erroriDa(e: z.ZodError): ActionState {
+  const errors: Record<string, string> = {};
+  for (const i of e.issues) errors[String(i.path[0] ?? "_")] ??= i.message;
+  return { ok: false, errors, message: "Controlla i campi evidenziati" };
+}
+
+async function ragioneSocialeEsiste(id: string) {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return false;
+  const [rs] = await getDb()
+    .select({ id: ragioniSociali.id })
+    .from(ragioniSociali)
+    .where(eq(ragioniSociali.id, id));
+  return !!rs;
+}
+
+export async function salvaMittenteEmail(_: ActionState, form: FormData): Promise<ActionState> {
+  const { user } = await requireSession();
+  const id = String(form.get("id") ?? "");
+  if (!(await ragioneSocialeEsiste(id)))
+    return { ok: false, message: "Ragione sociale non trovata" };
+  const r = mittenteSchema.safeParse(Object.fromEntries(form));
+  if (!r.success) return erroriDa(r.error);
+  const db = getDb();
+  await salvaMittente(db, id, r.data);
+  await audit(db, {
+    userId: user.id,
+    azione: "email.mittente",
+    entita: "ragioni_sociali",
+    entitaId: id,
+  });
+  refresh();
+  return { ok: true, message: "Mittente salvato" };
+}
+
+export async function salvaFirmaEmailAzione(_: ActionState, form: FormData): Promise<ActionState> {
+  const { user } = await requireSession();
+  const r = z.object({ firma: z.string().max(500, "Al massimo 500 caratteri") }).safeParse({
+    firma: String(form.get("firma") ?? ""),
+  });
+  if (!r.success) return erroriDa(r.error);
+  const db = getDb();
+  await salvaFirmaEmail(db, r.data.firma);
+  await audit(db, { userId: user.id, azione: "email.firma" });
+  refresh();
+  return { ok: true, message: "Firma salvata" };
+}
+
+/** Manda un'email vera, a chi ha fatto la richiesta, con il mittente della ragione sociale scelta. */
+export async function inviaEmailDiProva(_: ActionState, form: FormData): Promise<ActionState> {
+  const { user } = await requireSession();
+  const id = String(form.get("id") ?? "");
+  if (id && !(await ragioneSocialeEsiste(id)))
+    return { ok: false, message: "Ragione sociale non trovata" };
+  try {
+    await inviaEmailPerRagioneSociale(getDb(), id || null, {
+      a: user.email,
+      oggetto: "Email di prova da Telaio",
+      testo:
+        "Questa è un'email di prova inviata da Telaio.\nSe la leggi, il mittente e la firma sono configurati correttamente.",
+    });
+  } catch (e) {
+    const dettaglio = e instanceof Error ? e.message.slice(0, 200) : "errore sconosciuto";
+    return { ok: false, message: `Invio non riuscito: ${dettaglio}` };
+  }
+  return { ok: true, message: `Email di prova inviata a ${user.email}` };
+}
+
+// ── Modelli PDF ──────────────────────────────────────────────────────────────────────────────
+
+export async function salvaModelloPdfAzione(_: ActionState, form: FormData): Promise<ActionState> {
+  const { user } = await requireSession();
+  const id = String(form.get("id") ?? "");
+  if (!(await ragioneSocialeEsiste(id)))
+    return { ok: false, message: "Ragione sociale non trovata" };
+  const db = getDb();
+
+  // Logo: vuoto = invariato; «Rimuovi» = via; un file nuovo sostituisce.
+  let logo: string | null | undefined;
+  if (form.get("rimuoviLogo") === "on") logo = null;
+  const file = form.get("logo");
+  if (file instanceof File && file.size > 0) {
+    if (!/^image\/(png|jpeg)$/.test(file.type))
+      return {
+        ok: false,
+        errors: { logo: "Usa un'immagine PNG o JPEG" },
+        message: "Logo non valido",
+      };
+    if (file.size > LOGO_PDF_MAX_BYTE)
+      return {
+        ok: false,
+        errors: { logo: "Il logo non può superare i 200 KB" },
+        message: "Logo non valido",
+      };
+    logo = `data:${file.type};base64,${Buffer.from(await file.arrayBuffer()).toString("base64")}`;
+    if (!decodificaLogo(logo))
+      return {
+        ok: false,
+        errors: { logo: "Il file non è un'immagine valida" },
+        message: "Logo non valido",
+      };
+  }
+  const attuale = (await leggiModelliPdfSalvati(db))[id];
+  const r = modelloPdfSchema.safeParse({
+    colore: String(form.get("colore") ?? ""),
+    piePagina: String(form.get("piePagina") ?? ""),
+    notePreventivo: String(form.get("notePreventivo") ?? ""),
+    noteFattura: String(form.get("noteFattura") ?? ""),
+    mostraIban: form.get("mostraIban") === "on",
+    logo: logo === undefined ? (attuale?.logo ?? null) : logo,
+  });
+  if (!r.success) return erroriDa(r.error);
+  await salvaModelloPdf(db, id, r.data);
+  await audit(db, {
+    userId: user.id,
+    azione: "pdf.modello",
+    entita: "ragioni_sociali",
+    entitaId: id,
+  });
+  refresh();
+  return { ok: true, message: "Modello salvato" };
 }

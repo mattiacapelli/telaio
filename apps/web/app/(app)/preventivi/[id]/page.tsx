@@ -76,6 +76,9 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
         stato={<Tag tone={stato?.tone}>{stato?.label ?? p.stato}</Tag>}
         azioni={
           <>
+            <Button asChild variant="secondary">
+              <a href={`/api/pdf/preventivi/${p.id}`}>Scarica PDF</a>
+            </Button>
             {transizioni.map((nuovo) => (
               <form key={nuovo} action={cambiaStatoPreventivoAction}>
                 <input type="hidden" name="id" value={p.id} />

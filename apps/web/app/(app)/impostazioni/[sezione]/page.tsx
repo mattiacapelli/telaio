@@ -1,3 +1,4 @@
+import { decodificaLogo } from "@telaio/core";
 import {
   apiKeys,
   asc,
@@ -8,6 +9,8 @@ import {
   getDb,
   impostazioni,
   isNull,
+  leggiEmail,
+  leggiModelliPdfSalvati,
   listini,
   listinoBasi,
   listinoModuli,
@@ -24,14 +27,17 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { auth, passwordMinima } from "@/lib/auth";
-import { SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
+import { statoSmtp } from "@/lib/email";
+import { SEZIONI_DISATTIVATE, SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
 import { requireSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { SezioneApi } from "../_sezioni/api";
 import { SezioneDati } from "../_sezioni/dati";
+import { SezioneEmail } from "../_sezioni/email";
 import { SezioneIva } from "../_sezioni/iva";
 import { SezioneListini } from "../_sezioni/listini";
 import { SezioneMcp } from "../_sezioni/mcp";
+import { SezioneModelliPdf } from "../_sezioni/modelli-pdf";
 import { SezioneRagioniSociali } from "../_sezioni/ragioni-sociali";
 import { SezioneSicurezza } from "../_sezioni/sicurezza";
 import { SezioneTwenty } from "../_sezioni/twenty";
@@ -42,20 +48,13 @@ const DESCRIZIONI: Record<string, string> = {
   "ragioni-sociali": "Gli emittenti di preventivi e fatture, con la loro numerazione.",
   iva: "Regole IVA, bollo, ritenuta e split payment per ragione sociale.",
   listini: "Basi, moduli aggiuntivi, prezzi netti e compatibilità.",
+  email: "Mittenti, firma e prova dell'invio delle email.",
+  "modelli-pdf": "Aspetto e testi dei PDF di preventivi e fatture, per ragione sociale.",
   mcp: "Server MCP per gli assistenti AI: strumenti attivi e conferma delle scritture.",
   api: "Chiavi API, permessi e webhook in uscita.",
   twenty: "Stato del collegamento al CRM e sincronizzazione dei clienti.",
   sicurezza: "Profilo, password, verifica in due passaggi, passkey e dispositivi connessi.",
   dati: "Backup automatico del database ed export dei dati contabili.",
-};
-
-const STUB: Record<string, string> = {
-  "fatturazione-elettronica":
-    "L'invio passa da un intermediario: l'interfaccia del servizio è definita, il collegamento si implementa dopo.",
-  "modelli-pdf": "Modelli di preventivo e fattura in PDF, per ragione sociale.",
-  email: "Mittenti e modelli per l'invio di preventivi, fatture e solleciti.",
-
-  pagamenti: "Collegamento a Stripe per gli incassi con carta.",
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ sezione: string }> }) {
@@ -66,7 +65,7 @@ export async function generateMetadata({ params }: { params: Promise<{ sezione: 
 export default async function SezionePage({ params }: { params: Promise<{ sezione: string }> }) {
   const { sezione } = await params;
   const voce = SEZIONI_IMPOSTAZIONI.find((s) => s.slug === sezione);
-  if (!voce) notFound();
+  if (!voce || SEZIONI_DISATTIVATE.includes(sezione)) notFound();
   const db = getDb();
 
   let contenuto: React.ReactNode;
@@ -101,6 +100,36 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
       ]);
       contenuto = (
         <SezioneListini elenco={l} ragioni={ragioni} basi={b} moduli={m} assegnazioni={a} />
+      );
+    }
+  } else if (sezione === "email" || sezione === "modelli-pdf") {
+    const ragioni = await db
+      .select()
+      .from(ragioniSociali)
+      .where(isNull(ragioniSociali.deletedAt))
+      .orderBy(asc(ragioniSociali.createdAt));
+    if (sezione === "email") {
+      const { user } = await requireSession();
+      contenuto = (
+        <SezioneEmail
+          elenco={ragioni}
+          impostazioni={await leggiEmail(db)}
+          smtp={statoSmtp()}
+          emailUtente={user.email}
+        />
+      );
+    } else {
+      const [riga] = await db
+        .select()
+        .from(impostazioni)
+        .where(eq(impostazioni.chiave, "azienda.logo"));
+      const logo = (riga?.valore as { dataUrl?: string } | undefined)?.dataUrl;
+      contenuto = (
+        <SezioneModelliPdf
+          elenco={ragioni}
+          modelli={await leggiModelliPdfSalvati(db)}
+          logoIniziale={logo && decodificaLogo(logo) ? logo : null}
+        />
       );
     }
   } else if (sezione === "mcp") {
@@ -182,21 +211,7 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
       />
     );
   } else {
-    return (
-      <Guscio
-        sezione={sezione}
-        titolo={voce.titolo}
-        gruppo={voce.gruppo}
-        descrizione={STUB[sezione] ?? ""}
-      >
-        <Card>
-          <h2 className="text-base font-semibold">Sezione in arrivo</h2>
-          <p className="mt-1 max-w-prose text-sm text-fg-2">
-            La struttura è pronta: mancano le opzioni di questa sezione.
-          </p>
-        </Card>
-      </Guscio>
-    );
+    notFound();
   }
 
   return (
@@ -231,26 +246,40 @@ function Guscio({
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <nav
           aria-label="Sezioni delle impostazioni"
-          className="flex shrink-0 flex-col gap-3 md:sticky md:top-4 md:w-52"
+          className="flex shrink-0 flex-col gap-3 md:sticky md:top-4 md:w-56"
         >
           {gruppi.map((g) => (
             <div key={g} className="flex flex-col gap-0.5">
               <p className="px-2 pb-0.5 text-xs font-medium text-fg-3">{g}</p>
-              {SEZIONI_IMPOSTAZIONI.filter((s) => s.gruppo === g).map((s) => (
-                <Link
-                  key={s.slug}
-                  href={`/impostazioni/${s.slug}`}
-                  aria-current={s.slug === sezione ? "page" : undefined}
-                  className={cn(
-                    "flex h-8 items-center rounded-md px-2 text-sm transition-colors duration-150",
-                    s.slug === sezione
-                      ? "bg-hover font-medium text-fg"
-                      : "text-fg-2 hover:bg-hover hover:text-fg",
-                  )}
-                >
-                  {s.titolo}
-                </Link>
-              ))}
+              {SEZIONI_IMPOSTAZIONI.filter((s) => s.gruppo === g).map((s) =>
+                SEZIONI_DISATTIVATE.includes(s.slug) ? (
+                  <span
+                    key={s.slug}
+                    aria-disabled="true"
+                    title="Non ancora disponibile"
+                    className="flex h-8 cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 text-sm whitespace-nowrap text-fg-3"
+                  >
+                    {s.titolo}
+                    <span className="rounded-sm bg-subtle px-1.5 py-0.5 text-[10px] font-medium">
+                      Presto
+                    </span>
+                  </span>
+                ) : (
+                  <Link
+                    key={s.slug}
+                    href={`/impostazioni/${s.slug}`}
+                    aria-current={s.slug === sezione ? "page" : undefined}
+                    className={cn(
+                      "flex h-8 items-center rounded-md px-2 text-sm transition-colors duration-150",
+                      s.slug === sezione
+                        ? "bg-hover font-medium text-fg"
+                        : "text-fg-2 hover:bg-hover hover:text-fg",
+                    )}
+                  >
+                    {s.titolo}
+                  </Link>
+                ),
+              )}
             </div>
           ))}
         </nav>

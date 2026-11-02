@@ -70,6 +70,9 @@ export default async function FatturaPage({ params }: { params: Promise<{ id: st
         stato={<Tag tone={stato?.tone}>{stato?.label ?? f.stato}</Tag>}
         azioni={
           <>
+            <Button asChild variant="secondary">
+              <a href={`/api/pdf/fatture/${f.id}`}>Scarica PDF</a>
+            </Button>
             {prev[0] && (
               <Button asChild variant="secondary">
                 <Link href={`/preventivi/${prev[0].id}`}>Preventivo</Link>
