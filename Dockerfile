@@ -3,7 +3,7 @@
 #   web     → Next.js standalone, porta 3000
 #   worker  → job BullMQ (default) e, con un altro comando, migrazioni e creazione dell'admin
 # Le immagini finali contengono solo dipendenze di produzione e girano come utente non-root.
-ARG NODE_VERSION=24
+ARG NODE_VERSION=24.22.2
 
 FROM node:${NODE_VERSION}-alpine AS base
 # Versione di pnpm allineata a "packageManager" del package.json radice.
