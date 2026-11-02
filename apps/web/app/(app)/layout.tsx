@@ -1,6 +1,7 @@
 import { eq, getDb, pendingActions, sql } from "@telaio/db";
 import { cookies } from "next/headers";
 import { BadgeApp } from "@/components/pwa/badge-app";
+import { BarraInferiore } from "@/components/shell/barra-inferiore";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { Header } from "@/components/shell/header";
 import { Scorciatoie } from "@/components/shell/scorciatoie";
@@ -29,11 +30,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col">
         <Header utente={utente} inAttesa={inAttesa} />
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-6 md:px-8">
+          <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-6 max-md:gap-6 max-md:pb-24 md:px-8">
             {children}
           </div>
         </main>
       </div>
+      <BarraInferiore inAttesa={inAttesa} />
       <CommandPalette />
       <Scorciatoie />
       <BadgeApp conteggio={inAttesa} />

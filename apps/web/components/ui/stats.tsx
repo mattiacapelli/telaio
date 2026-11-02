@@ -11,20 +11,23 @@ export interface DatoStat {
   tono?: "bad" | "warn";
 }
 
-/** Indicatori in fila dentro un unico riquadro, divisi da un filo. */
+/**
+ * Indicatori in un unico riquadro, divisi da un filo. I fili sono lo spazio tra le celle (`gap-px`
+ * su sfondo `line`): restano uniformi qualunque sia il numero di colonne. Su telefono sono due per
+ * riga e l'ultimo, se dispari, occupa tutta la riga.
+ */
 export function StatsRow({ dati, className }: { dati: DatoStat[]; className?: string }) {
   return (
     <div
-      className={cn("grid overflow-hidden rounded-lg border border-line bg-surface", className)}
-      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
+      className={cn(
+        "grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]",
+        className,
+      )}
     >
-      {dati.map((d, i) => (
+      {dati.map((d) => (
         <div
           key={d.etichetta}
-          className={cn(
-            "flex flex-col gap-1 p-4",
-            i > 0 && "border-l border-line max-sm:border-t max-sm:border-l-0",
-          )}
+          className="flex flex-col gap-1 bg-surface p-4 max-sm:p-3 max-sm:last:odd:col-span-2"
         >
           <span className="text-xs font-medium text-fg-2">{d.etichetta}</span>
           <span className="text-xl font-semibold tracking-tight text-fg tabular-nums">

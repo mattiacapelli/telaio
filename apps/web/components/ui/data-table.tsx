@@ -44,7 +44,10 @@ export interface Colonna<T> {
   allinea?: "destra";
   /** larghezza minima in px */
   minLarghezza?: number;
-  /** nasconde la colonna sotto la larghezza indicata */
+  /**
+   * Colonna meno importante. Con "lg" sparisce sotto i 1024 px (anche nelle schede del telefono);
+   * "sm" e "md" restano visibili: la tabella parte da 768 px, e le schede hanno spazio per mostrarle.
+   */
   nascondiSotto?: "sm" | "md" | "lg";
 }
 
@@ -90,7 +93,7 @@ export interface DataTableProps<T> {
 
 type Ordine = { colonna: string; verso: "asc" | "desc" } | null;
 
-const NASCONDI = { sm: "max-sm:hidden", md: "max-md:hidden", lg: "max-lg:hidden" } as const;
+const NASCONDI = { sm: "", md: "", lg: "max-lg:hidden" } as const;
 const DIMENSIONI = [10, 20, 50];
 
 function confronta(a: string | number | null, b: string | number | null) {
@@ -226,14 +229,21 @@ export function DataTable<T>({
     setScelti({});
   };
 
+  // Sotto md la tabella diventa un elenco di schede: la prima colonna è il titolo, le altre coppie
+  // etichetta/valore (l'etichetta viene da data-label). Le colonne con `nascondiSotto` restano nascoste.
   const celleRiga = (r: T) =>
-    colonne.map((c) => (
+    colonne.map((c, i) => (
       <td
         key={c.id}
+        data-label={c.intestazione}
         className={cn(
           "px-3 py-2 align-middle text-sm text-fg",
           c.allinea === "destra" && "text-right tabular-nums",
           c.nascondiSotto && NASCONDI[c.nascondiSotto],
+          c.nascondiSotto !== "lg" &&
+            (i === 0
+              ? "max-md:block max-md:px-0 max-md:py-0 max-md:pr-9 max-md:text-base max-md:font-medium"
+              : "max-md:flex max-md:items-center max-md:justify-between max-md:gap-3 max-md:px-0 max-md:py-0 max-md:text-sm max-md:before:shrink-0 max-md:before:text-xs max-md:before:text-fg-2 max-md:before:content-[attr(data-label)] max-md:empty:hidden"),
         )}
       >
         {c.cella(r)}
@@ -318,9 +328,9 @@ export function DataTable<T>({
 
       {/* Tabella */}
       <div className="overflow-x-auto rounded-lg border border-line bg-surface">
-        <table className="w-full border-collapse text-left">
+        <table className="w-full border-collapse text-left max-md:block">
           <caption className="sr-only">{etichetta}</caption>
-          <thead>
+          <thead className="max-md:hidden">
             <tr className="border-b border-line bg-subtle">
               {selezionabile && (
                 <th scope="col" className="w-10 px-3 py-2">
@@ -383,7 +393,7 @@ export function DataTable<T>({
               )}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="max-md:block">
             {inPagina.map((r) => {
               const id = idRiga(r);
               const selezionata = selezione.has(id);
@@ -401,13 +411,13 @@ export function DataTable<T>({
                     router.push(hrefRiga(r));
                   }}
                   className={cn(
-                    "border-b border-line transition-colors duration-100 last:border-b-0 hover:bg-subtle",
+                    "border-b border-line transition-colors duration-100 last:border-b-0 hover:bg-subtle max-md:relative max-md:flex max-md:flex-col max-md:gap-1.5 max-md:px-4 max-md:py-3 max-md:active:bg-subtle",
                     selezionata && "bg-selected hover:bg-selected",
                     hrefRiga && "cursor-pointer",
                   )}
                 >
                   {selezionabile && (
-                    <td className="w-10 px-3 py-2">
+                    <td className="w-10 px-3 py-2 max-md:hidden">
                       <Checkbox
                         aria-label="Seleziona la riga"
                         checked={selezionata}
@@ -417,7 +427,7 @@ export function DataTable<T>({
                   )}
                   {celleRiga(r)}
                   {azioni && (
-                    <td className="w-10 px-2 py-1 text-right">
+                    <td className="w-10 px-2 py-1 text-right max-md:absolute max-md:top-1 max-md:right-1 max-md:w-auto max-md:p-0">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <IconButton label="Azioni della riga">

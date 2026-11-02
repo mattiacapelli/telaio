@@ -19,10 +19,10 @@ const VARIANTI: Record<Exclude<Variante, "glass">, string> = {
   danger: "bg-bad text-white hover:opacity-90",
 };
 const MISURE: Record<Misura, string> = {
-  sm: "h-7 gap-1.5 px-2.5 text-sm",
-  md: "h-8 gap-1.5 px-3 text-sm",
-  default: "h-8 gap-1.5 px-3 text-sm",
-  icon: "size-8 p-0",
+  sm: "h-7 gap-1.5 px-2.5 text-sm max-md:h-[38px]",
+  md: "h-8 gap-1.5 px-3 text-sm max-md:h-[42px]",
+  default: "h-8 gap-1.5 px-3 text-sm max-md:h-[42px]",
+  icon: "size-8 p-0 max-md:size-[42px]",
 };
 
 /** Classi di un bottone, per usarle su un link o su un altro elemento. */

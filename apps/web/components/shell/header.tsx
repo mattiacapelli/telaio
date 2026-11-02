@@ -3,7 +3,7 @@
 import { Menu, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button, IconButton } from "@/components/ui/button";
 import { Dialog, DialogTrigger, DrawerContent } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { briciole } from "@/lib/nav";
+import { EVENTO_MENU } from "./barra-inferiore";
 import { openPalette } from "./command-palette";
 import { Logo, NavContenuto } from "./sidebar";
 
@@ -35,6 +36,11 @@ export function Header({
 }) {
   const pathname = usePathname();
   const [menuAperto, setMenuAperto] = useState(false);
+  useEffect(() => {
+    const apri = () => setMenuAperto(true);
+    window.addEventListener(EVENTO_MENU, apri);
+    return () => window.removeEventListener(EVENTO_MENU, apri);
+  }, []);
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 md:px-6">
       <Dialog open={menuAperto} onOpenChange={setMenuAperto}>

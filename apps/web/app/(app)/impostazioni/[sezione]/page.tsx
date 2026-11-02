@@ -26,6 +26,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { ScorriVersoAttivo } from "@/components/ui/scorri-verso-attivo";
 import { auth, passwordMinima } from "@/lib/auth";
 import { statoSmtp } from "@/lib/email";
 import { SEZIONI_DISATTIVATE, SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
@@ -244,20 +245,21 @@ function Guscio({
     <>
       <PageHeader titolo={titolo} descrizione={descrizione || undefined} />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
-        <nav
+        <ScorriVersoAttivo
+          role="navigation"
           aria-label="Sezioni delle impostazioni"
-          className="flex shrink-0 flex-col gap-3 md:sticky md:top-4 md:w-56"
+          className="flex shrink-0 flex-col gap-3 max-md:-mx-4 max-md:flex-row max-md:gap-1.5 max-md:overflow-x-auto max-md:px-4 md:sticky md:top-4 md:w-56"
         >
           {gruppi.map((g) => (
-            <div key={g} className="flex flex-col gap-0.5">
-              <p className="px-2 pb-0.5 text-xs font-medium text-fg-3">{g}</p>
+            <div key={g} className="flex flex-col gap-0.5 max-md:contents">
+              <p className="px-2 pb-0.5 text-xs font-medium text-fg-3 max-md:hidden">{g}</p>
               {SEZIONI_IMPOSTAZIONI.filter((s) => s.gruppo === g).map((s) =>
                 SEZIONI_DISATTIVATE.includes(s.slug) ? (
                   <span
                     key={s.slug}
                     aria-disabled="true"
                     title="Non ancora disponibile"
-                    className="flex h-8 cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 text-sm whitespace-nowrap text-fg-3"
+                    className="flex h-8 cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 text-sm whitespace-nowrap text-fg-3 max-md:h-[38px] max-md:shrink-0 max-md:rounded-full max-md:border max-md:border-dashed max-md:border-line max-md:px-3"
                   >
                     {s.titolo}
                     <span className="rounded-sm bg-subtle px-1.5 py-0.5 text-[10px] font-medium">
@@ -270,9 +272,9 @@ function Guscio({
                     href={`/impostazioni/${s.slug}`}
                     aria-current={s.slug === sezione ? "page" : undefined}
                     className={cn(
-                      "flex h-8 items-center rounded-md px-2 text-sm transition-colors duration-150",
+                      "flex h-8 items-center rounded-md px-2 text-sm whitespace-nowrap transition-colors duration-150 max-md:h-[38px] max-md:shrink-0 max-md:rounded-full max-md:border max-md:border-line max-md:px-3",
                       s.slug === sezione
-                        ? "bg-hover font-medium text-fg"
+                        ? "bg-hover font-medium text-fg max-md:border-transparent max-md:bg-fg max-md:text-on-fg"
                         : "text-fg-2 hover:bg-hover hover:text-fg",
                     )}
                   >
@@ -282,7 +284,7 @@ function Guscio({
               )}
             </div>
           ))}
-        </nav>
+        </ScorriVersoAttivo>
         <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
       </div>
     </>
