@@ -26,8 +26,8 @@ export interface DbTemporaneo {
   elimina: () => Promise<void>;
 }
 
-/** Crea un database vuoto con tutte le migrazioni applicate, come una installazione nuova. */
-export async function creaDbTemporaneo(): Promise<DbTemporaneo> {
+/** Crea un database vuoto con tutte le migrazioni applicate (o senza, con `migra: false`). */
+export async function creaDbTemporaneo(opzioni: { migra?: boolean } = {}): Promise<DbTemporaneo> {
   if (!URL_SERVER) throw new Error("Nessun database per i test (TEST_DATABASE_URL o DATABASE_URL)");
   const nome = `telaio_test_${randomBytes(6).toString("hex")}`;
   const admin = postgres(conNome(URL_SERVER, "postgres"), { max: 1 });
@@ -35,7 +35,8 @@ export async function creaDbTemporaneo(): Promise<DbTemporaneo> {
   const url = conNome(URL_SERVER, nome);
   const sql = postgres(url, { max: 12, onnotice: () => {} });
   const db = drizzle(sql, { schema });
-  await migrate(db, { migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)) });
+  if (opzioni.migra !== false)
+    await migrate(db, { migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)) });
   return {
     db,
     sql,
