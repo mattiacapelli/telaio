@@ -88,15 +88,19 @@ describe("PDF di un preventivo", () => {
     expect((await PDFDocument.load(pdf)).getPageCount()).toBe(1);
     const t = await testoDi(pdf);
     for (const atteso of [
-      "PREVENTIVO",
-      "N. P-2026-001",
+      "Preventivo",
+      "P-2026-001",
       "Studio Rossi S.r.l.",
-      "P.IVA 01234567897",
+      "P.IVA",
+      "01234567897",
       "Trattoria Da Marco",
-      "Codice SDI KRRH6B9",
-      "Oggetto: Sito vetrina con prenotazioni",
-      "Valido fino al 02/12/2026",
-      "Hosting e manutenzione (canone annuo)",
+      "Codice SDI",
+      "KRRH6B9",
+      "Sito vetrina con prenotazioni",
+      "Valido fino al",
+      "02/12/2026",
+      "Hosting e manutenzione",
+      "canone annuo",
       "10%",
       "€ 1.180,00",
       "IVA 22%",
@@ -175,8 +179,9 @@ describe("PDF di una fattura", () => {
 
   it("senza IVA mostra la dicitura, il bollo, la ritenuta e il netto da pagare", async () => {
     const t = await testoDi(await generaPdf(fattura, MODELLO_PDF_PREDEFINITO));
-    expect(t).toContain("FATTURA");
-    expect(t).toContain("Scadenza 02/12/2026");
+    expect(t).toContain("Fattura");
+    expect(t).toContain("Scadenza");
+    expect(t).toContain("02/12/2026");
     expect(t).toContain("Operazione non soggetta a IVA ai sensi dell'art. 4 DPR 633/72");
     expect(t).not.toMatch(/IVA \d+%/);
     expect(t).toContain("Bollo");

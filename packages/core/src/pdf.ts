@@ -151,9 +151,12 @@ const LARGHEZZA = 595.28;
 const ALTEZZA = 841.89;
 const MARGINE = 48;
 const BASSO = 70; // spazio riservato al piè di pagina
-const GRIGIO = rgb(0.45, 0.45, 0.47);
+// Stessi valori dell'app: testo #202124, secondario #777, filetti #e8e8e8, fondo #f7f8fa.
+const GRIGIO = rgb(0.467, 0.467, 0.467);
 const NERO = rgb(0.125, 0.129, 0.141);
-const LINEA = rgb(0.9, 0.9, 0.91);
+const LINEA = rgb(0.91, 0.91, 0.91);
+const FONDO = rgb(0.969, 0.973, 0.98);
+const RAGGIO = 6;
 
 /** Solo caratteri che i font standard sanno disegnare (Latin-1 e €); il resto diventa «?». */
 export function perPdf(t: string): string {
@@ -266,23 +269,51 @@ class Foglio {
     return yy;
   }
 
+  /** Rettangolo con angoli arrotondati; `y` è il bordo alto. */
+  riquadro(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    opz: { fondo?: ReturnType<typeof rgb>; bordo?: ReturnType<typeof rgb> } = {},
+  ) {
+    const r = Math.min(RAGGIO, h / 2, w / 2);
+    const percorso = `M ${r} 0 L ${w - r} 0 A ${r} ${r} 0 0 1 ${w} ${r} L ${w} ${h - r} A ${r} ${r} 0 0 1 ${w - r} ${h} L ${r} ${h} A ${r} ${r} 0 0 1 0 ${h - r} L 0 ${r} A ${r} ${r} 0 0 1 ${r} 0 Z`;
+    this.pagina.drawSvgPath(percorso, {
+      x,
+      y,
+      color: opz.fondo,
+      borderColor: opz.bordo,
+      borderWidth: opz.bordo ? 0.75 : 0,
+    });
+  }
+
+  filetto(x1: number, x2: number, y: number) {
+    this.pagina.drawLine({
+      start: { x: x1, y },
+      end: { x: x2, y },
+      thickness: 0.5,
+      color: LINEA,
+    });
+  }
+
   serve(altezza: number) {
     if (this.y - altezza < BASSO) this.nuovaPagina();
   }
 }
 
-function righeAnagrafica(a: Anagrafica, conSdi: boolean): string[] {
+function coppieAnagrafica(a: Anagrafica, conSdi: boolean): [string, string][] {
   const luogo =
     [a.cap, a.citta].filter(Boolean).join(" ") + (a.provincia ? ` (${a.provincia})` : "");
-  return [
-    a.indirizzo ?? "",
-    luogo.trim(),
-    a.partitaIva ? `P.IVA ${a.partitaIva}` : "",
-    a.codiceFiscale && a.codiceFiscale !== a.partitaIva ? `C.F. ${a.codiceFiscale}` : "",
-    a.pec ? `PEC ${a.pec}` : "",
-    !conSdi && a.email ? a.email : "",
-    conSdi && a.codiceSdi ? `Codice SDI ${a.codiceSdi}` : "",
-  ].filter((r) => r.trim() !== "");
+  const coppie: [string, string][] = [
+    ["Sede", [a.indirizzo, luogo.trim()].filter(Boolean).join(", ")],
+    ["P.IVA", a.partitaIva ?? ""],
+    ["C.F.", a.codiceFiscale && a.codiceFiscale !== a.partitaIva ? a.codiceFiscale : ""],
+    ["PEC", a.pec ?? ""],
+    ["Email", !conSdi ? (a.email ?? "") : ""],
+    ["Codice SDI", conSdi ? (a.codiceSdi ?? "") : ""],
+  ];
+  return coppie.filter(([, v]) => v.trim() !== "");
 }
 
 /** Genera il PDF di un preventivo o di una fattura. */
@@ -298,7 +329,12 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
   const utile = LARGHEZZA - MARGINE * 2;
   f.nuovaPagina();
 
-  // intestazione: logo a sinistra, titolo e numero a destra
+  // filo d'accento sul bordo alto della pagina
+  const accentoPagina = (p: PDFPage) =>
+    p.drawRectangle({ x: 0, y: ALTEZZA - 4, width: LARGHEZZA, height: 4, color: accento });
+  accentoPagina(f.pagina);
+
+  // intestazione: logo o nome a sinistra, tipo e numero a destra
   let logo: PDFImage | null = null;
   const dl = modello.logo ? decodificaLogo(modello.logo) : null;
   if (dl) {
@@ -311,88 +347,143 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
   const yTesta = f.y;
   let fondoLogo = yTesta;
   if (logo) {
-    const s = Math.min(150 / logo.width, 56 / logo.height, 1);
+    const s = Math.min(150 / logo.width, 48 / logo.height, 1);
     const w = logo.width * s;
     const h = logo.height * s;
     f.pagina.drawImage(logo, { x: MARGINE, y: yTesta - h, width: w, height: h });
     fondoLogo = yTesta - h;
   } else {
-    f.testo(dati.emittente.nome, MARGINE, yTesta - 16, 16, { bold: true });
-    fondoLogo = yTesta - 20;
+    f.testo(dati.emittente.nome, MARGINE, yTesta - 14, 14, { bold: true });
+    fondoLogo = yTesta - 18;
   }
-  f.testo(titolo.toUpperCase(), LARGHEZZA - MARGINE, yTesta - 18, 20, {
-    bold: true,
-    colore: accento,
-    destra: true,
-  });
-  f.testo(dati.numero ? `N. ${dati.numero}` : "Bozza", LARGHEZZA - MARGINE, yTesta - 36, 11, {
-    destra: true,
-  });
-  if (dati.data)
-    f.testo(`Data ${dataIt(dati.data)}`, LARGHEZZA - MARGINE, yTesta - 50, 9, {
+  const dX = LARGHEZZA - MARGINE;
+  f.testo(titolo, dX, yTesta - 9, 9, { colore: GRIGIO, destra: true });
+  if (dati.numero) {
+    f.testo(dati.numero, dX, yTesta - 30, 22, { bold: true, destra: true });
+  } else {
+    const t = "Bozza";
+    const wP = f.larghezza(t, 9, true) + 16;
+    f.riquadro(dX - wP, yTesta - 14, wP, 20, { fondo: FONDO, bordo: LINEA });
+    f.testo(t, dX - wP / 2 - f.larghezza(t, 9, true) / 2, yTesta - 27, 9, {
+      bold: true,
       colore: GRIGIO,
-      destra: true,
     });
-  f.y = Math.min(fondoLogo, yTesta - 56) - 28;
-
-  // emittente e cliente affiancati
-  const col = (utile - 28) / 2;
-  const yBlocchi = f.y;
-  f.testo("DA", MARGINE, yBlocchi - 8, 7.5, { bold: true, colore: GRIGIO });
-  f.testo("PER", MARGINE + col + 28, yBlocchi - 8, 7.5, { bold: true, colore: GRIGIO });
-  let ySx = f.blocco(dati.emittente.nome, MARGINE, yBlocchi - 14, 10, col, { bold: true });
-  ySx = f.blocco(righeAnagrafica(dati.emittente, false).join("\n"), MARGINE, ySx, 9, col, {
-    colore: GRIGIO,
-  });
-  let yDx = f.blocco(dati.cliente.nome || "-", MARGINE + col + 28, yBlocchi - 14, 10, col, {
-    bold: true,
-  });
-  yDx = f.blocco(righeAnagrafica(dati.cliente, true).join("\n"), MARGINE + col + 28, yDx, 9, col, {
-    colore: GRIGIO,
-  });
-  f.y = Math.min(ySx, yDx) - 18;
-
-  // oggetto e scadenza
-  const meta: string[] = [];
-  if (dati.scadenza)
-    meta.push(
-      `${dati.tipo === "preventivo" ? "Valido fino al" : "Scadenza"} ${dataIt(dati.scadenza)}`,
-    );
-  if (dati.oggetto) {
-    f.y = f.blocco(`Oggetto: ${dati.oggetto}`, MARGINE, f.y, 10.5, utile, { bold: true }) - 2;
   }
-  if (meta.length) f.y = f.blocco(meta.join("   "), MARGINE, f.y, 9, utile, { colore: GRIGIO }) - 2;
-  f.y -= 12;
+  f.y = Math.min(fondoLogo, yTesta - 40) - 18;
+  f.filetto(MARGINE, MARGINE + utile, f.y);
+  f.y -= 18;
 
-  // tabella
-  const w = { q: 34, p: 72, s: 46, i: 76 };
+  // oggetto
+  if (dati.oggetto) {
+    f.y = f.blocco(dati.oggetto, MARGINE, f.y, 12, utile, { bold: true, interlinea: 16 }) - 8;
+  }
+
+  // emittente e cliente: due schede con righe etichetta/valore separate da filetti
+  const GAP = 14;
+  const col = (utile - GAP) / 2;
+  const ETICHETTA = 56;
+  const PAD = 12;
+  const scheda = (titoloScheda: string, a: Anagrafica, conSdi: boolean) => {
+    const coppie = coppieAnagrafica(a, conSdi);
+    const nomeRighe = f.righe(a.nome || "-", 11, col - PAD * 2, true);
+    const righeCoppie = coppie.map(([e, v]) => ({
+      e,
+      v: f.righe(v, 9, col - PAD * 2 - ETICHETTA),
+    }));
+    const hRiga = (n: number) => n * 11.5 + 12;
+    const altezza =
+      PAD +
+      12 +
+      nomeRighe.length * 14 +
+      6 +
+      righeCoppie.reduce((s, c) => s + hRiga(c.v.length), 0) +
+      4;
+    return { titoloScheda, nomeRighe, righeCoppie, hRiga, altezza };
+  };
+  const sx = scheda("Emittente", dati.emittente, false);
+  const dx = scheda("Cliente", dati.cliente, true);
+  const hScheda = Math.max(sx.altezza, dx.altezza);
+  f.serve(hScheda + 20);
+  const yScheda = f.y;
+  [
+    { s: sx, x: MARGINE },
+    { s: dx, x: MARGINE + col + GAP },
+  ].forEach(({ s, x }) => {
+    f.riquadro(x, yScheda, col, hScheda, { bordo: LINEA });
+    f.testo(s.titoloScheda, x + PAD, yScheda - PAD - 7, 8.5, { colore: GRIGIO });
+    let yy = yScheda - PAD - 12;
+    s.nomeRighe.forEach((r) => {
+      f.testo(r, x + PAD, yy - 11, 11, { bold: true });
+      yy -= 14;
+    });
+    yy -= 6;
+    for (const c of s.righeCoppie) {
+      f.filetto(x + PAD, x + col - PAD, yy);
+      c.v.forEach((riga, i) => {
+        if (i === 0) f.testo(c.e, x + PAD, yy - 14, 9, { colore: GRIGIO });
+        f.testo(riga, x + PAD + ETICHETTA, yy - 14 - i * 11.5, 9);
+      });
+      yy -= s.hRiga(c.v.length);
+    }
+  });
+  f.y = yScheda - hScheda - 14;
+
+  // data, scadenza e totale in una fascia, come i riepiloghi dell'app
+  const celle: [string, string][] = [];
+  if (dati.data) celle.push(["Data", dataIt(dati.data)]);
+  if (dati.scadenza)
+    celle.push([dati.tipo === "preventivo" ? "Valido fino al" : "Scadenza", dataIt(dati.scadenza)]);
+  celle.push(["Totale", formatEuro(dati.totaleCent)]);
+  f.serve(60);
+  const hFascia = 42;
+  f.riquadro(MARGINE, f.y, utile, hFascia, { bordo: LINEA });
+  const wCella = utile / celle.length;
+  celle.forEach(([e, v], i) => {
+    const x = MARGINE + i * wCella;
+    if (i > 0)
+      f.pagina.drawLine({
+        start: { x, y: f.y - 8 },
+        end: { x, y: f.y - hFascia + 8 },
+        thickness: 0.5,
+        color: LINEA,
+      });
+    f.testo(e, x + PAD, f.y - 15, 8.5, { colore: GRIGIO });
+    f.testo(v, x + PAD, f.y - 31, 12, { bold: true });
+  });
+  f.y -= hFascia + 20;
+
+  // tabella: intestazione su fondo chiaro con etichette grigie, righe separate da filetti
+  const w = { q: 34, p: 74, s: 46, i: 80 };
   const wDesc = utile - w.q - w.p - w.s - w.i - 16;
   const xQ = MARGINE + wDesc + 8;
   const xP = xQ + w.q;
   const xS = xP + w.p;
   const xI = xS + w.s;
   const intestazioneTabella = () => {
-    f.pagina.drawRectangle({ x: MARGINE, y: f.y - 20, width: utile, height: 20, color: accento });
-    const yy = f.y - 14;
-    const bianco = rgb(1, 1, 1);
-    f.testo("Descrizione", MARGINE + 8, yy, 8.5, { bold: true, colore: bianco });
-    f.testo("Q.tà", xQ + w.q - 6, yy, 8.5, { bold: true, colore: bianco, destra: true });
-    f.testo("Prezzo", xP + w.p - 6, yy, 8.5, { bold: true, colore: bianco, destra: true });
-    f.testo("Sconto", xS + w.s - 6, yy, 8.5, { bold: true, colore: bianco, destra: true });
-    f.testo("Importo", xI + w.i - 6, yy, 8.5, { bold: true, colore: bianco, destra: true });
-    f.y -= 20;
+    f.pagina.drawRectangle({ x: MARGINE, y: f.y - 22, width: utile, height: 22, color: FONDO });
+    f.filetto(MARGINE, MARGINE + utile, f.y);
+    f.filetto(MARGINE, MARGINE + utile, f.y - 22);
+    const yy = f.y - 15;
+    f.testo("Voce", MARGINE + 8, yy, 8.5, { colore: GRIGIO });
+    f.testo("Q.tà", xQ + w.q - 6, yy, 8.5, { colore: GRIGIO, destra: true });
+    f.testo("Prezzo", xP + w.p - 6, yy, 8.5, { colore: GRIGIO, destra: true });
+    f.testo("Sconto", xS + w.s - 6, yy, 8.5, { colore: GRIGIO, destra: true });
+    f.testo("Importo", xI + w.i - 6, yy, 8.5, { colore: GRIGIO, destra: true });
+    f.y -= 22;
   };
   intestazioneTabella();
   for (const r of dati.righe) {
-    const desc = r.dettaglio ? `${r.descrizione} (${r.dettaglio})` : r.descrizione;
-    const righe = f.righe(desc, 9.5, wDesc - 8);
-    const alt = righe.length * 12.5 + 10;
+    const righe = f.righe(r.descrizione, 9.5, wDesc - 8);
+    const alt = righe.length * 12.5 + (r.dettaglio ? 12 : 0) + 14;
     if (f.y - alt < BASSO) {
       f.nuovaPagina();
+      accentoPagina(f.pagina);
       intestazioneTabella();
     }
-    righe.forEach((riga, i) => f.testo(riga, MARGINE + 8, f.y - 15 - i * 12.5, 9.5));
-    const yy = f.y - 15;
+    righe.forEach((riga, i) => f.testo(riga, MARGINE + 8, f.y - 16 - i * 12.5, 9.5));
+    if (r.dettaglio)
+      f.testo(r.dettaglio, MARGINE + 8, f.y - 16 - righe.length * 12.5, 8.5, { colore: GRIGIO });
+    const yy = f.y - 16;
     f.testo(String(r.quantita), xQ + w.q - 6, yy, 9.5, { destra: true });
     f.testo(formatEuro(r.prezzoUnitarioCent), xP + w.p - 6, yy, 9.5, { destra: true });
     f.testo(r.scontoBp ? formatAliquota(r.scontoBp) : "-", xS + w.s - 6, yy, 9.5, {
@@ -401,15 +492,10 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
     });
     f.testo(formatEuro(r.importoCent), xI + w.i - 6, yy, 9.5, { destra: true, bold: true });
     f.y -= alt;
-    f.pagina.drawLine({
-      start: { x: MARGINE, y: f.y },
-      end: { x: MARGINE + utile, y: f.y },
-      thickness: 0.5,
-      color: LINEA,
-    });
+    f.filetto(MARGINE, MARGINE + utile, f.y);
   }
 
-  // totali
+  // totali in una scheda a destra
   const voci: { etichetta: string; valore: string; forte?: boolean }[] = [
     { etichetta: "Imponibile", valore: formatEuro(dati.imponibileCent) },
   ];
@@ -425,29 +511,26 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
   const netto = dati.nettoDaPagareCent;
   if (netto !== undefined && netto !== dati.totaleCent)
     voci.push({ etichetta: "Netto da pagare", valore: formatEuro(netto), forte: true });
-  f.serve(voci.length * 18 + 30);
-  f.y -= 14;
-  const xT = MARGINE + utile - 230;
-  for (const v of voci) {
-    if (v.forte) {
-      f.pagina.drawLine({
-        start: { x: xT, y: f.y + 4 },
-        end: { x: MARGINE + utile, y: f.y + 4 },
-        thickness: 1,
-        color: accento,
-      });
-      f.y -= 4;
-    }
-    f.testo(v.etichetta, xT, f.y - 10, v.forte ? 11 : 9.5, {
+  const wT = 240;
+  const hT = voci.length * 26;
+  f.serve(hT + 40);
+  f.y -= 16;
+  const xT = MARGINE + utile - wT;
+  f.riquadro(xT, f.y, wT, hT, { bordo: LINEA });
+  voci.forEach((v, i) => {
+    const yy = f.y - i * 26;
+    if (i > 0) f.filetto(xT + PAD, xT + wT - PAD, yy);
+    f.testo(v.etichetta, xT + PAD, yy - 17, v.forte ? 10.5 : 9.5, {
       bold: v.forte,
       colore: v.forte ? NERO : GRIGIO,
     });
-    f.testo(v.valore, MARGINE + utile, f.y - 10, v.forte ? 11 : 9.5, {
+    f.testo(v.valore, xT + wT - PAD, yy - 17, v.forte ? 10.5 : 9.5, {
       destra: true,
       bold: v.forte,
+      colore: v.forte && v.etichetta === "Totale" ? accento : NERO,
     });
-    f.y -= 18;
-  }
+  });
+  f.y -= hT;
 
   // dicitura, note, coordinate
   const chiusura: { titolo: string; testo: string }[] = [];
@@ -461,12 +544,12 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
       titolo: "Pagamento",
       testo: `Bonifico a ${dati.emittente.nome} - IBAN ${dati.emittente.iban}`,
     });
-  f.y -= 10;
+  f.y -= 22;
   for (const c of chiusura) {
     const righe = f.righe(c.testo, 9, utile);
-    f.serve(righe.length * 12 + 26);
-    f.testo(c.titolo.toUpperCase(), MARGINE, f.y - 8, 7.5, { bold: true, colore: GRIGIO });
-    f.y = f.blocco(c.testo, MARGINE, f.y - 14, 9, utile, { interlinea: 12 }) - 10;
+    f.serve(righe.length * 12 + 30);
+    f.testo(c.titolo, MARGINE, f.y - 8, 8.5, { colore: GRIGIO });
+    f.y = f.blocco(c.testo, MARGINE, f.y - 14, 9, utile, { interlinea: 12 }) - 12;
   }
 
   // piè di pagina su ogni pagina
