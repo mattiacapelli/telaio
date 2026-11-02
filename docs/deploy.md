@@ -113,7 +113,7 @@ openssl rand -hex 24   # POSTGRES_PASSWORD, poi un altro per REDIS_PASSWORD
 | `BETTER_AUTH_SECRET`                  | firma i cookie e **cifra i segreti 2FA**: se lo perdi, la 2FA non è più utilizzabile. Si salva nel backup (cifrato)                                                                                    |
 | `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | solo caratteri esadecimali: finiscono dentro un URL                                                                                                                                                    |
 | `DATABASE_URL`, `REDIS_URL`           | già costruiti dalle password; host `postgres` e `redis` della rete Docker                                                                                                                              |
-| `TWENTY_API_URL`, `TWENTY_API_KEY`    | opzionali; senza, `/clienti` usa dati finti                                                                                                                                                            |
+| `TWENTY_API_URL`, `TWENTY_API_KEY`    | senza, in produzione l'elenco clienti resta **vuoto**: i clienti di esempio esistono solo in sviluppo                                                                                                  |
 | `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit)                                                                                                                                 |
 | `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                  |
 | `WEB_PORT`                            | 3000 salvo conflitti                                                                                                                                                                                   |
@@ -240,8 +240,48 @@ Al primo avvio con un database senza stato di configurazione, ogni indirizzo del
   passkey) e, se caricato, `azienda.logo`. Nessun dato demo, nessuna password predefinita.
 - **Installazioni già esistenti** (per esempio un ambiente di sviluppo con utenti): una migrazione le segna come
   configurate, senza passare dal wizard. In sviluppo `pnpm db:seed` fa lo stesso.
-- **Account perso o dimenticato**: il wizard non si riapre. Se hai perso l'unico accesso, recuperalo dal database
-  (reimposta l'hash della password dell'utente) o ripristina un backup.
+- **Account perso o dimenticato**: il wizard non si riapre mai. Vedi «Recupero dell'amministratore» qui sotto.
+
+## Recupero dell'amministratore
+
+Non esiste una procedura di «password dimenticata» via email. Se perdi l'accesso, si interviene dal server, dove
+l'hash si genera con la stessa funzione di Better Auth contenuta nell'immagine del worker. Provato su uno stack reale.
+
+**Password dimenticata** (come utente `deploy`, in `/opt/telaio`):
+
+```bash
+read -r -s -p "Nuova password: " NUOVA_PASSWORD; echo; export NUOVA_PASSWORD
+export EMAIL_ADMIN="mario.rossi@example.com"
+./deploy/compose.sh run --rm -T -e NUOVA_PASSWORD -e EMAIL_ADMIN migrate \
+  sh -c 'cd "$(readlink -f node_modules/@telaio/db)" && node --input-type=module' <<'EOF'
+import postgres from "postgres";
+import { hashPassword } from "better-auth/crypto";
+const sql = postgres(process.env.DATABASE_URL);
+const hash = await hashPassword(process.env.NUOVA_PASSWORD);
+const r = await sql`update accounts set password = ${hash}, updated_at = now()
+  where provider_id = 'credential' and user_id = (select id from users where email = ${process.env.EMAIL_ADMIN})
+  returning id`;
+console.log(r.length === 1 ? "Password reimpostata" : "Utente non trovato: nessuna modifica");
+await sql.end();
+EOF
+unset NUOVA_PASSWORD
+```
+
+Stampa «Password reimpostata» se l'email esiste, altrimenti non modifica nulla. Da qui la lunghezza minima scelta nel
+setup non viene controllata: scegline una lunga e cambiala dall'app subito dopo l'accesso. Le sessioni già aperte
+restano valide: per chiuderle, `delete from sessions where user_id = …`.
+
+**Telefono perso senza codici di recupero (2FA):**
+
+```bash
+./deploy/compose.sh exec -T postgres psql -U telaio -d telaio -c "
+  update users set two_factor_enabled = false where email = 'mario.rossi@example.com';
+  delete from two_factors where user_id = (select id from users where email = 'mario.rossi@example.com');"
+```
+
+Poi accedi con la sola password e riattiva la 2FA da «Profilo e sicurezza». Le passkey registrate restano valide.
+
+Ogni intervento di questo tipo va preceduto da un backup (`./deploy/backup.sh`).
 
 ## 8. Deploy successivi, migrazioni e verifica
 
