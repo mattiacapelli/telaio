@@ -154,10 +154,16 @@ importers:
 
   packages/core:
     dependencies:
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       zod:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -1120,6 +1126,12 @@ packages:
 
   '@oxc-project/types@0.155.0':
     resolution: {integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==}
+
+  '@pdf-lib/standard-fonts@1.0.0':
+    resolution: {integrity: sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==}
+
+  '@pdf-lib/upng@1.0.1':
+    resolution: {integrity: sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==}
 
   '@peculiar/asn1-android@2.11.1':
     resolution: {integrity: sha512-AuUBRDNdWrgtnuJGXARa0Xdtq6OAD8GqezDQz6Qka7kyynMo9fzkcrtpBEHuX984uEB570BrhMZfJfkUDfpQfw==}
@@ -2614,6 +2626,9 @@ packages:
     resolution: {integrity: sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==}
     engines: {node: '>=6'}
 
+  pako@1.0.11:
+    resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
+
   parseurl@1.3.3:
     resolution: {integrity: sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==}
     engines: {node: '>= 0.8'}
@@ -2628,6 +2643,9 @@ packages:
 
   path-to-regexp@8.4.2:
     resolution: {integrity: sha512-qRcuIdP69NPm4qbACK+aDogI5CBDMi1jKe0ry5rSQJz8JVLsC7jV8XpiJjGRLLol3N+R5ihGYcrPLTno6pAdBA==}
+
+  pdf-lib@1.17.1:
+    resolution: {integrity: sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -3651,6 +3669,14 @@ snapshots:
   '@noble/hashes@2.4.0': {}
 
   '@oxc-project/types@0.155.0': {}
+
+  '@pdf-lib/standard-fonts@1.0.0':
+    dependencies:
+      pako: 1.0.11
+
+  '@pdf-lib/upng@1.0.1':
+    dependencies:
+      pako: 1.0.11
 
   '@peculiar/asn1-android@2.11.1':
     dependencies:
@@ -4996,6 +5022,8 @@ snapshots:
 
   p-try@2.2.0: {}
 
+  pako@1.0.11: {}
+
   parseurl@1.3.3: {}
 
   path-exists@4.0.0: {}
@@ -5003,6 +5031,13 @@ snapshots:
   path-key@3.1.1: {}
 
   path-to-regexp@8.4.2: {}
+
+  pdf-lib@1.17.1:
+    dependencies:
+      '@pdf-lib/standard-fonts': 1.0.0
+      '@pdf-lib/upng': 1.0.1
+      pako: 1.0.11
+      tslib: 1.14.1
 
   picocolors@1.1.1: {}
 
