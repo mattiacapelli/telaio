@@ -94,12 +94,18 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UTENTE_GH: ${{ github.actor }}
         run: |
-          # Il token non resta sul server: login, deploy, logout. Passa da stdin, mai da argomenti.
-          # shellcheck disable=SC2029  # le variabili si espandono qui di proposito: sono i valori da inviare
-          printf '%s' "$GHCR_TOKEN" | ssh vps "docker login ghcr.io -u '$UTENTE_GH' --password-stdin"
-          trap 'ssh vps "docker logout ghcr.io" || true' EXIT
-          # shellcheck disable=SC2029
-          ssh vps "cd '$PERCORSO' && ./deploy/deploy.sh '$VERSIONE'"
+          # Config Docker temporanea sul VPS: evita dipendenze dai permessi di ~/.docker
+          # e rimuove le credenziali al termine. Il token passa via stdin, mai negli argomenti SSH.
+          # shellcheck disable=SC2029  # le variabili del runner si espandono qui di proposito
+          printf '%s' "$GHCR_TOKEN" | ssh vps "
+            set -Eeuo pipefail
+            export DOCKER_CONFIG=\"\$(mktemp -d /tmp/telaio-docker.XXXXXX)\"
+            chmod 700 \"\$DOCKER_CONFIG\"
+            trap 'docker logout ghcr.io >/dev/null 2>&1 || true; rm -rf \"\$DOCKER_CONFIG\"' EXIT
+            docker login ghcr.io -u '$UTENTE_GH' --password-stdin
+            cd '$PERCORSO'
+            ./deploy/deploy.sh '$VERSIONE'
+          "
 
       - name: Verifica dall'esterno (DNS, Nginx, HTTPS, versione servita)
         run: |
