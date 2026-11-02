@@ -17,7 +17,18 @@ const SEGRETI_DA_NON_VEDERE = [
 
 /** Tutto ciò che il browser riceve (pagine e risposte delle azioni) viene controllato alla fine. */
 const ricevuto: string[] = [];
+/** Richieste delle Server Actions viste dal browser, per riprovarle dopo il completamento. */
+const azioniViste: { id: string; contentType: string; body: string }[] = [];
 function osserva(page: Page) {
+  page.on("request", (r) => {
+    const id = r.headers()["next-action"];
+    if (r.method() === "POST" && id)
+      azioniViste.push({
+        id,
+        contentType: r.headers()["content-type"] ?? "",
+        body: r.postData() ?? "",
+      });
+  });
   page.on("response", async (r) => {
     const tipo = r.headers()["content-type"] ?? "";
     if (/text|json|javascript/.test(tipo) && !r.url().includes("/_next/static")) {
@@ -289,6 +300,25 @@ test.describe("prima configurazione", () => {
       await expect(page, percorso).toHaveURL(/\/login/);
     }
     await expect(page.getByLabel("Nome dell'azienda")).toHaveCount(0);
+  });
+
+  test("a configurazione completata il codice giusto non emette più il cookie di accesso", async ({
+    request,
+  }) => {
+    const giusta = azioniViste.find((a) => a.body.includes(CODICE));
+    expect(giusta, "azione verificaCodice non intercettata").toBeTruthy();
+    const r = await request.post("/setup", {
+      headers: {
+        "content-type": giusta?.contentType ?? "text/plain;charset=UTF-8",
+        "next-action": giusta?.id ?? "",
+        origin: process.env.E2E_BASE_URL as string,
+      },
+      data: giusta?.body,
+      maxRedirects: 0,
+    });
+    const testo = await r.text();
+    expect(testo).not.toContain('"ok":true');
+    expect(r.headers()["set-cookie"] ?? "").not.toContain("telaio-setup");
   });
 
   test("il login funziona con le credenziali scelte e porta alla guida di sicurezza", async () => {

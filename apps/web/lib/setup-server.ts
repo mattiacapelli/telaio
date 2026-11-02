@@ -106,6 +106,17 @@ export async function origineFidata(): Promise<boolean> {
   }
 }
 
+/**
+ * Descrizione di un errore adatta ai log: senza i parametri della query. Gli errori di Drizzle li
+ * includono, e tra i parametri ci sono email e hash della password dell'amministratore.
+ */
+export function descriviErrore(e: unknown): string {
+  if (!(e instanceof Error)) return "errore sconosciuto";
+  const causa = (e as { cause?: { code?: string; message?: string } }).cause;
+  const testo = (causa?.message ?? e.message).split("\nparams:")[0] ?? "";
+  return `${e.name}${causa?.code ? ` [${causa.code}]` : ""}: ${testo.slice(0, 300)}`;
+}
+
 export async function setupCompletato(): Promise<boolean> {
   return (await leggiStatoSetup(getDb())).completato;
 }

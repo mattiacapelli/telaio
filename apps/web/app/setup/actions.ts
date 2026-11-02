@@ -24,6 +24,7 @@ import {
   accessoConsentito,
   codiceCorretto,
   concediAccesso,
+  descriviErrore,
   origineFidata,
   setupCompletato,
 } from "@/lib/setup-server";
@@ -46,7 +47,7 @@ async function guardia(): Promise<EsitoSetup | null> {
         messaggio: "La configurazione è già stata completata.",
       };
   } catch (e) {
-    console.error("[setup] stato non leggibile", e);
+    console.error("[setup] stato non leggibile:", descriviErrore(e));
     return { ok: false, messaggio: "Database non raggiungibile. Riprova tra poco." };
   }
   return null;
@@ -61,6 +62,18 @@ export async function verificaCodice(codice: string): Promise<EsitoSetup> {
   if (!(await origineFidata())) return { ok: false, messaggio: "Richiesta non valida." };
   if (typeof codice !== "string" || codice.length > 200)
     return { ok: false, messaggio: "Codice non valido." };
+  // A configurazione completata il codice non serve più: niente cookie di accesso al wizard.
+  try {
+    if (await setupCompletato())
+      return {
+        ok: false,
+        completato: true,
+        messaggio: "La configurazione è già stata completata.",
+      };
+  } catch (e) {
+    console.error("[setup] stato non leggibile:", descriviErrore(e));
+    return { ok: false, messaggio: "Database non raggiungibile. Riprova tra poco." };
+  }
   if (!codiceCorretto(codice)) {
     // Rallenta i tentativi ripetuti. Il codice è lungo e casuale: la forza bruta non è praticabile.
     await new Promise((r) => setTimeout(r, 600));
@@ -188,7 +201,7 @@ export async function completaSetup(): Promise<EsitoSetup> {
         ok: false,
         messaggio: "Mancano dei dati: torna ai passi precedenti e controlla i campi.",
       };
-    console.error("[setup] inizializzazione fallita", e);
+    console.error("[setup] inizializzazione fallita:", descriviErrore(e));
     return {
       ok: false,
       messaggio:
@@ -201,6 +214,6 @@ export async function completaSetup(): Promise<EsitoSetup> {
 function gestisciErrore(e: unknown): EsitoSetup {
   if (e instanceof SetupGiaCompletato)
     return { ok: false, completato: true, messaggio: "La configurazione è già stata completata." };
-  console.error("[setup]", e);
+  console.error("[setup]", descriviErrore(e));
   return erroreGenerico;
 }
