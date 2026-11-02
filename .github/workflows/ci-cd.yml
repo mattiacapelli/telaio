@@ -43,7 +43,7 @@ jobs:
       - uses: pnpm/action-setup@v4 # la versione di pnpm viene da "packageManager"
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 24.22.2
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
