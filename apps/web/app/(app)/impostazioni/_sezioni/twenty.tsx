@@ -20,7 +20,11 @@ export function SezioneTwenty({
         title="Collegamento"
         action={
           <Badge variant={finto ? "warn" : "ok"} dot>
-            {finto ? "Dati finti" : "Collegato"}
+            {finto
+              ? process.env.NODE_ENV === "production"
+                ? "Non collegato"
+                : "Dati finti"
+              : "Collegato"}
           </Badge>
         }
       />

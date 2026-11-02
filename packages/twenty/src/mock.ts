@@ -106,3 +106,27 @@ export function creaClientFinto(): TwentyClient {
     async allegaPdf() {},
   };
 }
+
+/**
+ * Produzione senza Twenty collegato: nessun cliente e nessuna opportunità, mai dati di esempio.
+ * Con i dati finti un preventivo potrebbe finire intestato a un cliente inventato.
+ */
+export function creaClientVuoto(): TwentyClient {
+  return {
+    finto: true,
+    async elencaClienti() {
+      return [];
+    },
+    async dettaglioCliente() {
+      return null;
+    },
+    async elencaPersone() {
+      return [];
+    },
+    async elencaOpportunita() {
+      return [];
+    },
+    async aggiornaFaseOpportunita() {},
+    async allegaPdf() {},
+  };
+}

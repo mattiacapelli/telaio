@@ -70,7 +70,9 @@ export default async function ClientiPage() {
           <>
             {twenty.finto ? (
               <Badge variant="warn" dot>
-                Dati finti · imposta TWENTY_API_URL
+                {process.env.NODE_ENV === "production"
+                  ? "Twenty non collegato · imposta TWENTY_API_URL"
+                  : "Dati finti · imposta TWENTY_API_URL"}
               </Badge>
             ) : (
               <Badge variant="ok" dot>

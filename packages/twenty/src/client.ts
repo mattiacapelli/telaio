@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { creaClientFinto } from "./mock";
+import { creaClientFinto, creaClientVuoto } from "./mock";
 import type { Cliente, Opportunita, Persona, TwentyClient } from "./types";
 
 export interface OpzioniTwenty {
@@ -155,5 +155,8 @@ export function creaTwentyClient(opzioni: OpzioniTwenty = {}): TwentyClient {
 
 /** Client configurato dalle variabili d'ambiente. */
 export function twentyDaEnv(env: Record<string, string | undefined> = process.env): TwentyClient {
-  return creaTwentyClient({ apiUrl: env.TWENTY_API_URL || undefined, apiKey: env.TWENTY_API_KEY });
+  const apiUrl = env.TWENTY_API_URL || undefined;
+  // In produzione mai i clienti di esempio: senza Twenty l'elenco è vuoto.
+  if (!apiUrl && env.NODE_ENV === "production") return creaClientVuoto();
+  return creaTwentyClient({ apiUrl, apiKey: env.TWENTY_API_KEY });
 }
