@@ -78,7 +78,7 @@ sudo chown deploy:deploy /home/deploy/.ssh/authorized_keys && sudo chmod 600 /ho
 sudo ss -ltnp | grep ':3100' || echo "libera"
 ```
 
-Se è occupata, scegli un'altra porta: imposta `WEB_PORT` in `.env.production` e cambia la porta nell'`upstream`
+| `WEB_PORT`                           | `3100` porta dedicata a Telaio                                                                                                                                                                                 |
 del file Nginx (passo 5).
 
 ### Installazione di Docker (solo se manca)
