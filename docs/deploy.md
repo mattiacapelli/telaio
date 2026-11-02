@@ -1,13 +1,13 @@
 # Deploy in produzione
 
 Telaio gira su un VPS (Ubuntu 24.04) con Docker Compose. Nginx sull'host fa da reverse proxy HTTPS verso
-`127.0.0.1:3000`. Le immagini si costruiscono su GitHub Actions, si pubblicano su GHCR con il commit SHA
+`127.0.0.1:3100`. Le immagini si costruiscono su GitHub Actions, si pubblicano su GHCR con il commit SHA
 come tag e il deploy avviene via SSH.
 
 ```
 Internet ──443──▶ Nginx (host, Let's Encrypt)
                      │
-                     ▼ 127.0.0.1:3000
+                     ▼ 127.0.0.1:3100
               ┌─────────────── Docker Compose (progetto telaio-prod) ───────────────┐
               │  web ──┐                                                            │
               │        ├── rete "backend" (interna, senza uscita) ── postgres 18    │
@@ -72,10 +72,10 @@ sudo chown deploy:deploy /home/deploy/.ssh/authorized_keys && sudo chmod 600 /ho
 > L'utente nel gruppo `docker` equivale a root sul server. Per questo la chiave SSH è dedicata, vive solo nei
 > secrets di GitHub e il suo accesso si può revocare togliendola da `authorized_keys`.
 
-**Porta 3000.** Il web ascolta solo su `127.0.0.1:3000`. Verifica che sia libera:
+**Porta 3100.** Il web ascolta solo su `127.0.0.1:3100`. Verifica che sia libera:
 
 ```bash
-sudo ss -ltnp | grep ':3000' || echo "libera"
+sudo ss -ltnp | grep ':3100' || echo "libera"
 ```
 
 Se è occupata, scegli un'altra porta: imposta `WEB_PORT` in `.env.production` e cambia la porta nell'`upstream`
@@ -116,7 +116,7 @@ openssl rand -hex 24   # POSTGRES_PASSWORD, poi un altro per REDIS_PASSWORD
 | `TWENTY_API_URL`, `TWENTY_API_KEY`    | senza, in produzione l'elenco clienti resta **vuoto**: i clienti di esempio esistono solo in sviluppo                                                                                                  |
 | `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit)                                                                                                                                 |
 | `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                  |
-| `WEB_PORT`                            | 3000 salvo conflitti                                                                                                                                                                                   |
+| `WEB_PORT`                            | 3100 (porta dedicata a Telaio)                                                                                                                                                                                   |
 | `*_MEM_LIMIT`, `*_CPUS`               | limiti di risorse, opzionali                                                                                                                                                                           |
 | `BACKUP_*`                            | vedi sezione Backup                                                                                                                                                                                    |
 
@@ -147,7 +147,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 - Il rinnovo è automatico (timer `certbot.timer` di Ubuntu); l'`--deploy-hook` ricarica Nginx dopo ogni rinnovo.
   Prova con `sudo certbot renew --dry-run`.
-- Se hai cambiato `WEB_PORT`, aggiorna `server 127.0.0.1:3000;` nell'`upstream` prima del passo 5.3.
+- Se hai cambiato `WEB_PORT`, aggiorna `server 127.0.0.1:3100;` nell'`upstream` prima del passo 5.3.
 - La configurazione imposta HSTS (senza `includeSubDomains`), gli header forwarded, un limite ai tentativi di accesso,
   e per `/mcp` disattiva il buffering (risposte in streaming).
 
@@ -307,7 +307,7 @@ Controlli utili:
 cd /opt/telaio
 ./deploy/compose.sh ps                      # stato dei servizi
 ./deploy/compose.sh logs -f web             # log (con rotazione: 5 file da 10 MB per servizio)
-curl -s http://127.0.0.1:3000/api/health    # {"stato":"ok","database":"ok","redis":"ok","versione":"<sha>"}
+curl -s http://127.0.0.1:3100/api/health    # {"stato":"ok","database":"ok","redis":"ok","versione":"<sha>"}
 cat .versione                               # versione in esecuzione
 ```
 
@@ -419,7 +419,7 @@ configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 | Il deploy riesce ma la verifica esterna fallisce             | Nginx o certificato: `sudo nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS; porta dell'`upstream` diversa da `WEB_PORT`                               |
 | `502 Bad Gateway`                                            | il web non è in ascolto: `./deploy/compose.sh ps` e `logs web`                                                                                                             |
 | `/api/health` risponde 503                                   | guarda quale tra `database` e `redis` è `errore`: `./deploy/compose.sh ps`, `logs postgres` o `logs redis`                                                                 |
-| `port is already allocated` su 3000                          | porta occupata: cambia `WEB_PORT` e l'upstream Nginx                                                                                                                       |
+| `port is already allocated` su 3100                          | porta occupata: cambia `WEB_PORT` e l'upstream Nginx                                                                                                                       |
 | Migrazioni fallite                                           | il deploy si ferma prima di toccare web e worker. Leggi l'errore (`./deploy/compose.sh logs migrate`), correggi e ripubblica                                               |
 | Login che non funziona dietro Nginx, errore «Invalid origin» | `BETTER_AUTH_URL` diverso dall'indirizzo reale (http/https, dominio)                                                                                                       |
 | `/setup` mostra «Configurazione non disponibile»             | in produzione manca `SETUP_TOKEN`, è troppo corto (< 16 caratteri) o è ancora il valore di esempio: correggi `.env.production` e riavvia (`./deploy/compose.sh up -d web`) |
