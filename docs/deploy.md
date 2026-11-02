@@ -78,7 +78,8 @@ sudo chown deploy:deploy /home/deploy/.ssh/authorized_keys && sudo chmod 600 /ho
 sudo ss -ltnp | grep ':3100' || echo "libera"
 ```
 
-| `WEB_PORT`                           | `3100` porta dedicata a Telaio                                                                                                                                                                                 |
+Se è occupata, scegli un'altra porta: imposta `WEB_PORT` in `.env.production` e cambia la porta nell'`upstream`
+del file Nginx (passo 5).
 del file Nginx (passo 5).
 
 ### Installazione di Docker (solo se manca)
@@ -116,7 +117,7 @@ openssl rand -hex 24   # POSTGRES_PASSWORD, poi un altro per REDIS_PASSWORD
 | `TWENTY_API_URL`, `TWENTY_API_KEY`    | senza, in produzione l'elenco clienti resta **vuoto**: i clienti di esempio esistono solo in sviluppo                                                                                                  |
 | `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit)                                                                                                                                 |
 | `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                  |
-| `WEB_PORT`                            | 3100 (porta dedicata a Telaio)                                                                                                                                                                                   |
+| `WEB_PORT`                            | 3100 (porta dedicata a Telaio)                                                                                                                                                                         |
 | `*_MEM_LIMIT`, `*_CPUS`               | limiti di risorse, opzionali                                                                                                                                                                           |
 | `BACKUP_*`                            | vedi sezione Backup                                                                                                                                                                                    |
 
