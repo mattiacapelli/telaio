@@ -80,7 +80,6 @@ sudo ss -ltnp | grep ':3100' || echo "libera"
 
 Se è occupata, scegli un'altra porta: imposta `WEB_PORT` in `.env.production` e cambia la porta nell'`upstream`
 del file Nginx (passo 5).
-del file Nginx (passo 5).
 
 ### Installazione di Docker (solo se manca)
 
