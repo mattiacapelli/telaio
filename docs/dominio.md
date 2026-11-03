@@ -14,6 +14,7 @@
 - **listini** → **listino_basi** e **listino_moduli**; **modulo_basi** è la relazione molti-a-molti modulo↔base. Ogni voce ha `prezzo_una_tantum`, `canone_annuo`, `canone_mensile` (netti).
 - **preventivi** → **preventivo_righe**; **fatture** → **fattura_righe**. Entrambi con snapshot JSON di emittente, cliente e regole IVA.
 - **abbonamenti** → **rate** (anche rate singole da preventivo); **incassi** su rata/fattura/libero; **movimenti** (prima nota); **solleciti**.
+- **progetti** → **progetto_risorse**: commesse per i clienti (vedi «Progetti»); **progetti_numerazione** è il contatore annuale dei codici.
 - Sistema: **api_keys**, **webhooks**, **webhook_deliveries**, **pending_actions**, **audit_log**, **numerazioni**.
 
 ## Regole fiscali (per ragione sociale)
@@ -89,3 +90,17 @@ rata scaduta ──worker──► sollecito  da_confermare ──utente──�
 - **Saldo conto** = saldo iniziale + entrate − uscite − giroconti in uscita + giroconti in entrata.
 - **Fattura da preventivo**: solo da un preventivo `accettato`, con le sole righe una tantum; una fattura per preventivo. All'**emissione** assegna il numero, congela emittente e regole del momento, ricalcola i totali e crea la rata (scadenza a 30 giorni) che compare nello scadenzario.
 - **Preventivo**: all'invio (bozza → inviato) assegna il numero e congela emittente, regole e totali.
+
+## Progetti
+
+Un progetto è una commessa per un cliente. Nasce **a mano** da Progetti → Nuovo progetto, oppure **da un preventivo accettato** con «Crea progetto» (mai in automatico: è una scelta dell'utente).
+
+- **Codice**: `PRJ-AAAA-NNN`, progressivo per anno, assegnato nella stessa transazione del progetto (niente buchi) e non modificabile.
+- **Cliente**: solo un riferimento a `clienti_ref` (l'anagrafica resta su Twenty). Da preventivo il progetto eredita il cliente del preventivo; l'opportunità Twenty si legge dal preventivo (`twenty_opportunity_id`), non si duplica.
+- **Preventivo di origine**: opzionale, e un preventivo può generare **più progetti** (due lavori nello stesso preventivo): `preventivo_id` ha un indice normale, non univoco. Si collega solo un preventivo `accettato`. La creazione da preventivo è una transazione che blocca la riga del preventivo; non è idempotente per scelta, e contro il doppio clic accidentale il pulsante resta disattivato durante l'invio. La pagina del preventivo elenca i progetti collegati e propone sempre «Crea progetto».
+- **Categorie**: `software`, `sito_web`, `ecommerce`, `infrastruttura`, `consulenza`, `altro` (elenco fisso, nessun editor).
+- **Stati**: `pianificato`, `in_corso`, `in_attesa`, `completato`, `annullato`; si passa liberamente da uno all'altro. **Priorità**: `bassa`, `normale`, `alta`, `urgente`.
+- **Date effettive** automatiche: il primo passaggio a `in_corso` (o direttamente a `completato`) fissa l'inizio; `completato` fissa la fine; riaprire un progetto completato cancella la fine. Le date già presenti non si sovrascrivono.
+- **Risorse** (`progetto_risorse`): collegamenti esterni (repository, design, produzione, staging, documentazione, infrastruttura, monitoraggio, altro), con ambiente opzionale (`development`, `staging`, `production`) e al più un collegamento principale per progetto (indice univoco parziale). Solo URL `http`/`https`, senza nome utente e password nell'indirizzo. Si eliminano davvero (nessun soft delete: sono semplici collegamenti, l'audit conserva chi li ha tolti). Ogni modifica aggiorna `updated_at` del progetto.
+- **Audit**: `progetto.creato`, `progetto.modificato`, `progetto.stato`, `progetto.creato_da_preventivo`, `progetto_risorsa.creata`, `progetto_risorsa.modificata`, `progetto_risorsa.eliminata`.
+- Pensato per crescere: stato del progetto separato da un futuro stato dei ticket, risorse in una tabella a parte, nessun JSONB al posto delle entità e nessuna dipendenza dalla fatturazione. Fuori da questa fase: campi personalizzati, tipologie configurabili, ticket, kanban, task, time tracking.

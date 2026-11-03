@@ -10,6 +10,7 @@ const VAI: { tasto: string; titolo: string; href: string }[] = [
   { tasto: "d", titolo: "Dashboard", href: "/" },
   { tasto: "c", titolo: "Clienti", href: "/clienti" },
   { tasto: "p", titolo: "Preventivi", href: "/preventivi" },
+  { tasto: "j", titolo: "Progetti", href: "/progetti" },
   { tasto: "l", titolo: "Listini", href: "/listini" },
   { tasto: "f", titolo: "Fatture", href: "/fatture" },
   { tasto: "i", titolo: "Incassi", href: "/incassi" },

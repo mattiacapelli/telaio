@@ -29,6 +29,20 @@
       "when": 1793576148706,
       "tag": "0003_setup_installazioni_esistenti",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793661106315,
+      "tag": "0004_progetti",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793695875528,
+      "tag": "0005_preventivo_piu_progetti",
+      "breakpoints": true
     }
   ]
 }

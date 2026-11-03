@@ -11,6 +11,7 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
       { numero: "01", titolo: "Dashboard", href: "/" },
       { numero: "02", titolo: "Clienti", href: "/clienti" },
       { numero: "03", titolo: "Preventivi", href: "/preventivi" },
+      { numero: "04", titolo: "Progetti", href: "/progetti" },
       { numero: "05", titolo: "Listini", href: "/listini" },
     ],
   },
@@ -43,6 +44,7 @@ export const GRUPPI_NAV: { titolo: string; voci: VoceNav[] }[] = [
 
 export const AZIONI_PRINCIPALI: Record<string, { label: string; href: string }> = {
   "/preventivi": { label: "Nuovo preventivo", href: "/preventivi/nuovo" },
+  "/progetti": { label: "Nuovo progetto", href: "/progetti/nuovo" },
   "/fatture": { label: "Nuova fattura", href: "/fatture/nuova" },
   "/incassi": { label: "Registra incasso", href: "/incassi" },
   "/abbonamenti": { label: "Nuovo abbonamento", href: "/abbonamenti" },
@@ -76,6 +78,7 @@ export interface Briciola {
 const ETICHETTE_SEGMENTO: Record<string, string> = {
   nuova: "Nuova",
   nuovo: "Nuovo",
+  modifica: "Modifica",
   "design-system": "Design system",
   "incasso-rapido": "Incasso al volo",
   "azioni-in-attesa": "Azioni in attesa",

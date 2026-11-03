@@ -1,7 +1,6 @@
 import { calcolaTotali, importoRiga, moduliCompatibili, type RegoleFiscali } from "@telaio/core";
 import {
   and,
-  clientiRef,
   type Database,
   eq,
   inArray,
@@ -14,11 +13,11 @@ import {
   preventivoRighe,
   ragioniSociali,
 } from "@telaio/db";
-import { twentyDaEnv } from "@telaio/twenty";
 import { z } from "zod";
 import { oggi } from "../date";
 import { regoleDa } from "../regole";
 import { emettiEvento } from "../webhooks";
+import { risolviClienteRef } from "./cliente-ref";
 
 function aggiungiGiorni(data: string, giorni: number): string {
   const d = new Date(`${data}T00:00:00Z`);
@@ -206,25 +205,9 @@ export async function creaPreventivoLibero(
   let clienteRefId: string | null = null;
   let clienteSnapshot: Record<string, unknown> = {};
   if (dati.clienteTwentyId) {
-    const cliente = await twentyDaEnv().dettaglioCliente(dati.clienteTwentyId);
-    if (!cliente) throw new Error("Cliente non trovato su Twenty");
-    const valori = {
-      twentyCompanyId: cliente.id,
-      nome: cliente.nome,
-      partitaIva: cliente.partitaIva,
-      codiceFiscale: cliente.codiceFiscale,
-      pec: cliente.pec,
-      codiceSdi: cliente.codiceSdi,
-      pa: cliente.pa,
-      lastSyncedAt: new Date(),
-    };
-    const [ref] = await db
-      .insert(clientiRef)
-      .values(valori)
-      .onConflictDoUpdate({ target: clientiRef.twentyCompanyId, set: valori })
-      .returning({ id: clientiRef.id });
-    clienteRefId = ref?.id ?? null;
-    clienteSnapshot = { ...cliente };
+    const r = await risolviClienteRef(db, dati.clienteTwentyId);
+    clienteRefId = r.id;
+    clienteSnapshot = r.cliente;
   }
 
   const regole: RegoleFiscali = regoleDa(rs);

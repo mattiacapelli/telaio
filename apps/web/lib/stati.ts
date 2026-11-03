@@ -42,3 +42,20 @@ export const STATO_RATA: Record<
   scaduta: { label: "Scaduta", tone: "orange" },
   annullata: { label: "Annullata", tone: "ink" },
 };
+
+type VarianteStato = "neutral" | "brand" | "ok" | "warn" | "bad";
+
+export const STATO_PROGETTO: Record<string, { label: string; variante: VarianteStato }> = {
+  pianificato: { label: "Pianificato", variante: "neutral" },
+  in_corso: { label: "In corso", variante: "brand" },
+  in_attesa: { label: "In attesa", variante: "warn" },
+  completato: { label: "Completato", variante: "ok" },
+  annullato: { label: "Annullato", variante: "bad" },
+};
+
+export const PRIORITA_PROGETTO: Record<string, { label: string; variante: VarianteStato }> = {
+  bassa: { label: "Bassa", variante: "neutral" },
+  normale: { label: "Normale", variante: "brand" },
+  alta: { label: "Alta", variante: "warn" },
+  urgente: { label: "Urgente", variante: "bad" },
+};

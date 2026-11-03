@@ -10,6 +10,10 @@ import { leggiStatoSetup } from "../src/setup";
 import { creaDbTemporaneo, type DbTemporaneo, URL_SERVER } from "./db-temporaneo";
 
 const CARTELLA = fileURLToPath(new URL("../drizzle", import.meta.url));
+/** Quante migrazioni ci sono in tutto: cresce a ogni nuova migrazione, il test non va ritoccato. */
+const MIGRAZIONI_TOTALI: number = JSON.parse(
+  readFileSync(join(CARTELLA, "meta", "_journal.json"), "utf8"),
+).entries.length;
 
 /** Una copia della cartella delle migrazioni ferma alle prime `n`: com'era una installazione prima del wizard. */
 function migrazioniFinoA(n: number): string {
@@ -74,7 +78,7 @@ describe.skipIf(!URL_SERVER)("migrazioni su installazioni esistenti", () => {
     expect(a?.password).toBe("hash-esistente");
     expect((await t.db.select().from(ragioniSociali))[0]?.nome).toBe("Azienda Esistente");
     expect((await t.sql`select count(*)::int as n from drizzle.__drizzle_migrations`)[0]?.n).toBe(
-      4,
+      MIGRAZIONI_TOTALI,
     );
   });
 
@@ -86,7 +90,7 @@ describe.skipIf(!URL_SERVER)("migrazioni su installazioni esistenti", () => {
     const [dopo] = await t.db.select().from(impostazioni).where(eq(impostazioni.chiave, "setup"));
     expect(dopo?.valore).toEqual(prima?.valore);
     expect((await t.sql`select count(*)::int as n from drizzle.__drizzle_migrations`)[0]?.n).toBe(
-      4,
+      MIGRAZIONI_TOTALI,
     );
   });
 
@@ -100,7 +104,7 @@ describe.skipIf(!URL_SERVER)("migrazioni su installazioni esistenti", () => {
   it("un database completamente vuoto arriva all'ultima migrazione senza stato di configurazione", async () => {
     await migrate(t.db, { migrationsFolder: CARTELLA });
     expect((await t.sql`select count(*)::int as n from drizzle.__drizzle_migrations`)[0]?.n).toBe(
-      4,
+      MIGRAZIONI_TOTALI,
     );
     expect((await leggiStatoSetup(t.db)).completato).toBe(false);
     const [{ n }] = await t.db.execute<{ n: number }>(sql`select count(*)::int as n from users`);

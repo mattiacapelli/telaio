@@ -7,9 +7,20 @@ import {
   type StatoPreventivo,
   transizioniPreventivo,
 } from "@telaio/core";
-import { asc, eq, getDb, preventivi, preventivoRighe, ragioniSociali } from "@telaio/db";
+import {
+  asc,
+  eq,
+  getDb,
+  preventivi,
+  preventivoRighe,
+  progettiDelPreventivo,
+  ragioniSociali,
+} from "@telaio/db";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { creaFatturaDaPreventivoAction } from "@/app/(app)/fatture/actions";
+import { CreaProgettoDaPreventivo } from "@/app/(app)/progetti/crea-da-preventivo";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { DefList } from "@/components/ui/def-list";
@@ -17,7 +28,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { formatData } from "@/lib/date";
-import { STATO_PREVENTIVO } from "@/lib/stati";
+import { STATO_PREVENTIVO, STATO_PROGETTO } from "@/lib/stati";
 import { cambiaStatoPreventivoAction } from "./actions";
 
 export const metadata = { title: "Preventivo" };
@@ -42,13 +53,14 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
   const db = getDb();
   const [p] = await db.select().from(preventivi).where(eq(preventivi.id, id));
   if (!p) notFound();
-  const [righe, [rs]] = await Promise.all([
+  const [righe, [rs], progettiCollegati] = await Promise.all([
     db
       .select()
       .from(preventivoRighe)
       .where(eq(preventivoRighe.preventivoId, id))
       .orderBy(asc(preventivoRighe.posizione)),
     db.select().from(ragioniSociali).where(eq(ragioniSociali.id, p.ragioneSocialeId)),
+    progettiDelPreventivo(db, id),
   ]);
 
   const regole = p.snapshot.regole as unknown as RegoleFiscali;
@@ -91,6 +103,9 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
                 </Button>
               </form>
             ))}
+            {p.stato === "accettato" && (
+              <CreaProgettoDaPreventivo preventivoId={p.id} nomeIniziale={p.oggetto} />
+            )}
             {p.stato === "accettato" && (
               <form action={creaFatturaDaPreventivoAction}>
                 <input type="hidden" name="preventivoId" value={p.id} />
@@ -240,6 +255,26 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
               <p className="mt-3 text-xs text-fg-2">{regole.diciturSenzaIva}</p>
             )}
           </Card>
+          {progettiCollegati.length > 0 && (
+            <Card>
+              <CardHeader
+                title="Progetti"
+                description={`${progettiCollegati.length} ${progettiCollegati.length === 1 ? "progetto collegato" : "progetti collegati"}`}
+              />
+              <ul className="divide-y divide-line text-sm">
+                {progettiCollegati.map((pr) => (
+                  <li key={pr.id} className="flex items-center justify-between gap-3 py-2">
+                    <Link href={`/progetti/${pr.id}`} className="min-w-0 truncate hover:underline">
+                      <span className="font-medium tabular-nums">{pr.codice}</span> · {pr.nome}
+                    </Link>
+                    <Badge variant={STATO_PROGETTO[pr.stato]?.variante} dot>
+                      {STATO_PROGETTO[pr.stato]?.label}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <Card>
             <CardHeader title="Dettagli" />
             <DefList

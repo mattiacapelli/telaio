@@ -5,6 +5,7 @@ export * from "./client";
 export * from "./documenti-pdf";
 export * from "./impostazioni-documenti";
 export * from "./numerazione";
+export * from "./progetti";
 export * from "./rate-abbonamenti";
 export * from "./schema";
 export * from "./setup";

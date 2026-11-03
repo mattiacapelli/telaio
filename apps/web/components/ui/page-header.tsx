@@ -12,7 +12,7 @@ export function PageHeader({
   destra,
 }: {
   titolo: string;
-  descrizione?: string;
+  descrizione?: React.ReactNode;
   azioni?: React.ReactNode;
   /** etichetta accanto al titolo (per esempio lo stato di un documento) */
   stato?: React.ReactNode;

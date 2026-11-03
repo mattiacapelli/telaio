@@ -4,6 +4,7 @@ export * from "./money";
 export * from "./numerazione";
 export * from "./pdf";
 export * from "./preventivo";
+export * from "./progetti";
 export * from "./rate";
 export * from "./setup";
 export * from "./solleciti";

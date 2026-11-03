@@ -20,6 +20,7 @@ import { Logo, NavContenuto } from "./sidebar";
 
 const CREA = [
   { label: "Nuovo preventivo", href: "/preventivi/nuovo" },
+  { label: "Nuovo progetto", href: "/progetti/nuovo" },
   { label: "Nuova fattura", href: "/fatture/nuova" },
   { label: "Registra incasso", href: "/incassi" },
   { label: "Nuovo abbonamento", href: "/abbonamenti" },
