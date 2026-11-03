@@ -7,5 +7,6 @@ export * from "./pdf";
 export * from "./preventivo";
 export * from "./progetti";
 export * from "./rate";
+export * from "./ricerca";
 export * from "./setup";
 export * from "./solleciti";
