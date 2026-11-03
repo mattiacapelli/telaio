@@ -121,6 +121,8 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
   const servizi = serviziRicorrenti(dec);
   const accettateUnaTantum = unaTantum.filter((r) => r.accettata === true);
   const puoFatturare = accettato && accettateUnaTantum.length > 0 && !fattura;
+  // Un progetto nasce da un preventivo accettato (anche in parte) con almeno una prestazione accettata.
+  const puoCreareProgetto = accettato && righe.some((r) => r.accettata === true);
   const valoreAnnuo = valoreRicorrenteAnnuo(dec, accettato);
 
   /** Etichetta e stile dell'esito di una riga, tenendo conto delle alternative. */
@@ -191,7 +193,9 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
                 </Button>
               </form>
             ))}
-            {accettato && <CreaProgettoDaPreventivo preventivoId={p.id} nomeIniziale={p.oggetto} />}
+            {puoCreareProgetto && (
+              <CreaProgettoDaPreventivo preventivoId={p.id} nomeIniziale={p.oggetto} />
+            )}
             {fattura ? (
               <Button asChild variant="secondary">
                 <Link href={`/fatture/${fattura.id}`}>Vai alla fattura</Link>

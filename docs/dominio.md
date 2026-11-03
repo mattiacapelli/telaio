@@ -97,7 +97,7 @@ Un progetto è una commessa per un cliente. Nasce **a mano** da Progetti → Nuo
 
 - **Codice**: `PRJ-AAAA-NNN`, progressivo per anno, assegnato nella stessa transazione del progetto (niente buchi) e non modificabile.
 - **Cliente**: solo un riferimento a `clienti_ref` (l'anagrafica resta su Twenty). Da preventivo il progetto eredita il cliente del preventivo; l'opportunità Twenty si legge dal preventivo (`twenty_opportunity_id`), non si duplica.
-- **Preventivo di origine**: opzionale, e un preventivo può generare **più progetti** (due lavori nello stesso preventivo): `preventivo_id` ha un indice normale, non univoco. Si collega solo un preventivo `accettato`. La creazione da preventivo è una transazione che blocca la riga del preventivo; non è idempotente per scelta, e contro il doppio clic accidentale il pulsante resta disattivato durante l'invio. La pagina del preventivo elenca i progetti collegati e propone sempre «Crea progetto».
+- **Preventivo di origine**: opzionale, e un preventivo può generare **più progetti** (due lavori nello stesso preventivo): `preventivo_id` ha un indice normale, non univoco. Si collega solo un preventivo `accettato` o `accettato_parzialmente` che abbia **almeno una prestazione accettata** (`accettata = true`, una tantum o abbonamento): le righe escluse non contano, e il progetto non copia né modifica le righe del preventivo, di cui tiene solo il riferimento. «Crea progetto» compare nelle stesse condizioni. La creazione da preventivo è una transazione che blocca la riga del preventivo; non è idempotente per scelta, e contro il doppio clic accidentale il pulsante resta disattivato durante l'invio. La pagina del preventivo elenca i progetti collegati e, finché ci sono prestazioni accettate, propone ancora «Crea progetto».
 - **Categorie**: `software`, `sito_web`, `ecommerce`, `infrastruttura`, `consulenza`, `altro` (elenco fisso, nessun editor).
 - **Stati**: `pianificato`, `in_corso`, `in_attesa`, `completato`, `annullato`; si passa liberamente da uno all'altro. **Priorità**: `bassa`, `normale`, `alta`, `urgente`.
 - **Date effettive** automatiche: il primo passaggio a `in_corso` (o direttamente a `completato`) fissa l'inizio; `completato` fissa la fine; riaprire un progetto completato cancella la fine. Le date già presenti non si sovrascrivono.
@@ -122,11 +122,11 @@ Due righe con lo stesso `gruppo_alternativa_id` sono **alternative dello stesso 
 
 L'unità di decisione è il **servizio**: una riga indipendente oppure un intero gruppo. Esito (`valutaAccettazione`, in `@telaio/core`):
 
-| Esito | Quando |
-| --- | --- |
-| `accettato` | tutti i servizi sono accettati (per un gruppo basta una modalità scelta: l'alternativa non scelta non è un'esclusione) |
-| `accettato_parzialmente` | almeno un servizio accettato e almeno uno escluso (una prestazione tolta, o un intero gruppo rifiutato) |
-| `rifiutato` | nessun servizio accettato: si chiude con «Rifiuta il preventivo», non con l'accettazione |
+| Esito                    | Quando                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `accettato`              | tutti i servizi sono accettati (per un gruppo basta una modalità scelta: l'alternativa non scelta non è un'esclusione) |
+| `accettato_parzialmente` | almeno un servizio accettato e almeno uno escluso (una prestazione tolta, o un intero gruppo rifiutato)                |
+| `rifiutato`              | nessun servizio accettato: si chiude con «Rifiuta il preventivo», non con l'accettazione                               |
 
 Il server riconvalida tutto: righe estranee al preventivo, un gruppo senza scelta esplicita, due alternative dello stesso gruppo o un'alternativa fuori dal suo gruppo sono errori e non cambiano nulla.
 

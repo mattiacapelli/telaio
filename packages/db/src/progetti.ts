@@ -5,10 +5,18 @@ import {
   type RisorsaDati,
   risorsaSchema,
   type StatoProgetto,
+  staAccettato,
 } from "@telaio/core";
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Database } from "./client";
-import { preventivi, progetti, progettiNumerazione, progettoRisorse, users } from "./schema";
+import {
+  preventivi,
+  preventivoRighe,
+  progetti,
+  progettiNumerazione,
+  progettoRisorse,
+  users,
+} from "./schema";
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
@@ -35,8 +43,10 @@ async function verificaResponsabile(tx: Tx, id: string | null) {
 }
 
 /**
- * Un preventivo si collega a un progetto solo se è accettato. Blocca la riga del preventivo per la
- * durata della transazione, così un cambio di stato concorrente non passa inosservato.
+ * Un preventivo si collega a un progetto solo se è accettato, anche parzialmente, e ha almeno una
+ * prestazione accettata (una tantum o un abbonamento). Le righe escluse non contano. Blocca la riga
+ * del preventivo per la durata della transazione, così un cambio di stato concorrente non passa
+ * inosservato.
  */
 async function verificaPreventivo(
   tx: Tx,
@@ -52,8 +62,20 @@ async function verificaPreventivo(
     .where(and(eq(preventivi.id, preventivoId), isNull(preventivi.deletedAt)))
     .for("update");
   if (!p) throw new Error("Preventivo non trovato");
-  if (p.stato !== "accettato")
-    throw new Error("Si può creare un progetto solo da un preventivo accettato");
+  if (!staAccettato(p.stato))
+    throw new Error(
+      "Si può creare un progetto solo da un preventivo accettato, anche parzialmente",
+    );
+  const [accettate] = await tx
+    .select({ n: sql<number>`count(*)::int` })
+    .from(preventivoRighe)
+    .where(
+      and(eq(preventivoRighe.preventivoId, preventivoId), eq(preventivoRighe.accettata, true)),
+    );
+  if (!accettate?.n)
+    throw new Error(
+      "Nessuna prestazione accettata: da questo preventivo non si può creare un progetto",
+    );
   return { clienteRefId: p.clienteRefId, oggetto: p.oggetto };
 }
 

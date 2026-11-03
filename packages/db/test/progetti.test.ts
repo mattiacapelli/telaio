@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { accettaPreventivo } from "../src/accettazione";
 import {
   aggiungiRisorsa,
   cambiaStatoProgetto,
@@ -13,6 +14,7 @@ import {
 import {
   clientiRef,
   preventivi,
+  preventivoRighe,
   progetti,
   progettoRisorse,
   ragioniSociali,
@@ -46,9 +48,14 @@ describe.skipIf(!URL_SERVER)("modulo Progetti (Postgres reale)", () => {
     await t?.elimina();
   });
 
+  /**
+   * Un preventivo con le sue righe una tantum: `accettate` dice come sono state decise (true = accettata,
+   * false = esclusa, null = nessuna decisione). Di norma i preventivi accettati hanno una riga accettata.
+   */
   async function preventivo(
-    stato: "bozza" | "accettato" | "rifiutato" = "accettato",
-    cliente = clienteId,
+    stato: "bozza" | "inviato" | "accettato" | "accettato_parzialmente" | "rifiutato" = "accettato",
+    cliente: string | null = clienteId,
+    accettate: (boolean | null)[] = stato.startsWith("accettato") ? [true] : [],
   ) {
     const [p] = await t.db
       .insert(preventivi)
@@ -61,7 +68,20 @@ describe.skipIf(!URL_SERVER)("modulo Progetti (Postgres reale)", () => {
         snapshot: { emittente: {}, cliente: {}, regole: {} },
       })
       .returning();
-    return p?.id ?? "";
+    const id = p?.id ?? "";
+    if (accettate.length > 0)
+      await t.db.insert(preventivoRighe).values(
+        accettate.map((accettata, i) => ({
+          preventivoId: id,
+          posizione: i,
+          descrizione: `Prestazione ${i + 1}`,
+          tipo: "una_tantum" as const,
+          prezzoUnitarioCent: 10000,
+          importoCent: 10000,
+          accettata,
+        })),
+      );
+    return id;
   }
 
   describe("creazione manuale", () => {
@@ -269,6 +289,190 @@ describe.skipIf(!URL_SERVER)("modulo Progetti (Postgres reale)", () => {
       ).rejects.toThrow("accettato");
       await modificaProgetto(t.db, altro.id, { dati: { nome: "B" }, preventivoId: null });
       expect(await progettiDelPreventivo(t.db, pid)).toHaveLength(1);
+    });
+  });
+
+  describe("integrazione con l'accettazione dei preventivi", () => {
+    it("da un preventivo accettato parzialmente si crea il progetto, collegato all'originale", async () => {
+      const pid = await preventivo("accettato_parzialmente", clienteId, [true, false]);
+      const r = await creaProgettoDaPreventivo(t.db, { preventivoId: pid, dati: {} });
+      const [p] = await t.db.select().from(progetti).where(eq(progetti.id, r.id));
+      expect(p).toMatchObject({
+        preventivoId: pid,
+        clienteRefId: clienteId,
+        nome: "Sito vetrina",
+        stato: "pianificato",
+        priorita: "normale",
+      });
+      expect(await progettiDelPreventivo(t.db, pid)).toMatchObject([{ id: r.id }]);
+    });
+
+    it("non copia né altera le righe del preventivo: accettate ed escluse restano com'erano", async () => {
+      const pid = await preventivo("accettato_parzialmente", clienteId, [true, false, true]);
+      await creaProgettoDaPreventivo(t.db, { preventivoId: pid, dati: {} });
+      const righe = await t.db
+        .select()
+        .from(preventivoRighe)
+        .where(eq(preventivoRighe.preventivoId, pid))
+        .orderBy(preventivoRighe.posizione);
+      expect(righe.map((r) => [r.accettata, r.importoCent])).toEqual([
+        [true, 10000],
+        [false, 10000],
+        [true, 10000],
+      ]);
+      // il progetto tiene solo il riferimento: nessuna riga economica, nessun abbonamento
+      expect(await t.db.select().from(preventivoRighe)).toHaveLength(3);
+    });
+
+    it("serve almeno una prestazione accettata, sia da accettato sia da accettato parzialmente", async () => {
+      for (const stato of ["accettato", "accettato_parzialmente"] as const) {
+        const nessuna = await preventivo(stato, clienteId, [false, false]);
+        await expect(
+          creaProgettoDaPreventivo(t.db, { preventivoId: nessuna, dati: {} }),
+        ).rejects.toThrow("Nessuna prestazione accettata");
+        const senzaDecisione = await preventivo(stato, clienteId, [null]);
+        await expect(
+          creaProgetto(t.db, { dati: { nome: "X" }, preventivoId: senzaDecisione }),
+        ).rejects.toThrow("Nessuna prestazione accettata");
+        const senzaRighe = await preventivo(stato, clienteId, []);
+        await expect(
+          creaProgettoDaPreventivo(t.db, { preventivoId: senzaRighe, dati: {} }),
+        ).rejects.toThrow("Nessuna prestazione accettata");
+      }
+      expect(await t.db.select().from(progetti)).toHaveLength(0);
+      expect((await creaProgetto(t.db, { dati: { nome: "Y" } })).codice).toMatch(/-001$/);
+    });
+
+    it("basta una riga accettata, anche un solo abbonamento", async () => {
+      const pid = await preventivo("accettato_parzialmente", clienteId, [false]);
+      await t.db.insert(preventivoRighe).values({
+        preventivoId: pid,
+        posizione: 1,
+        descrizione: "Hosting",
+        tipo: "canone_mensile",
+        prezzoUnitarioCent: 5000,
+        importoCent: 5000,
+        accettata: true,
+      });
+      await creaProgettoDaPreventivo(t.db, { preventivoId: pid, dati: {} });
+      expect(await progettiDelPreventivo(t.db, pid)).toHaveLength(1);
+    });
+
+    it("preventivi inviati, rifiutati o in bozza non generano progetti, nemmeno con righe", async () => {
+      for (const stato of ["bozza", "inviato", "rifiutato"] as const) {
+        const pid = await preventivo(stato, clienteId, [true]);
+        await expect(
+          creaProgettoDaPreventivo(t.db, { preventivoId: pid, dati: {} }),
+        ).rejects.toThrow("preventivo accettato");
+      }
+      expect(await t.db.select().from(progetti)).toHaveLength(0);
+    });
+
+    it("più progetti dallo stesso preventivo parziale, con codici distinti e nessun duplicato involontario", async () => {
+      const pid = await preventivo("accettato_parzialmente", clienteId, [true, false]);
+      const a = await creaProgettoDaPreventivo(t.db, { preventivoId: pid, dati: { nome: "Sito" } });
+      const b = await creaProgettoDaPreventivo(t.db, { preventivoId: pid, dati: { nome: "SEO" } });
+      expect(a.codice).not.toBe(b.codice);
+      const parallelo = await Promise.all(
+        Array.from({ length: 4 }, (_, i) =>
+          creaProgettoDaPreventivo(t.db, { preventivoId: pid, dati: { nome: `P${i}` } }),
+        ),
+      );
+      expect(new Set(parallelo.map((x) => x.codice)).size).toBe(4);
+      expect(await progettiDelPreventivo(t.db, pid)).toHaveLength(6);
+    });
+
+    it("il cliente si eredita dal preventivo parziale; senza cliente il progetto resta senza", async () => {
+      const senza = await preventivo("accettato_parzialmente", null, [true]);
+      const r = await creaProgettoDaPreventivo(t.db, { preventivoId: senza, dati: {} });
+      expect(
+        (await t.db.select().from(progetti).where(eq(progetti.id, r.id)))[0]?.clienteRefId,
+      ).toBeNull();
+    });
+
+    it("collegare in modifica un preventivo parziale funziona solo se ha prestazioni accettate", async () => {
+      const buono = await preventivo("accettato_parzialmente", clienteId, [true, false]);
+      const vuoto = await preventivo("accettato_parzialmente", clienteId, [false]);
+      const { id } = await creaProgetto(t.db, { dati: { nome: "A" } });
+      await modificaProgetto(t.db, id, { dati: { nome: "A" }, preventivoId: buono });
+      await expect(
+        modificaProgetto(t.db, id, { dati: { nome: "A" }, preventivoId: vuoto }),
+      ).rejects.toThrow("Nessuna prestazione accettata");
+      expect(await progettiDelPreventivo(t.db, buono)).toHaveLength(1);
+    });
+
+    it("dopo un'accettazione parziale vera (transazione completa) il progetto si crea e le righe restano intatte", async () => {
+      const [p] = await t.db
+        .insert(preventivi)
+        .values({
+          ragioneSocialeId: rsId,
+          clienteRefId: clienteId,
+          anno: 2026,
+          stato: "inviato",
+          numero: "P-1",
+          oggetto: "Sito e SEO",
+          snapshot: {
+            emittente: {},
+            cliente: {},
+            regole: {
+              ivaAttiva: true,
+              aliquotaIvaBp: 2200,
+              bolloAutomatico: false,
+              splitPayment: false,
+            },
+          },
+          imponibileCent: 130000,
+          ivaCent: 28600,
+          totaleCent: 158600,
+        })
+        .returning();
+      const righe = await t.db
+        .insert(preventivoRighe)
+        .values([
+          {
+            preventivoId: p!.id,
+            posizione: 0,
+            descrizione: "Sito",
+            tipo: "una_tantum",
+            prezzoUnitarioCent: 100000,
+            importoCent: 100000,
+          },
+          {
+            preventivoId: p!.id,
+            posizione: 1,
+            descrizione: "SEO",
+            tipo: "una_tantum",
+            prezzoUnitarioCent: 30000,
+            importoCent: 30000,
+          },
+        ])
+        .returning();
+      const esito = await accettaPreventivo(t.db, p!.id, {
+        scelta: { righe: [righe[0]!.id], gruppi: {} },
+      });
+      expect(esito.stato).toBe("accettato_parzialmente");
+
+      const r = await creaProgettoDaPreventivo(t.db, { preventivoId: p!.id, dati: {} });
+      expect((await t.db.select().from(progetti).where(eq(progetti.id, r.id)))[0]).toMatchObject({
+        preventivoId: p!.id,
+        nome: "Sito e SEO",
+      });
+      const dopo = await t.db
+        .select()
+        .from(preventivoRighe)
+        .where(eq(preventivoRighe.preventivoId, p!.id))
+        .orderBy(preventivoRighe.posizione);
+      expect(dopo.map((x) => [x.descrizione, x.accettata])).toEqual([
+        ["Sito", true],
+        ["SEO", false],
+      ]);
+      expect(
+        (await t.db.select().from(preventivi).where(eq(preventivi.id, p!.id)))[0],
+      ).toMatchObject({
+        stato: "accettato_parzialmente",
+        totaleCent: 158600, // offerta originale intatta
+        imponibileAccettatoCent: 100000,
+      });
     });
   });
 

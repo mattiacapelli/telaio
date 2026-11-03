@@ -5,8 +5,10 @@ import {
   type Database,
   desc,
   eq,
+  inArray,
   isNull,
   preventivi,
+  sql,
   users,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
@@ -22,9 +24,21 @@ export async function opzioniFormProgetto(
       .catch(() => []),
     db.select({ id: users.id, nome: users.name }).from(users).orderBy(asc(users.name)),
     db
-      .select({ id: preventivi.id, numero: preventivi.numero, oggetto: preventivi.oggetto })
+      .select({
+        id: preventivi.id,
+        numero: preventivi.numero,
+        oggetto: preventivi.oggetto,
+        stato: preventivi.stato,
+      })
       .from(preventivi)
-      .where(and(eq(preventivi.stato, "accettato"), isNull(preventivi.deletedAt)))
+      .where(
+        and(
+          // accettati anche parzialmente, e con almeno una prestazione accettata
+          inArray(preventivi.stato, ["accettato", "accettato_parzialmente"]),
+          sql`exists (select 1 from preventivo_righe r where r.preventivo_id = ${preventivi.id} and r.accettata)`,
+          isNull(preventivi.deletedAt),
+        ),
+      )
       .orderBy(desc(preventivi.createdAt))
       .limit(200),
   ]);
@@ -39,7 +53,7 @@ export async function opzioniFormProgetto(
   }
   const preventiviOpz = accettati.map((p) => ({
     id: p.id,
-    etichetta: `${p.numero ?? "Bozza"} · ${p.oggetto}`,
+    etichetta: `${p.numero ?? "Bozza"} · ${p.oggetto}${p.stato === "accettato_parzialmente" ? " (parziale)" : ""}`,
   }));
   return { clienti, utenti, preventivi: preventiviOpz };
 }

@@ -40,13 +40,21 @@ async function pulisci() {
   }
 }
 
-async function creaPreventivo(stato: string, oggetto: string): Promise<string> {
+/** `accettate`: esito di ogni riga una tantum (true accettata, false esclusa); di norma un preventivo accettato ne ha una accettata. */
+async function creaPreventivo(
+  stato: string,
+  oggetto: string,
+  accettate: boolean[] = stato.startsWith("accettato") ? [true] : [],
+): Promise<string> {
   const [rs] =
     await sql`select id from ragioni_sociali where deleted_at is null order by created_at limit 1`;
   const [p] = await sql`
     insert into preventivi (ragione_sociale_id, anno, stato, oggetto, snapshot)
     values (${rs.id}, 2026, ${stato}::stato_preventivo, ${oggetto}, ${sql.json({ emittente: {}, cliente: {}, regole: {} })})
     returning id`;
+  for (const [i, accettata] of accettate.entries())
+    await sql`insert into preventivo_righe (preventivo_id, posizione, descrizione, tipo, prezzo_unitario_cent, importo_cent, accettata)
+              values (${p.id}, ${i}, ${i === 0 ? "Sito" : "SEO"}, 'una_tantum', 10000, 10000, ${accettata})`;
   return p.id;
 }
 
@@ -221,4 +229,67 @@ test("l'elenco filtra e cerca", async ({ page }) => {
   await page.getByPlaceholder("Nome o codice…").fill(`${PREFISSO} da preventivo`);
   await expect(page.getByText(`${PREFISSO} da preventivo`).first()).toBeVisible();
   await expect(page.getByText(`${PREFISSO} manuale modificato`)).toHaveCount(0);
+});
+
+test("da un preventivo accettato parzialmente: il progetto si crea, collegato, e le righe restano com'erano", async ({
+  page,
+}) => {
+  const parziale = await creaPreventivo(
+    "accettato_parzialmente",
+    `${OGGETTO_PREVENTIVO} parziale`,
+    [true, false],
+  );
+  await accedi(page);
+  await page.goto(`/preventivi/${parziale}`);
+  await page.getByRole("button", { name: "Crea progetto" }).click();
+  await page.locator("input[name=nome]").fill(`${PREFISSO} da parziale`);
+  await page.getByRole("button", { name: "Crea progetto" }).last().click();
+  await expect(page).toHaveURL(/\/progetti\/[0-9a-f-]{36}$/);
+  // collegamento al preventivo originale, con il suo stato
+  await expect(
+    page.getByRole("link", { name: new RegExp(`${OGGETTO_PREVENTIVO} parziale`) }),
+  ).toBeVisible();
+  await expect(page.getByText("Accettato parzialmente")).toBeVisible();
+
+  const progetti = await sql`select id, nome from progetti where preventivo_id = ${parziale}`;
+  expect(progetti).toHaveLength(1);
+  const righe =
+    await sql`select descrizione, accettata, importo_cent from preventivo_righe where preventivo_id = ${parziale} order by posizione`;
+  expect(righe.map((r: { accettata: boolean }) => r.accettata)).toEqual([true, false]);
+  expect(righe.map((r: { importo_cent: number }) => r.importo_cent)).toEqual([10000, 10000]);
+
+  // il preventivo elenca il progetto e propone ancora, volendo, di crearne un altro (due lavori)
+  await page.goto(`/preventivi/${parziale}`);
+  await expect(page.getByText("1 progetto collegato")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crea progetto" })).toBeVisible();
+  expect(await sql`select 1 from progetti where preventivo_id = ${parziale}`).toHaveLength(1);
+
+  // e si può scegliere dal form di un progetto nuovo
+  await page.goto("/progetti/nuovo");
+  await expect(
+    page.locator("select[name=preventivoId] option", {
+      hasText: `${OGGETTO_PREVENTIVO} parziale (parziale)`,
+    }),
+  ).toHaveCount(1);
+});
+
+test("senza prestazioni accettate l'azione «Crea progetto» non c'è", async ({ page }) => {
+  const vuoto = await creaPreventivo("accettato_parzialmente", `${OGGETTO_PREVENTIVO} vuoto`, [
+    false,
+    false,
+  ]);
+  const inviato = await creaPreventivo("inviato", `${OGGETTO_PREVENTIVO} inviato`, [true]);
+  await accedi(page);
+  for (const id of [vuoto, inviato]) {
+    await page.goto(`/preventivi/${id}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Crea progetto" })).toHaveCount(0);
+  }
+  await page.goto("/progetti/nuovo");
+  for (const nome of ["vuoto", "inviato"])
+    await expect(
+      page.locator("select[name=preventivoId] option", {
+        hasText: `${OGGETTO_PREVENTIVO} ${nome}`,
+      }),
+    ).toHaveCount(0);
 });
