@@ -74,10 +74,13 @@ export default async function IncassiPage() {
         descrizione="Ogni incasso va su un conto preciso e chiude una rata o una fattura. Genera anche l'entrata in prima nota."
         azioni={
           <>
-            <Button asChild variant="secondary">
-              <Link href="/incasso-rapido">Da telefono</Link>
+            {/* Un solo tasto: su telefono apre il tastierino, da md in su la finestra completa. */}
+            <Button asChild className="md:hidden">
+              <Link href="/incasso-rapido">Registra incasso</Link>
             </Button>
-            <IncassoModal conti={contiAttivi} trigger="Registra incasso" />
+            <span className="hidden md:contents">
+              <IncassoModal conti={contiAttivi} trigger="Registra incasso" />
+            </span>
           </>
         }
       />
