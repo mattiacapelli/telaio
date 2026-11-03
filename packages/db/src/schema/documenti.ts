@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  boolean,
   date,
   index,
   integer,
@@ -6,6 +8,7 @@ import {
   pgEnum,
   pgTable,
   text,
+  timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -19,6 +22,7 @@ export const statoPreventivoEnum = pgEnum("stato_preventivo", [
   "accettato",
   "rifiutato",
   "scaduto",
+  "accettato_parzialmente",
 ]);
 export const statoFatturaEnum = pgEnum("stato_fattura", [
   "bozza",
@@ -63,7 +67,14 @@ export const preventivi = pgTable(
     note: text("note"),
     validoFino: date("valido_fino"),
     snapshot: jsonb("snapshot").$type<SnapshotDocumento>().notNull(),
+    /** Offerta originale: una tantum al momento dell'invio. Non cambia mai con l'accettazione. */
     ...totali,
+    /** Esito dell'accettazione sulle sole prestazioni una tantum accettate; nulli prima. */
+    imponibileAccettatoCent: integer("imponibile_accettato_cent"),
+    ivaAccettataCent: integer("iva_accettata_cent"),
+    bolloAccettatoCent: integer("bollo_accettato_cent"),
+    totaleAccettatoCent: integer("totale_accettato_cent"),
+    dataAccettazione: timestamp("data_accettazione", { withTimezone: true }),
     ...timestamps,
     deletedAt: deletedAt(),
   },
@@ -89,6 +100,13 @@ export const preventivoRighe = pgTable(
     importoCent: integer("importo_cent").notNull(),
     /** voce di listino di origine (base o modulo); nullo per righe libere */
     voceListinoId: uuid("voce_listino_id"),
+    /**
+     * Righe con lo stesso valore sono alternative dello stesso servizio (canone annuo o mensile):
+     * il cliente ne sceglie una sola. Nullo per le righe indipendenti.
+     */
+    gruppoAlternativaId: uuid("gruppo_alternativa_id"),
+    /** Esito: nullo = nessuna decisione ancora; vero = accettata; falso = esclusa o alternativa non scelta. */
+    accettata: boolean("accettata"),
     ...timestamps,
   },
   (t) => [index("preventivo_righe_prev_idx").on(t.preventivoId)],
@@ -126,6 +144,10 @@ export const fatture = pgTable(
   (t) => [
     index("fatture_stato_idx").on(t.stato),
     uniqueIndex("fatture_numero_uq").on(t.ragioneSocialeId, t.anno, t.numero),
+    // Una sola fattura (non eliminata) per preventivo, garantita dal database.
+    uniqueIndex("fatture_preventivo_uq")
+      .on(t.preventivoId)
+      .where(sql`${t.origine} = 'preventivo' and ${t.deletedAt} is null`),
   ],
 );
 

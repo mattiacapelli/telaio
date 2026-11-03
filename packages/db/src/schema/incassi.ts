@@ -10,7 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { clientiRef, conti, ragioniSociali } from "./anagrafiche";
-import { fatture, preventivi } from "./documenti";
+import { fatture, preventivi, preventivoRighe } from "./documenti";
 import { deletedAt, id, timestamps } from "./helpers";
 
 export const periodicitaEnum = pgEnum("periodicita", [
@@ -44,6 +44,10 @@ export const abbonamenti = pgTable("abbonamenti", {
     .notNull()
     .references(() => clientiRef.id),
   preventivoId: uuid("preventivo_id").references(() => preventivi.id),
+  /** Riga di preventivo da cui nasce: al più un abbonamento per riga accettata. Nullo se creato a mano. */
+  preventivoRigaId: uuid("preventivo_riga_id")
+    .references(() => preventivoRighe.id)
+    .unique(),
   descrizione: text("descrizione").notNull(),
   periodicita: periodicitaEnum("periodicita").notNull(),
   importoRataCent: integer("importo_rata_cent").notNull(),

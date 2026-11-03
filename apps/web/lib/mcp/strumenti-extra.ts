@@ -46,6 +46,7 @@ const STATI_PREVENTIVO = [
   "inviato",
   "in_revisione",
   "accettato",
+  "accettato_parzialmente",
   "rifiutato",
   "scaduto",
 ] as const;

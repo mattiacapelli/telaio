@@ -2,11 +2,15 @@
 
 import {
   calcolaTotali,
+  ETICHETTA_PERIODO,
+  erroreGruppi,
   formatAliquota,
   formatEuro,
   importoRiga,
+  nomeServizio,
   parseEuro,
   prezzoVisualizzato,
+  valoreRicorrenteAnnuo,
 } from "@telaio/core";
 import { BookOpen, Check, Copy, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
@@ -27,11 +31,6 @@ const VALIDITA = [15, 30, 60, 90];
 
 type Tipo = "una_tantum" | "canone_annuo" | "canone_mensile";
 
-const TIPI: { valore: Tipo; etichetta: string }[] = [
-  { valore: "una_tantum", etichetta: "Una tantum" },
-  { valore: "canone_annuo", etichetta: "Canone annuo" },
-  { valore: "canone_mensile", etichetta: "Canone mensile" },
-];
 const SUFFISSO: Record<Tipo, string> = {
   una_tantum: "",
   canone_annuo: " — canone annuo",
@@ -47,15 +46,18 @@ interface RigaForm {
   prezzo: string;
   scontoPercento: string;
   voceListinoId?: string;
+  /** righe con lo stesso valore sono alternative dello stesso servizio (annuale oppure mensile) */
+  gruppo: string | null;
 }
 
 let contatore = 0;
 const nuovaChiave = () => `r${++contatore}`;
 
-const rigaVuota = (): RigaForm => ({
+const rigaVuota = (tipo: Tipo = "una_tantum"): RigaForm => ({
   chiave: nuovaChiave(),
   descrizione: "",
-  tipo: "una_tantum",
+  tipo,
+  gruppo: null,
   quantita: "1",
   prezzo: "",
   scontoPercento: "",
@@ -63,8 +65,12 @@ const rigaVuota = (): RigaForm => ({
 
 const centInTesto = (cent: number) => (cent / 100).toFixed(2).replace(".", ",");
 
-/** Una voce di listino diventa una riga per ogni prezzo valorizzato (una tantum, annuo, mensile). */
+/**
+ * Una voce di listino diventa una riga per ogni prezzo valorizzato. Se ha sia il canone annuo sia
+ * quello mensile, le due righe sono alternative dello stesso servizio: il cliente ne sceglie una.
+ */
 function righeDaVoce(v: VoceCfg): RigaForm[] {
+  const gruppo = v.canoneAnnuoCent > 0 && v.canoneMensileCent > 0 ? `g${++contatore}` : null;
   const prezzi: [Tipo, number][] = [
     ["una_tantum", v.unaTantumCent],
     ["canone_annuo", v.canoneAnnuoCent],
@@ -80,6 +86,7 @@ function righeDaVoce(v: VoceCfg): RigaForm[] {
       prezzo: centInTesto(cent),
       scontoPercento: "",
       voceListinoId: v.id,
+      gruppo: tipo === "una_tantum" ? null : gruppo,
     }));
 }
 
@@ -92,6 +99,7 @@ interface RigaCalcolata {
   prezzoUnitarioCent: number;
   scontoBp: number;
   voceListinoId?: string;
+  gruppo: string | null;
 }
 
 function calcolaRiga(r: RigaForm): RigaCalcolata {
@@ -116,6 +124,7 @@ function calcolaRiga(r: RigaForm): RigaCalcolata {
     prezzoUnitarioCent: valida ? (prezzo ?? 0) : 0,
     scontoBp: valida ? Math.round(sconto * 100) : 0,
     voceListinoId: r.voceListinoId,
+    gruppo: r.gruppo,
   };
 }
 
@@ -159,8 +168,8 @@ export function PreventivoEditor({
 
   const calcolate = righe.map(calcolaRiga);
   const valide = calcolate.filter((r) => r.valida);
-  const tutteValide = righe.length > 0 && calcolate.every((r) => r.valida);
   const unaTantum = valide.filter((r) => r.tipo === "una_tantum");
+  const abbonamenti = valide.filter((r) => r.tipo !== "una_tantum");
   const doc = regole
     ? calcolaTotali(
         unaTantum.map((r) => ({
@@ -177,24 +186,58 @@ export function PreventivoEditor({
       prezzoUnitarioCent: r.prezzoUnitarioCent,
       scontoBp: r.scontoBp,
     });
-  const canoneAnno = valide.reduce(
-    (s, r) =>
-      s +
-      (r.tipo === "canone_annuo"
-        ? importoDi(r)
-        : r.tipo === "canone_mensile"
-          ? importoDi(r) * 12
-          : 0),
-    0,
+  const comeDecisione = (r: RigaCalcolata) => ({
+    id: r.chiave,
+    tipo: r.tipo,
+    quantita: r.quantita,
+    prezzoUnitarioCent: r.prezzoUnitarioCent,
+    scontoBp: r.scontoBp,
+    gruppoAlternativaId: r.gruppo,
+  });
+  const erroreAlternative = erroreGruppi(calcolate.map(comeDecisione));
+  const tutteValide = righe.length > 0 && calcolate.every((r) => r.valida) && !erroreAlternative;
+  // Un servizio ricorrente per riga indipendente o per gruppo: le alternative non si sommano mai.
+  const servizi: { chiave: string; nome: string; opzioni: RigaCalcolata[] }[] = [];
+  for (const r of abbonamenti) {
+    const esistente = r.gruppo ? servizi.find((x) => x.chiave === r.gruppo) : undefined;
+    if (esistente) esistente.opzioni.push(r);
+    else
+      servizi.push({
+        chiave: r.gruppo ?? r.chiave,
+        nome: nomeServizio(r.descrizione),
+        opzioni: [r],
+      });
+  }
+  const valoreAnnuo = valoreRicorrenteAnnuo(
+    abbonamenti.map((r) => ({ ...comeDecisione(r), accettata: null })),
+    false,
   );
-  const canoneV = regole ? prezzoVisualizzato(canoneAnno, regole) : null;
   const iva = regole?.ivaAttiva ? `IVA ${formatAliquota(regole.aliquotaIvaBp)}` : "Senza IVA";
-  const primoNetto = (doc?.imponibileCent ?? 0) + canoneAnno;
-  const primoLordo = (doc?.totaleCent ?? 0) + (canoneV?.lordoCent ?? canoneAnno);
 
   const aggiorna = (chiave: string, patch: Partial<RigaForm>) =>
     setRighe((p) => p.map((r) => (r.chiave === chiave ? { ...r, ...patch } : r)));
-  const rimuovi = (chiave: string) => setRighe((p) => p.filter((r) => r.chiave !== chiave));
+  /** Toglie una riga dal suo gruppo; l'altra riga del gruppo, rimasta sola, torna indipendente. */
+  const scioglie = (p: RigaForm[], chiave: string): RigaForm[] => {
+    const g = p.find((r) => r.chiave === chiave)?.gruppo;
+    if (!g) return p;
+    return p.map((r) => (r.gruppo === g ? { ...r, gruppo: null } : r));
+  };
+  const rimuovi = (chiave: string) =>
+    setRighe((p) => scioglie(p, chiave).filter((r) => r.chiave !== chiave));
+  /** Rende una riga alternativa a un'altra (nuovo gruppo di due) oppure la separa. */
+  function alternativaA(chiave: string, partner: string) {
+    setRighe((p) => {
+      const senza = scioglie(p, chiave);
+      if (!partner) return senza;
+      const g = `g${++contatore}`;
+      return senza.map((r) =>
+        r.chiave === chiave || r.chiave === partner ? { ...r, gruppo: g } : r,
+      );
+    });
+  }
+  /** Cambiando periodicità una riga lascia il gruppo: due alternative devono avere periodicità diverse. */
+  const cambiaTipo = (chiave: string, tipo: Tipo) =>
+    setRighe((p) => scioglie(p, chiave).map((r) => (r.chiave === chiave ? { ...r, tipo } : r)));
 
   /** Aggiunge le righe di una voce; se la prima riga è ancora vuota la sostituisce. */
   function aggiungiVoce(v: VoceCfg) {
@@ -221,9 +264,17 @@ export function PreventivoEditor({
   const copiaRiepilogo = async () => {
     const testo = [
       `Offerta · ${emittente?.nome ?? ""}`,
-      ...valide.map((r) => `- ${r.descrizione}`),
+      ...unaTantum.map((r) => `- ${r.descrizione}`),
       doc ? `Totale una tantum: ${formatEuro(doc.totaleCent)}` : "",
-      canoneAnno ? `Canone annuo netto: ${formatEuro(canoneAnno)}` : "",
+      ...servizi.map(
+        (s) =>
+          `Abbonamento ${s.nome}: ${s.opzioni
+            .map(
+              (o) =>
+                `${formatEuro(importoDi(o))}/${ETICHETTA_PERIODO[o.tipo as "canone_annuo" | "canone_mensile"]}`,
+            )
+            .join(" oppure ")}`,
+      ),
     ]
       .filter(Boolean)
       .join("\n");
@@ -288,6 +339,138 @@ export function PreventivoEditor({
       </div>
     );
 
+  const righeUnaTantum = righe
+    .map((r, i) => ({ r, c: calcolate[i] as RigaCalcolata }))
+    .filter(({ r }) => r.tipo === "una_tantum");
+  const righeAbbonamento = righe
+    .map((r, i) => ({ r, c: calcolate[i] as RigaCalcolata }))
+    .filter(({ r }) => r.tipo !== "una_tantum");
+
+  /** Una riga di una delle due sezioni; negli abbonamenti ci sono periodicità e alternativa. */
+  function renderRiga(r: RigaForm, c: RigaCalcolata, etichetta: string, abbonamento: boolean) {
+    const importo = c.valida ? importoDi(c) : null;
+    const partner = r.gruppo
+      ? righe.find((x) => x.gruppo === r.gruppo && x.chiave !== r.chiave)
+      : undefined;
+    const candidati = righe.filter(
+      (x) => x.chiave !== r.chiave && x.tipo !== "una_tantum" && x.tipo !== r.tipo && !x.gruppo,
+    );
+    return (
+      <li
+        key={r.chiave}
+        data-gruppo={r.gruppo ?? undefined}
+        className={cn(
+          "grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_170px]",
+          r.gruppo ? "border-brand/40 bg-brand-soft/40" : "border-line",
+        )}
+      >
+        <div className="flex flex-col gap-1">
+          <Input
+            aria-label={`Descrizione ${etichetta}`}
+            placeholder={abbonamento ? "Servizio (es. Manutenzione)" : "Descrizione"}
+            value={r.descrizione}
+            onChange={(e) => aggiorna(r.chiave, { descrizione: e.target.value })}
+          />
+          {r.voceListinoId && <span className="text-xs text-fg-3">Dal listino</span>}
+        </div>
+        {abbonamento ? (
+          <Select
+            aria-label={`Periodicità ${etichetta}`}
+            value={r.tipo}
+            onChange={(e) => cambiaTipo(r.chiave, e.target.value as Tipo)}
+          >
+            <option value="canone_mensile">Mensile</option>
+            <option value="canone_annuo">Annuale</option>
+          </Select>
+        ) : (
+          <span />
+        )}
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+          <label className="flex items-center gap-1.5 text-xs text-fg-2">
+            Qtà
+            <Input
+              aria-label={`Quantità ${etichetta}`}
+              inputMode="numeric"
+              className="w-16"
+              value={r.quantita}
+              onChange={(e) => aggiorna(r.chiave, { quantita: e.target.value })}
+            />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-fg-2">
+            {abbonamento ? "Importo per periodo €" : "Prezzo €"}
+            <Input
+              aria-label={`Prezzo ${etichetta}`}
+              inputMode="decimal"
+              placeholder="0,00"
+              className="w-28"
+              value={r.prezzo}
+              onChange={(e) => aggiorna(r.chiave, { prezzo: e.target.value })}
+            />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-fg-2">
+            Sconto %
+            <Input
+              aria-label={`Sconto ${etichetta}`}
+              inputMode="decimal"
+              placeholder="0"
+              className="w-16"
+              value={r.scontoPercento}
+              onChange={(e) => aggiorna(r.chiave, { scontoPercento: e.target.value })}
+            />
+          </label>
+          <span className="ml-auto text-sm font-medium tabular-nums">
+            {importo !== null ? formatEuro(importo) : "—"}
+            {abbonamento && importo !== null && (
+              <span className="text-xs font-normal text-fg-3">
+                {" "}
+                / {r.tipo === "canone_annuo" ? "anno" : "mese"}
+              </span>
+            )}
+          </span>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label={`Rimuovi ${etichetta}`}
+            onClick={() => rimuovi(r.chiave)}
+          >
+            <Trash2 />
+          </Button>
+        </div>
+        {abbonamento && (
+          <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+            <label className="flex items-center gap-1.5 text-xs text-fg-2">
+              Alternativa a
+              <Select
+                aria-label={`Alternativa per ${etichetta}`}
+                className="w-auto"
+                value={partner?.chiave ?? ""}
+                onChange={(e) => alternativaA(r.chiave, e.target.value)}
+              >
+                <option value="">Nessuna: servizio indipendente</option>
+                {partner && (
+                  <option value={partner.chiave}>
+                    {partner.descrizione || "Altro abbonamento"} (
+                    {partner.tipo === "canone_annuo" ? "annuale" : "mensile"})
+                  </option>
+                )}
+                {candidati.map((x) => (
+                  <option key={x.chiave} value={x.chiave}>
+                    {x.descrizione || "Altro abbonamento"} (
+                    {x.tipo === "canone_annuo" ? "annuale" : "mensile"})
+                  </option>
+                ))}
+              </Select>
+            </label>
+            {r.gruppo && (
+              <Badge variant="brand">Alternativa: il cliente sceglie una periodicità</Badge>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  }
+
   return (
     <form action={azione} className="contents">
       <input type="hidden" name="ragioneSocialeId" value={emittenteId} />
@@ -296,9 +479,10 @@ export function PreventivoEditor({
         type="hidden"
         name="righe"
         value={JSON.stringify(
-          valide.map(({ chiave: _c, valida: _v, ...r }) => ({
+          valide.map(({ chiave: _c, valida: _v, gruppo, ...r }) => ({
             ...r,
             voceListinoId: r.voceListinoId || undefined,
+            gruppoAlternativa: gruppo,
           })),
         )}
       />
@@ -399,180 +583,139 @@ export function PreventivoEditor({
             </Field>
           </Card>
 
-          <Card>
-            <CardHeader
-              title="Righe"
-              description="Descrizione, quantità e prezzo netto. I canoni non entrano nel totale una tantum."
-              action={
-                <div className="flex gap-2">
-                  {listini.length > 0 && (
+          {listini.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm text-fg-2">
+                  Scrivi le righe a mano o prendile da un listino: non è obbligatorio.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={listinoAperto ? "primary" : "secondary"}
+                  aria-expanded={listinoAperto}
+                  onClick={() => setListinoAperto((v) => !v)}
+                >
+                  <BookOpen /> Dal listino
+                </Button>
+              </div>
+              {listinoAperto && listino && (
+                <div className="mb-4 flex flex-col gap-3 rounded-lg border border-line bg-subtle p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {listini.length > 1 && (
+                      <Select
+                        aria-label="Listino"
+                        className="w-auto"
+                        value={listino.id}
+                        onChange={(e) => setListinoId(e.target.value)}
+                      >
+                        {listini.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            Listino {l.nome}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                    <Input
+                      type="search"
+                      aria-label="Cerca nel listino"
+                      placeholder="Cerca nel listino…"
+                      className="min-w-40 flex-1"
+                      value={ricerca}
+                      onChange={(e) => setRicerca(e.target.value)}
+                    />
                     <Button
                       type="button"
-                      size="sm"
-                      variant={listinoAperto ? "primary" : "secondary"}
-                      aria-expanded={listinoAperto}
-                      onClick={() => setListinoAperto((v) => !v)}
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Chiudi il listino"
+                      onClick={() => setListinoAperto(false)}
                     >
-                      <BookOpen /> Dal listino
+                      <X />
                     </Button>
+                  </div>
+                  {basi.length + moduli.length === 0 ? (
+                    <p className="text-sm text-fg-2">
+                      {q ? "Nessuna voce corrisponde alla ricerca." : "Questo listino è vuoto."}
+                    </p>
+                  ) : (
+                    <div className="flex max-h-72 flex-col gap-3 overflow-y-auto">
+                      {elencoVoci("Basi", basi)}
+                      {elencoVoci("Moduli", moduli)}
+                    </div>
                   )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setRighe((p) => [...p, rigaVuota()])}
-                  >
-                    <Plus /> Riga libera
-                  </Button>
                 </div>
+              )}
+            </div>
+          )}
+
+          <Card>
+            <CardHeader
+              title="Prestazioni una tantum"
+              description="Pagamento non ricorrente: entrano nei totali del preventivo e nella fattura."
+              action={
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setRighe((p) => [...p, rigaVuota("una_tantum")])}
+                >
+                  <Plus /> Aggiungi prestazione
+                </Button>
               }
             />
-
-            {listini.length > 0 && listinoAperto && listino && (
-              <div className="mb-4 flex flex-col gap-3 rounded-lg border border-line bg-subtle p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {listini.length > 1 && (
-                    <Select
-                      aria-label="Listino"
-                      className="w-auto"
-                      value={listino.id}
-                      onChange={(e) => setListinoId(e.target.value)}
-                    >
-                      {listini.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          Listino {l.nome}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                  <Input
-                    type="search"
-                    aria-label="Cerca nel listino"
-                    placeholder="Cerca nel listino…"
-                    className="min-w-40 flex-1"
-                    value={ricerca}
-                    onChange={(e) => setRicerca(e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Chiudi il listino"
-                    onClick={() => setListinoAperto(false)}
-                  >
-                    <X />
-                  </Button>
-                </div>
-                {basi.length + moduli.length === 0 ? (
-                  <p className="text-sm text-fg-2">
-                    {q ? "Nessuna voce corrisponde alla ricerca." : "Questo listino è vuoto."}
-                  </p>
-                ) : (
-                  <div className="flex max-h-72 flex-col gap-3 overflow-y-auto">
-                    {elencoVoci("Basi", basi)}
-                    {elencoVoci("Moduli", moduli)}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {righe.length === 0 && (
-              <p className="text-sm text-fg-2">Nessuna riga: aggiungine una per iniziare.</p>
+            {righeUnaTantum.length === 0 && (
+              <p className="text-sm text-fg-2">Nessuna prestazione una tantum.</p>
             )}
             <ul className="flex flex-col gap-3">
-              {righe.map((r, i) => {
-                const c = calcolate[i];
-                const importo = c?.valida ? importoDi(c) : null;
-                return (
-                  <li
-                    key={r.chiave}
-                    className="grid gap-2 rounded-lg border border-line p-3 sm:grid-cols-[1fr_150px]"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <Input
-                        aria-label={`Descrizione riga ${i + 1}`}
-                        placeholder="Descrizione"
-                        value={r.descrizione}
-                        onChange={(e) => aggiorna(r.chiave, { descrizione: e.target.value })}
-                      />
-                      {r.voceListinoId && <span className="text-xs text-fg-3">Dal listino</span>}
-                    </div>
-                    <Select
-                      aria-label={`Tipo riga ${i + 1}`}
-                      value={r.tipo}
-                      onChange={(e) => aggiorna(r.chiave, { tipo: e.target.value as Tipo })}
-                    >
-                      {TIPI.map((t) => (
-                        <option key={t.valore} value={t.valore}>
-                          {t.etichetta}
-                        </option>
-                      ))}
-                    </Select>
-                    <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
-                      <label className="flex items-center gap-1.5 text-xs text-fg-2">
-                        Qtà
-                        <Input
-                          aria-label={`Quantità riga ${i + 1}`}
-                          inputMode="numeric"
-                          className="w-16"
-                          value={r.quantita}
-                          onChange={(e) => aggiorna(r.chiave, { quantita: e.target.value })}
-                        />
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs text-fg-2">
-                        Prezzo €
-                        <Input
-                          aria-label={`Prezzo riga ${i + 1}`}
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          className="w-28"
-                          value={r.prezzo}
-                          onChange={(e) => aggiorna(r.chiave, { prezzo: e.target.value })}
-                        />
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs text-fg-2">
-                        Sconto %
-                        <Input
-                          aria-label={`Sconto riga ${i + 1}`}
-                          inputMode="decimal"
-                          placeholder="0"
-                          className="w-16"
-                          value={r.scontoPercento}
-                          onChange={(e) => aggiorna(r.chiave, { scontoPercento: e.target.value })}
-                        />
-                      </label>
-                      <span className="ml-auto text-sm font-medium tabular-nums">
-                        {importo !== null ? formatEuro(importo) : "—"}
-                      </span>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label={`Rimuovi riga ${i + 1}`}
-                        onClick={() => rimuovi(r.chiave)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </li>
-                );
-              })}
+              {righeUnaTantum.map(({ r, c }, i) => renderRiga(r, c, `prestazione ${i + 1}`, false))}
             </ul>
-            {!tutteValide && righe.length > 0 && (
-              <p className="mt-3 text-xs text-fg-2">
-                Ogni riga ha bisogno di una descrizione e di un prezzo valido (es. 1.250,00).
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Abbonamenti"
+              description="Servizi ricorrenti, per periodo. Annuale e mensile dello stesso servizio sono alternative: il cliente ne sceglie una."
+              action={
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setRighe((p) => [...p, rigaVuota("canone_mensile")])}
+                >
+                  <Plus /> Aggiungi abbonamento
+                </Button>
+              }
+            />
+            {righeAbbonamento.length === 0 && (
+              <p className="text-sm text-fg-2">Nessun abbonamento.</p>
+            )}
+            <ul className="flex flex-col gap-3">
+              {righeAbbonamento.map(({ r, c }, i) =>
+                renderRiga(r, c, `abbonamento ${i + 1}`, true),
+              )}
+            </ul>
+            {erroreAlternative && (
+              <p role="alert" className="mt-3 text-xs text-bad">
+                {erroreAlternative}
               </p>
             )}
           </Card>
+          {!tutteValide && righe.length > 0 && (
+            <p className="text-xs text-fg-2">
+              Ogni riga ha bisogno di una descrizione e di un prezzo valido (es. 1.250,00).
+            </p>
+          )}
         </div>
 
         <Card className="h-fit lg:sticky lg:top-4" aria-live="polite">
           <CardHeader title="Riepilogo" description={iva} />
-          {valide.length === 0 ? (
-            <p className="text-sm text-fg-2">Compila almeno una riga per vedere i totali.</p>
+          <p className="mb-1 text-xs font-medium text-fg-2">Prestazioni una tantum</p>
+          {unaTantum.length === 0 ? (
+            <p className="mb-2 text-sm text-fg-3">Nessuna prestazione.</p>
           ) : (
             <ul className="mb-2 divide-y divide-line border-y border-line text-sm">
-              {valide.map((r) => (
+              {unaTantum.map((r) => (
                 <li key={r.chiave} className="flex justify-between gap-3 py-1.5">
                   <span>{r.descrizione}</span>
                   <span className="text-fg-2 tabular-nums">{formatEuro(importoDi(r))}</span>
@@ -580,31 +723,47 @@ export function PreventivoEditor({
               ))}
             </ul>
           )}
-          <Riga t="Una tantum netto" v={formatEuro(doc?.imponibileCent ?? 0)} />
+          <Riga t="Imponibile" v={formatEuro(doc?.imponibileCent ?? 0)} />
           {regole?.ivaAttiva && doc && <Riga t={iva} v={formatEuro(doc.ivaCent)} />}
           {doc && doc.bolloCent > 0 && <Riga t="Marca da bollo" v={formatEuro(doc.bolloCent)} />}
           <div className="my-1 border-t border-line" />
           <Riga t="Totale una tantum" v={formatEuro(doc?.totaleCent ?? 0)} forte />
-          {canoneAnno > 0 && (
-            <>
-              <Riga t="Canone annuo netto" v={formatEuro(canoneAnno)} />
-              {canoneV?.lordoCent != null && (
-                <Riga t="Canone annuo IVA inclusa" v={formatEuro(canoneV.lordoCent)} />
-              )}
-            </>
+
+          <p className="mt-4 mb-1 text-xs font-medium text-fg-2">
+            Abbonamenti (per periodo, non sommati)
+          </p>
+          {servizi.length === 0 ? (
+            <p className="text-sm text-fg-3">Nessun abbonamento.</p>
+          ) : (
+            <ul className="divide-y divide-line border-y border-line text-sm">
+              {servizi.map((sv) => (
+                <li key={sv.chiave} className="flex flex-col gap-0.5 py-1.5">
+                  <span className="font-medium">{sv.nome}</span>
+                  <span className="text-fg-2 tabular-nums">
+                    {sv.opzioni.map((o, i) => {
+                      const v = regole ? prezzoVisualizzato(importoDi(o), regole) : null;
+                      return (
+                        <span key={o.chiave}>
+                          {i > 0 && <span className="text-fg-3"> oppure </span>}
+                          {formatEuro(importoDi(o))} /{" "}
+                          {ETICHETTA_PERIODO[o.tipo as "canone_annuo" | "canone_mensile"]}
+                          {v?.lordoCent != null && (
+                            <span className="text-fg-3"> ({formatEuro(v.lordoCent)} ivato)</span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
-          <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-fg-2">Primo anno netto</span>
-              <b className="font-semibold tabular-nums">{formatEuro(primoNetto)}</b>
-            </div>
-            {regole?.ivaAttiva && (
-              <div className="flex justify-between text-sm">
-                <span className="text-fg-2">Primo anno IVA inclusa</span>
-                <b className="font-semibold tabular-nums">{formatEuro(primoLordo)}</b>
-              </div>
-            )}
-          </div>
+          {servizi.length > 0 && (
+            <p className="mt-2 text-xs text-fg-3">
+              Valore ricorrente annualizzato indicativo: {formatEuro(valoreAnnuo)}. Non entra nei
+              totali.
+            </p>
+          )}
           {regole && !regole.ivaAttiva && regole.diciturSenzaIva && (
             <p className="mt-3 text-xs text-fg-2">{regole.diciturSenzaIva}</p>
           )}

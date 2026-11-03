@@ -6,7 +6,15 @@ export const preventivoApiSchema = z.object({
   id: z.uuid(),
   numero: z.string().nullable(),
   oggetto: z.string(),
-  stato: z.enum(["bozza", "inviato", "in_revisione", "accettato", "rifiutato", "scaduto"]),
+  stato: z.enum([
+    "bozza",
+    "inviato",
+    "in_revisione",
+    "accettato",
+    "accettato_parzialmente",
+    "rifiutato",
+    "scaduto",
+  ]),
   totaleCent: z.number().int(),
   creatoIl: z.string(),
 });

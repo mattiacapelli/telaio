@@ -3,17 +3,25 @@ export type StatoPreventivo =
   | "inviato"
   | "in_revisione"
   | "accettato"
+  | "accettato_parzialmente"
   | "rifiutato"
   | "scaduto";
 
 const TRANSIZIONI_PREVENTIVO: Record<StatoPreventivo, StatoPreventivo[]> = {
   bozza: ["inviato"],
-  inviato: ["in_revisione", "accettato", "rifiutato", "scaduto"],
-  in_revisione: ["inviato", "accettato", "rifiutato", "scaduto"],
+  inviato: ["in_revisione", "accettato", "accettato_parzialmente", "rifiutato", "scaduto"],
+  in_revisione: ["inviato", "accettato", "accettato_parzialmente", "rifiutato", "scaduto"],
   scaduto: ["in_revisione"],
   accettato: [],
+  accettato_parzialmente: [],
   rifiutato: [],
 };
+
+/** Stati in cui il cliente ha accettato qualcosa: da qui si fattura e si attivano gli abbonamenti. */
+export const STATI_ACCETTATI: readonly StatoPreventivo[] = ["accettato", "accettato_parzialmente"];
+
+export const staAccettato = (stato: string): boolean =>
+  (STATI_ACCETTATI as readonly string[]).includes(stato);
 
 export function transizioniPreventivo(da: StatoPreventivo): StatoPreventivo[] {
   return TRANSIZIONI_PREVENTIVO[da];

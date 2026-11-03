@@ -1,3 +1,4 @@
+export * from "./accettazione";
 export * from "./email";
 export * from "./iva";
 export * from "./money";

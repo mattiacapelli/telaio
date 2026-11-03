@@ -110,4 +110,52 @@ describe.skipIf(!URL_SERVER)("migrazioni su installazioni esistenti", () => {
     const [{ n }] = await t.db.execute<{ n: number }>(sql`select count(*)::int as n from users`);
     expect(n).toBe(0);
   });
+
+  it("preventivi già accettati: righe accettate e totali accettati = offerta; gli altri restano senza decisione; nessun abbonamento creato", async () => {
+    // fino alla migrazione 0005 (prima dell'accettazione parziale)
+    const prima = migrazioniFinoA(6);
+    cartelleTemp.push(prima);
+    await migrate(t.db, { migrationsFolder: prima });
+    const [rs] = await t.sql`insert into ragioni_sociali (nome) values ('Azienda') returning id`;
+    const insPrev = async (stato: string, num: string) =>
+      (
+        await t.sql`
+          insert into preventivi (ragione_sociale_id, anno, stato, numero, oggetto, snapshot, imponibile_cent, iva_cent, bollo_cent, totale_cent)
+          values (${rs?.id}, 2026, ${stato}::stato_preventivo, ${num}, 'Offerta', '{"emittente":{},"cliente":{},"regole":{}}'::jsonb, 100000, 22000, 0, 122000)
+          returning id`
+      )[0]?.id as string;
+    const accettato = await insPrev("accettato", "P-1");
+    const inviato = await insPrev("inviato", "P-2");
+    for (const pid of [accettato, inviato]) {
+      await t.sql`insert into preventivo_righe (preventivo_id, posizione, descrizione, tipo, prezzo_unitario_cent, importo_cent)
+                  values (${pid}, 0, 'Sito', 'una_tantum', 100000, 100000), (${pid}, 1, 'Hosting', 'canone_mensile', 5000, 5000)`;
+    }
+
+    await migrate(t.db, { migrationsFolder: CARTELLA });
+
+    const righe = await t.sql`select preventivo_id, accettata from preventivo_righe`;
+    expect(
+      righe.filter((r) => r.preventivo_id === accettato).every((r) => r.accettata === true),
+    ).toBe(true);
+    expect(
+      righe.filter((r) => r.preventivo_id === inviato).every((r) => r.accettata === null),
+    ).toBe(true);
+    const [a] = await t.sql`select * from preventivi where id = ${accettato}`;
+    expect(a).toMatchObject({
+      imponibile_cent: 100000,
+      totale_cent: 122000,
+      imponibile_accettato_cent: 100000,
+      iva_accettata_cent: 22000,
+      totale_accettato_cent: 122000,
+    });
+    expect(a?.data_accettazione).not.toBeNull();
+    const [b] = await t.sql`select * from preventivi where id = ${inviato}`;
+    expect(b?.totale_accettato_cent).toBeNull();
+    expect((await t.sql`select count(*)::int as n from abbonamenti`)[0]?.n).toBe(0);
+    // rieseguire non cambia nulla
+    await migrate(t.db, { migrationsFolder: CARTELLA });
+    expect(
+      (await t.sql`select count(*)::int as n from preventivo_righe where accettata`)[0]?.n,
+    ).toBe(2);
+  });
 });

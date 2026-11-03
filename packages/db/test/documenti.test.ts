@@ -220,7 +220,8 @@ describe.skipIf(!URL_SERVER)("email, modelli PDF e documenti (Postgres reale)", 
       expect(d?.dati.cliente).toMatchObject({ nome: "Trattoria Da Marco", codiceSdi: "KRRH6B9" });
       // righe in ordine di posizione e con il tipo di canone
       expect(d?.dati.righe.map((r) => r.descrizione)).toEqual(["Sito web", "Canone hosting"]);
-      expect(d?.dati.righe[1]?.dettaglio).toBe("canone annuo");
+      // il tipo della riga separa le prestazioni dagli abbonamenti nel PDF
+      expect(d?.dati.righe[1]?.tipo).toBe("canone_annuo");
     });
     it("una bozza senza numero ha un nome file riconoscibile", async () => {
       const id = await creaPreventivo({ numero: null });

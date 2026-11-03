@@ -105,7 +105,7 @@ export const STRUMENTI_MCP: StrumentoMcp[] = [
   {
     nome: "cambia_stato_preventivo",
     descrizione:
-      "Cambia lo stato di un preventivo (inviato, accettato…); all'invio assegna il numero.",
+      "Cambia lo stato di un preventivo (inviato, accettato, rifiutato…); all'invio assegna il numero. L'accettazione totale registra tutte le righe e crea gli abbonamenti; con alternative mensile/annuale o parziale serve la pagina del preventivo.",
     scrittura: true,
     stato: "attivo",
     gruppo: "Preventivi",
@@ -126,7 +126,8 @@ export const STRUMENTI_MCP: StrumentoMcp[] = [
   },
   {
     nome: "crea_fattura_da_preventivo",
-    descrizione: "Crea la bozza di fattura da un preventivo accettato.",
+    descrizione:
+      "Crea la bozza di fattura dalle sole prestazioni una tantum accettate di un preventivo accettato (anche parzialmente).",
     scrittura: true,
     stato: "attivo",
     gruppo: "Fatture",

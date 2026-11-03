@@ -117,6 +117,22 @@ export interface RigaPdf {
   prezzoUnitarioCent: number;
   scontoBp: number;
   importoCent: number;
+  /** solo preventivi: separa le prestazioni una tantum dagli abbonamenti */
+  tipo?: "una_tantum" | "canone_annuo" | "canone_mensile";
+  /** righe con lo stesso valore sono alternative dello stesso servizio (annuale oppure mensile) */
+  gruppoId?: string | null;
+  /** esito dell'accettazione: nullo = nessuna decisione; falso = esclusa o alternativa non scelta */
+  accettata?: boolean | null;
+}
+
+/** Totali delle sole prestazioni una tantum accettate, quando il preventivo è stato accettato. */
+export interface AccettazionePdf {
+  stato: "accettato" | "accettato_parzialmente";
+  imponibileCent: number;
+  ivaCent: number;
+  bolloCent: number;
+  totaleCent: number;
+  data?: string | null;
 }
 
 export interface DatiPdf {
@@ -143,6 +159,8 @@ export interface DatiPdf {
   aliquotaIvaBp: number;
   diciturSenzaIva?: string | null;
   splitPayment?: boolean;
+  /** i totali sopra restano quelli dell'offerta originale; questi sono quelli accettati */
+  accettazione?: AccettazionePdf | null;
 }
 
 // ── Disegno ──────────────────────────────────────────────────────────────────────────────────
@@ -157,6 +175,8 @@ const NERO = rgb(0.125, 0.129, 0.141);
 const LINEA = rgb(0.91, 0.91, 0.91);
 const FONDO = rgb(0.969, 0.973, 0.98);
 const RAGGIO = 6;
+// Rosso dell'app (#b42318) per le righe non accettate.
+const ROSSO = rgb(0.706, 0.137, 0.094);
 
 /** Solo caratteri che i font standard sanno disegnare (Latin-1 e €); il resto diventa «?». */
 export function perPdf(t: string): string {
@@ -429,11 +449,17 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
   f.y = yScheda - hScheda - 14;
 
   // data, scadenza e totale in una fascia, come i riepiloghi dell'app
+  const strutturato = dati.tipo === "preventivo" && dati.righe.some((r) => r.tipo);
+  const acc = dati.accettazione ?? null;
   const celle: [string, string][] = [];
   if (dati.data) celle.push(["Data", dataIt(dati.data)]);
   if (dati.scadenza)
     celle.push([dati.tipo === "preventivo" ? "Valido fino al" : "Scadenza", dataIt(dati.scadenza)]);
-  celle.push(["Totale", formatEuro(dati.totaleCent)]);
+  if (acc) celle.push(["Esito", acc.stato === "accettato" ? "Accettato" : "Parziale"]);
+  celle.push([
+    strutturato ? (acc ? "Totale accettato" : "Totale una tantum") : "Totale",
+    formatEuro(acc ? acc.totaleCent : dati.totaleCent),
+  ]);
   f.serve(60);
   const hFascia = 42;
   f.riquadro(MARGINE, f.y, utile, hFascia, { bordo: LINEA });
@@ -452,7 +478,55 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
   });
   f.y -= hFascia + 20;
 
-  // tabella: intestazione su fondo chiaro con etichette grigie, righe separate da filetti
+  // Una riga è «alternativa non scelta» se un'altra del suo gruppo è stata accettata.
+  const scelteGruppo = new Set(
+    dati.righe.filter((r) => r.gruppoId && r.accettata === true).map((r) => r.gruppoId),
+  );
+  const esito = (r: RigaPdf): string | null =>
+    r.accettata === false
+      ? r.gruppoId && scelteGruppo.has(r.gruppoId)
+        ? "Alternativa non scelta"
+        : "Non accettata"
+      : null;
+  /** Testo rosso con una linea al centro: la riga resta leggibile ma chiaramente esclusa. */
+  const barrato = (
+    t: string,
+    x: number,
+    y: number,
+    dim: number,
+    opz: { bold?: boolean; destra?: boolean } = {},
+  ) => {
+    const s = perPdf(t);
+    const larg = f.larghezza(s, dim, opz.bold);
+    const x0 = opz.destra ? x - larg : x;
+    // x0 è già l'ascissa di partenza: l'allineamento a destra è stato risolto qui sopra.
+    f.testo(s, x0, y, dim, { bold: opz.bold, colore: ROSSO });
+    f.pagina.drawLine({
+      start: { x: x0, y: y + dim * 0.32 },
+      end: { x: x0 + larg, y: y + dim * 0.32 },
+      thickness: 0.7,
+      color: ROSSO,
+    });
+  };
+  const testoRiga = (
+    r: RigaPdf,
+    t: string,
+    x: number,
+    y: number,
+    dim: number,
+    opz: { bold?: boolean; destra?: boolean; colore?: ReturnType<typeof rgb> } = {},
+  ) => (r.accettata === false ? barrato(t, x, y, dim, opz) : f.testo(t, x, y, dim, opz));
+  const titoloSezione = (t: string) => {
+    f.serve(60);
+    f.testo(t, MARGINE, f.y - 10, 10.5, { bold: true });
+    f.y -= 20;
+  };
+  const nuovaPaginaConAccento = () => {
+    f.nuovaPagina();
+    accentoPagina(f.pagina);
+  };
+
+  // tabella delle prestazioni: intestazione su fondo chiaro con etichette grigie, righe separate da filetti
   const w = { q: 34, p: 74, s: 46, i: 80 };
   const wDesc = utile - w.q - w.p - w.s - w.i - 16;
   const xQ = MARGINE + wDesc + 8;
@@ -471,45 +545,146 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
     f.testo("Importo", xI + w.i - 6, yy, 8.5, { colore: GRIGIO, destra: true });
     f.y -= 22;
   };
-  intestazioneTabella();
-  for (const r of dati.righe) {
-    const righe = f.righe(r.descrizione, 9.5, wDesc - 8);
-    const alt = righe.length * 12.5 + (r.dettaglio ? 12 : 0) + 14;
-    if (f.y - alt < BASSO) {
-      f.nuovaPagina();
-      accentoPagina(f.pagina);
-      intestazioneTabella();
+  const prestazioni = strutturato ? dati.righe.filter((r) => r.tipo === "una_tantum") : dati.righe;
+  if (strutturato) titoloSezione("Prestazioni una tantum");
+  if (prestazioni.length > 0) {
+    intestazioneTabella();
+    for (const r of prestazioni) {
+      const righe = f.righe(r.descrizione, 9.5, wDesc - 8);
+      const nota = esito(r) ?? r.dettaglio ?? null;
+      const alt = righe.length * 12.5 + (nota ? 12 : 0) + 14;
+      if (f.y - alt < BASSO) {
+        nuovaPaginaConAccento();
+        intestazioneTabella();
+      }
+      righe.forEach((riga, i) => testoRiga(r, riga, MARGINE + 8, f.y - 16 - i * 12.5, 9.5));
+      if (nota)
+        f.testo(nota, MARGINE + 8, f.y - 16 - righe.length * 12.5, 8.5, {
+          colore: r.accettata === false ? ROSSO : GRIGIO,
+        });
+      const yy = f.y - 16;
+      testoRiga(r, String(r.quantita), xQ + w.q - 6, yy, 9.5, { destra: true });
+      testoRiga(r, formatEuro(r.prezzoUnitarioCent), xP + w.p - 6, yy, 9.5, { destra: true });
+      testoRiga(r, r.scontoBp ? formatAliquota(r.scontoBp) : "-", xS + w.s - 6, yy, 9.5, {
+        destra: true,
+        colore: r.scontoBp ? NERO : GRIGIO,
+      });
+      testoRiga(r, formatEuro(r.importoCent), xI + w.i - 6, yy, 9.5, { destra: true, bold: true });
+      f.y -= alt;
+      f.filetto(MARGINE, MARGINE + utile, f.y);
     }
-    righe.forEach((riga, i) => f.testo(riga, MARGINE + 8, f.y - 16 - i * 12.5, 9.5));
-    if (r.dettaglio)
-      f.testo(r.dettaglio, MARGINE + 8, f.y - 16 - righe.length * 12.5, 8.5, { colore: GRIGIO });
-    const yy = f.y - 16;
-    f.testo(String(r.quantita), xQ + w.q - 6, yy, 9.5, { destra: true });
-    f.testo(formatEuro(r.prezzoUnitarioCent), xP + w.p - 6, yy, 9.5, { destra: true });
-    f.testo(r.scontoBp ? formatAliquota(r.scontoBp) : "-", xS + w.s - 6, yy, 9.5, {
-      destra: true,
-      colore: r.scontoBp ? NERO : GRIGIO,
-    });
-    f.testo(formatEuro(r.importoCent), xI + w.i - 6, yy, 9.5, { destra: true, bold: true });
-    f.y -= alt;
-    f.filetto(MARGINE, MARGINE + utile, f.y);
+  } else if (strutturato) {
+    f.testo("Nessuna prestazione una tantum.", MARGINE, f.y - 10, 9, { colore: GRIGIO });
+    f.y -= 18;
   }
 
-  // totali in una scheda a destra
-  const voci: { etichetta: string; valore: string; forte?: boolean }[] = [
-    { etichetta: "Imponibile", valore: formatEuro(dati.imponibileCent) },
-  ];
+  // abbonamenti: una riga per periodicità; le alternative dello stesso servizio sono raggruppate («oppure»)
+  const ricorrenti = strutturato ? dati.righe.filter((r) => r.tipo && r.tipo !== "una_tantum") : [];
+  if (ricorrenti.length > 0) {
+    f.y -= 14;
+    titoloSezione("Abbonamenti");
+    const wI = 96;
+    const wL = dati.ivaAttiva ? 96 : 0;
+    const wP = 84;
+    const wS = utile - wP - wI - wL - 16;
+    const xPer = MARGINE + wS + 8;
+    const xImp = xPer + wP;
+    const xLor = xImp + wI;
+    const intestazioneAbb = () => {
+      f.pagina.drawRectangle({ x: MARGINE, y: f.y - 22, width: utile, height: 22, color: FONDO });
+      f.filetto(MARGINE, MARGINE + utile, f.y);
+      f.filetto(MARGINE, MARGINE + utile, f.y - 22);
+      const yy = f.y - 15;
+      f.testo("Servizio", MARGINE + 8, yy, 8.5, { colore: GRIGIO });
+      f.testo("Periodicità", xPer, yy, 8.5, { colore: GRIGIO });
+      f.testo("Importo per periodo", xImp + wI - 6, yy, 8.5, { colore: GRIGIO, destra: true });
+      if (dati.ivaAttiva)
+        f.testo("IVA inclusa", xLor + wL - 6, yy, 8.5, { colore: GRIGIO, destra: true });
+      f.y -= 22;
+    };
+    intestazioneAbb();
+    const viste = new Set<string>();
+    let conAlternative = false;
+    for (const r of ricorrenti) {
+      const inGruppo = !!r.gruppoId;
+      if (inGruppo) conAlternative = true;
+      const secondo = inGruppo && viste.has(r.gruppoId as string);
+      if (inGruppo) viste.add(r.gruppoId as string);
+      const nome =
+        r.descrizione.replace(/\s*[—-]\s*canone (annuo|mensile)\s*$/i, "").trim() || r.descrizione;
+      const righe = f.righe(`${secondo ? "oppure " : ""}${nome}`, 9.5, wS - 8);
+      const nota = esito(r);
+      const alt = righe.length * 12.5 + (nota ? 12 : 0) + 14;
+      if (f.y - alt < BASSO) {
+        nuovaPaginaConAccento();
+        intestazioneAbb();
+      }
+      if (inGruppo)
+        f.pagina.drawRectangle({
+          x: MARGINE,
+          y: f.y - alt,
+          width: utile,
+          height: alt,
+          color: FONDO,
+        });
+      righe.forEach((riga, i) => testoRiga(r, riga, MARGINE + 8, f.y - 16 - i * 12.5, 9.5));
+      if (nota) f.testo(nota, MARGINE + 8, f.y - 16 - righe.length * 12.5, 8.5, { colore: ROSSO });
+      const yy = f.y - 16;
+      testoRiga(r, r.tipo === "canone_annuo" ? "Annuale" : "Mensile", xPer, yy, 9.5);
+      const per = r.tipo === "canone_annuo" ? "anno" : "mese";
+      testoRiga(r, `${formatEuro(r.importoCent)} / ${per}`, xImp + wI - 6, yy, 9.5, {
+        destra: true,
+        bold: true,
+      });
+      if (dati.ivaAttiva) {
+        const lordo = r.importoCent + Math.round((r.importoCent * dati.aliquotaIvaBp) / 10000);
+        testoRiga(r, `${formatEuro(lordo)} / ${per}`, xLor + wL - 6, yy, 9.5, { destra: true });
+      }
+      f.y -= alt;
+      f.filetto(MARGINE, MARGINE + utile, f.y);
+    }
+    f.y -= 6;
+    const avvisi = [
+      conAlternative && !acc
+        ? "I servizi indicati con «oppure» sono alternative: il cliente sceglie una sola periodicità."
+        : "",
+      "Gli abbonamenti non sono compresi nei totali una tantum e non si sommano tra loro.",
+    ].filter(Boolean);
+    for (const a of avvisi) {
+      f.serve(14);
+      f.testo(a, MARGINE, f.y - 8, 8, { colore: GRIGIO });
+      f.y -= 12;
+    }
+  }
+
+  // totali in una scheda a destra (con l'accettazione: originale e accettato, mai mescolati)
+  const voci: { etichetta: string; valore: string; forte?: boolean; tenue?: boolean }[] = [];
+  const t = acc ?? dati;
+  if (acc)
+    voci.push({
+      etichetta: "Imponibile originale",
+      valore: formatEuro(dati.imponibileCent),
+      tenue: true,
+    });
+  voci.push({
+    etichetta: acc ? "Imponibile accettato" : "Imponibile",
+    valore: formatEuro(t.imponibileCent),
+  });
   if (dati.ivaAttiva)
     voci.push({
       etichetta: `IVA ${formatAliquota(dati.aliquotaIvaBp)}${dati.splitPayment ? " (split payment)" : ""}`,
-      valore: formatEuro(dati.ivaCent),
+      valore: formatEuro(t.ivaCent),
     });
-  if (dati.bolloCent > 0) voci.push({ etichetta: "Bollo", valore: formatEuro(dati.bolloCent) });
-  if ((dati.ritenutaCent ?? 0) > 0)
+  if (t.bolloCent > 0) voci.push({ etichetta: "Bollo", valore: formatEuro(t.bolloCent) });
+  if (!acc && (dati.ritenutaCent ?? 0) > 0)
     voci.push({ etichetta: "Ritenuta d'acconto", valore: formatEuro(-(dati.ritenutaCent ?? 0)) });
-  voci.push({ etichetta: "Totale", valore: formatEuro(dati.totaleCent), forte: true });
+  voci.push({
+    etichetta: acc ? "Totale accettato" : "Totale",
+    valore: formatEuro(t.totaleCent),
+    forte: true,
+  });
   const netto = dati.nettoDaPagareCent;
-  if (netto !== undefined && netto !== dati.totaleCent)
+  if (!acc && netto !== undefined && netto !== dati.totaleCent)
     voci.push({ etichetta: "Netto da pagare", valore: formatEuro(netto), forte: true });
   const wT = 240;
   const hT = voci.length * 26;
@@ -527,7 +702,7 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
     f.testo(v.valore, xT + wT - PAD, yy - 17, v.forte ? 10.5 : 9.5, {
       destra: true,
       bold: v.forte,
-      colore: v.forte && v.etichetta === "Totale" ? accento : NERO,
+      colore: v.forte && /^Totale/.test(v.etichetta) ? accento : v.tenue ? GRIGIO : NERO,
     });
   });
   f.y -= hT;

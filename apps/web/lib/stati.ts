@@ -6,6 +6,7 @@ export const STATO_PREVENTIVO: Record<
   inviato: { label: "Inviato", tone: "blue" },
   in_revisione: { label: "In revisione", tone: "orange" },
   accettato: { label: "Accettato", tone: "green" },
+  accettato_parzialmente: { label: "Accettato parzialmente", tone: "orange" },
   rifiutato: { label: "Rifiutato", tone: "ink" },
   scaduto: { label: "Scaduto", tone: "orange" },
 };

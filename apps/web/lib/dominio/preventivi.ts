@@ -1,4 +1,11 @@
-import { calcolaTotali, importoRiga, moduliCompatibili, type RegoleFiscali } from "@telaio/core";
+import { randomUUID } from "node:crypto";
+import {
+  calcolaTotali,
+  erroreGruppi,
+  importoRiga,
+  moduliCompatibili,
+  type RegoleFiscali,
+} from "@telaio/core";
 import {
   and,
   type Database,
@@ -50,17 +57,36 @@ export const rigaLiberaSchema = z.object({
   scontoBp: z.number().int().min(0).max(10000).default(0),
   /** voce di listino di origine, se la riga è stata scelta da un listino */
   voceListinoId: z.uuid().optional(),
+  /**
+   * Chiave scelta dal client: le righe con la stessa chiave sono alternative dello stesso servizio
+   * (canone annuo oppure mensile, mai entrambi). Il server la sostituisce con un identificativo.
+   */
+  gruppoAlternativa: z.string().trim().min(1).max(64).nullish(),
 });
 export type RigaLibera = z.infer<typeof rigaLiberaSchema>;
 
-export const creaPreventivoLiberoSchema = z.object({
-  ragioneSocialeId: z.uuid(),
-  clienteTwentyId: z.string().min(1).optional(),
-  righe: z.array(rigaLiberaSchema).min(1, "Aggiungi almeno una riga").max(200),
-  oggetto: z.string().trim().min(1).optional(),
-  note: z.string().trim().optional(),
-  validitaGiorni: z.number().int().min(1).max(365).optional(),
-});
+export const creaPreventivoLiberoSchema = z
+  .object({
+    ragioneSocialeId: z.uuid(),
+    clienteTwentyId: z.string().min(1).optional(),
+    righe: z.array(rigaLiberaSchema).min(1, "Aggiungi almeno una riga").max(200),
+    oggetto: z.string().trim().min(1).optional(),
+    note: z.string().trim().optional(),
+    validitaGiorni: z.number().int().min(1).max(365).optional(),
+  })
+  .superRefine((v, ctx) => {
+    const errore = erroreGruppi(
+      v.righe.map((r, i) => ({
+        id: String(i),
+        tipo: r.tipo,
+        quantita: r.quantita,
+        prezzoUnitarioCent: r.prezzoUnitarioCent,
+        scontoBp: r.scontoBp,
+        gruppoAlternativaId: r.gruppoAlternativa ?? null,
+      })),
+    );
+    if (errore) ctx.addIssue({ code: "custom", path: ["righe"], message: errore });
+  });
 export type CreaPreventivoLiberoInput = z.infer<typeof creaPreventivoLiberoSchema>;
 
 interface VocePrezzi {
@@ -82,12 +108,15 @@ function righeDaVoce(v: VocePrezzi & { id: string }) {
     descrizione: string;
     prezzoUnitarioCent: number;
     voceListinoId: string;
+    gruppoAlternativa: string | null;
   }[] = [];
   const mappa: [TipoRiga, number][] = [
     ["una_tantum", v.unaTantumCent],
     ["canone_annuo", v.canoneAnnuoCent],
     ["canone_mensile", v.canoneMensileCent],
   ];
+  // Canone annuo e mensile della stessa voce sono alternative: il cliente ne sceglie una.
+  const alternative = v.canoneAnnuoCent > 0 && v.canoneMensileCent > 0;
   for (const [tipo, prezzo] of mappa) {
     if (prezzo > 0)
       out.push({
@@ -95,6 +124,7 @@ function righeDaVoce(v: VocePrezzi & { id: string }) {
         descrizione: `${v.nome} — ${ETICHETTE[tipo]}`,
         prezzoUnitarioCent: prezzo,
         voceListinoId: v.id,
+        gruppoAlternativa: alternative && tipo !== "una_tantum" ? `voce-${v.id}` : null,
       });
   }
   return out;
@@ -174,6 +204,7 @@ export async function creaPreventivoDaListino(
       prezzoUnitarioCent: r.prezzoUnitarioCent,
       scontoBp: r.tipo === "una_tantum" ? dati.scontoUnaTantumBp : 0,
       voceListinoId: r.voceListinoId,
+      gruppoAlternativa: r.gruppoAlternativa,
     }));
   return creaPreventivoLibero(db, {
     ragioneSocialeId: rs.id,
@@ -211,10 +242,17 @@ export async function creaPreventivoLibero(
   }
 
   const regole: RegoleFiscali = regoleDa(rs);
-  const righe = dati.righe.map((r, i) => ({
+  // Le chiavi di gruppo del client diventano identificativi veri, uno per gruppo.
+  const gruppi = new Map<string, string>();
+  const righe = dati.righe.map(({ gruppoAlternativa, ...r }, i) => ({
     ...r,
     posizione: i,
     importoCent: importoRiga(r),
+    gruppoAlternativaId: gruppoAlternativa
+      ? (gruppi.get(gruppoAlternativa) ??
+        gruppi.set(gruppoAlternativa, randomUUID()).get(gruppoAlternativa) ??
+        null)
+      : null,
   }));
   const totali = calcolaTotali(
     righe.filter((r) => r.tipo === "una_tantum"),

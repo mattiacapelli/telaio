@@ -41,12 +41,6 @@ function regole(snapshot: Grezzo) {
   };
 }
 
-const ETICHETTA_TIPO: Record<string, string | null> = {
-  una_tantum: null,
-  canone_annuo: "canone annuo",
-  canone_mensile: "canone mensile",
-};
-
 const nomeSicuro = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
 
 export async function datiPdfPreventivo(db: Database, id: string): Promise<DocumentoPdf | null> {
@@ -77,17 +71,33 @@ export async function datiPdfPreventivo(db: Database, id: string): Promise<Docum
     righe: righe.map(
       (x): RigaPdf => ({
         descrizione: x.descrizione,
-        dettaglio: ETICHETTA_TIPO[x.tipo] ?? null,
+        dettaglio: null,
         quantita: x.quantita,
         prezzoUnitarioCent: x.prezzoUnitarioCent,
         scontoBp: x.scontoBp,
         importoCent: x.importoCent,
+        tipo: x.tipo,
+        gruppoId: x.gruppoAlternativaId,
+        accettata: x.accettata,
       }),
     ),
+    // L'offerta originale resta qui; con l'accettazione si aggiungono i totali accettati.
     imponibileCent: p.imponibileCent,
     ivaCent: p.ivaCent,
     bolloCent: p.bolloCent,
     totaleCent: p.totaleCent,
+    accettazione:
+      (p.stato === "accettato" || p.stato === "accettato_parzialmente") &&
+      p.totaleAccettatoCent !== null
+        ? {
+            stato: p.stato,
+            imponibileCent: p.imponibileAccettatoCent ?? 0,
+            ivaCent: p.ivaAccettataCent ?? 0,
+            bolloCent: p.bolloAccettatoCent ?? 0,
+            totaleCent: p.totaleAccettatoCent,
+            data: p.dataAccettazione?.toISOString().slice(0, 10) ?? null,
+          }
+        : null,
     ...r,
   };
   return {
@@ -155,24 +165,59 @@ export async function datiPdfEsempio(
     .from(ragioniSociali)
     .where(and(eq(ragioniSociali.id, ragioneSocialeId), isNull(ragioniSociali.deletedAt)));
   if (!rs) return null;
-  const righe: RigaPdf[] = [
-    {
-      descrizione: "Sito web con pannello di gestione dei contenuti",
-      quantita: 1,
-      prezzoUnitarioCent: 250000,
-      scontoBp: 0,
-      importoCent: 250000,
-    },
-    {
-      descrizione: "Hosting, aggiornamenti e assistenza",
-      dettaglio: "canone annuo",
-      quantita: 1,
-      prezzoUnitarioCent: 36000,
-      scontoBp: 1000,
-      importoCent: 32400,
-    },
-  ];
-  const imponibile = righe.reduce((s, r) => s + r.importoCent, 0);
+  const sito: RigaPdf = {
+    descrizione: "Sito web con pannello di gestione dei contenuti",
+    quantita: 1,
+    prezzoUnitarioCent: 250000,
+    scontoBp: 0,
+    importoCent: 250000,
+  };
+  // Nel preventivo gli abbonamenti hanno la loro sezione, con le alternative annuale/mensile.
+  const righe: RigaPdf[] =
+    tipo === "preventivo"
+      ? [
+          { ...sito, tipo: "una_tantum" },
+          {
+            descrizione: "Formazione del personale",
+            quantita: 2,
+            prezzoUnitarioCent: 15000,
+            scontoBp: 0,
+            importoCent: 30000,
+            tipo: "una_tantum",
+          },
+          {
+            descrizione: "Hosting e assistenza — canone annuo",
+            quantita: 1,
+            prezzoUnitarioCent: 36000,
+            scontoBp: 1000,
+            importoCent: 32400,
+            tipo: "canone_annuo",
+            gruppoId: "esempio",
+          },
+          {
+            descrizione: "Hosting e assistenza — canone mensile",
+            quantita: 1,
+            prezzoUnitarioCent: 3500,
+            scontoBp: 0,
+            importoCent: 3500,
+            tipo: "canone_mensile",
+            gruppoId: "esempio",
+          },
+        ]
+      : [
+          sito,
+          {
+            descrizione: "Hosting, aggiornamenti e assistenza",
+            dettaglio: "canone annuo",
+            quantita: 1,
+            prezzoUnitarioCent: 36000,
+            scontoBp: 1000,
+            importoCent: 32400,
+          },
+        ];
+  const imponibile = righe
+    .filter((r) => !r.tipo || r.tipo === "una_tantum")
+    .reduce((s, r) => s + r.importoCent, 0);
   const aliquota = rs.ivaAttiva ? rs.aliquotaIvaBp : 0;
   const iva = Math.round((imponibile * aliquota) / 10000);
   const bollo = !rs.ivaAttiva && rs.bolloAutomatico ? 200 : 0;

@@ -42,61 +42,8 @@ function totaliFattura(
   };
 }
 
-/** Bozza di fattura dalle righe una tantum di un preventivo accettato. */
-export async function creaFatturaDaPreventivo(
-  db: Database,
-  preventivoId: string,
-): Promise<{ id: string }> {
-  return db.transaction(async (tx) => {
-    const [p] = await tx
-      .select()
-      .from(preventivi)
-      .where(and(eq(preventivi.id, preventivoId), isNull(preventivi.deletedAt)));
-    if (!p) throw new Error("Preventivo non trovato");
-    if (p.stato !== "accettato") throw new Error("Si può fatturare solo un preventivo accettato");
-    const [esistente] = await tx
-      .select({ id: fatture.id })
-      .from(fatture)
-      .where(and(eq(fatture.preventivoId, p.id), isNull(fatture.deletedAt)));
-    if (esistente) throw new Error("Questo preventivo ha già una fattura");
-
-    const righe = (
-      await tx
-        .select()
-        .from(preventivoRighe)
-        .where(eq(preventivoRighe.preventivoId, p.id))
-        .orderBy(asc(preventivoRighe.posizione))
-    ).filter((r) => r.tipo === "una_tantum");
-    if (righe.length === 0) throw new Error("Il preventivo non ha righe una tantum da fatturare");
-
-    const regole = p.snapshot.regole as unknown as RegoleFiscali;
-    const [f] = await tx
-      .insert(fatture)
-      .values({
-        ragioneSocialeId: p.ragioneSocialeId,
-        clienteRefId: p.clienteRefId,
-        origine: "preventivo",
-        preventivoId: p.id,
-        anno: new Date().getFullYear(),
-        snapshot: p.snapshot,
-        ...totaliFattura(righe, regole),
-      })
-      .returning({ id: fatture.id });
-    if (!f) throw new Error("Creazione fattura fallita");
-    await tx.insert(fatturaRighe).values(
-      righe.map((r, i) => ({
-        fatturaId: f.id,
-        posizione: i,
-        descrizione: r.descrizione,
-        quantita: r.quantita,
-        prezzoUnitarioCent: r.prezzoUnitarioCent,
-        scontoBp: r.scontoBp,
-        importoCent: importoRiga(r),
-      })),
-    );
-    return f;
-  });
-}
+// La fattura da preventivo (solo righe una tantum accettate) vive in @telaio/db, dove la si testa su Postgres.
+export { creaFatturaDaPreventivo } from "@telaio/db";
 
 export interface NuovaFatturaLibera {
   ragioneSocialeId: string;

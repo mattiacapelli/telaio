@@ -43,6 +43,13 @@
       "when": 1793695875528,
       "tag": "0005_preventivo_piu_progetti",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793698585091,
+      "tag": "0006_accettazione_parziale",
+      "breakpoints": true
     }
   ]
 }

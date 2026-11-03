@@ -3,6 +3,7 @@ import {
   formatEuroCompatto,
   prezzoVisualizzato,
   type RegoleFiscali,
+  staAccettato,
 } from "@telaio/core";
 import {
   clientiRef,
@@ -78,8 +79,8 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     .filter(({ p }) => p.stato !== "bozza")
     .reduce((s, { p }) => s + p.imponibileCent, 0);
   const accettato = prev
-    .filter(({ p }) => p.stato === "accettato")
-    .reduce((s, { p }) => s + p.imponibileCent, 0);
+    .filter(({ p }) => staAccettato(p.stato))
+    .reduce((s, { p }) => s + (p.imponibileAccettatoCent ?? p.imponibileCent), 0);
   const incassato = versati.reduce((s, { i }) => s + i.importoCent, 0);
   const opp = opportunita[0];
   const faseIdx = opp ? FASI.findIndex((f) => norm(f) === norm(opp.fase)) : -1;

@@ -70,7 +70,15 @@ const BASE: Record<string, Strumento> = {
   elenca_preventivi: strumento(
     {
       stato: z
-        .enum(["bozza", "inviato", "in_revisione", "accettato", "rifiutato", "scaduto"])
+        .enum([
+          "bozza",
+          "inviato",
+          "in_revisione",
+          "accettato",
+          "accettato_parzialmente",
+          "rifiutato",
+          "scaduto",
+        ])
         .optional(),
     },
     (db, { stato }) =>

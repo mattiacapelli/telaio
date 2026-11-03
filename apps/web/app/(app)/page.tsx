@@ -29,6 +29,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatsRow } from "@/components/ui/stats";
 import { oggi } from "@/lib/date";
 import { saldiConti } from "@/lib/dominio/movimenti";
+import { sqlCanoneAnnuo, sqlUnaTantum } from "@/lib/queries";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -101,8 +102,8 @@ export default async function Dashboard({
         p: preventivi,
         emittente: ragioniSociali.nome,
         cliente: clientiRef.nome,
-        unaTantum: sql<number>`coalesce((select sum(importo_cent) from preventivo_righe where preventivo_id = ${preventivi.id} and tipo = 'una_tantum'),0)::int`,
-        canone: sql<number>`coalesce((select sum(case tipo when 'canone_annuo' then importo_cent when 'canone_mensile' then importo_cent * 12 else 0 end) from preventivo_righe where preventivo_id = ${preventivi.id}),0)::int`,
+        unaTantum: sqlUnaTantum,
+        canone: sqlCanoneAnnuo,
       })
       .from(preventivi)
       .innerJoin(ragioniSociali, eq(ragioniSociali.id, preventivi.ragioneSocialeId))

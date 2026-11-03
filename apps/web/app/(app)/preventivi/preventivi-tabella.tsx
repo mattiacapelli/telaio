@@ -1,6 +1,11 @@
 "use client";
 
-import { formatEuro } from "@telaio/core";
+import {
+  ETICHETTA_PERIODO,
+  formatEuro,
+  formatEuroCompatto,
+  type ServizioRicorrente,
+} from "@telaio/core";
 import { ExternalLink, Receipt } from "lucide-react";
 import { Badge, type VarianteBadge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
@@ -13,8 +18,11 @@ export interface RigaPreventivo {
   emittente: string;
   unaTantumCent: number;
   unaTantumLordoCent: number | null;
-  canoneCent: number;
-  canoneLordoCent: number | null;
+  /** importo proposto, solo se diverso da quello accettato */
+  unaTantumPropostaCent: number | null;
+  servizi: ServizioRicorrente[];
+  /** valore ricorrente annualizzato: solo per ordinare, non è un importo fatturabile */
+  valoreAnnuoCent: number;
   /** stato mostrato: include «in_scadenza» */
   stato: string;
   etichettaStato: string;
@@ -27,6 +35,7 @@ const VARIANTE: Record<string, VarianteBadge> = {
   in_revisione: "warn",
   in_scadenza: "warn",
   accettato: "ok",
+  accettato_parzialmente: "warn",
   rifiutato: "neutral",
   scaduto: "bad",
 };
@@ -34,23 +43,60 @@ const VARIANTE: Record<string, VarianteBadge> = {
 const Importo = ({
   cent,
   lordo,
-  suffisso = "",
+  proposta,
 }: {
   cent: number;
   lordo: number | null;
-  suffisso?: string;
+  proposta?: number | null;
 }) =>
-  cent > 0 ? (
+  cent > 0 || proposta ? (
     <div className="flex flex-col items-end leading-tight">
-      <span className="font-medium">
-        {formatEuro(cent)}
-        {suffisso}
-      </span>
-      {lordo !== null && <span className="text-xs text-fg-3">{formatEuro(lordo)} ivato</span>}
+      <span className="font-medium">{formatEuro(cent)}</span>
+      {lordo !== null && cent > 0 && (
+        <span className="text-xs text-fg-3">{formatEuro(lordo)} ivato</span>
+      )}
+      {proposta ? (
+        <span className="text-xs text-fg-3">su {formatEuro(proposta)} proposti</span>
+      ) : null}
     </div>
   ) : (
     <span className="text-fg-3">—</span>
   );
+
+const periodo = (tipo: "canone_annuo" | "canone_mensile", cent: number) =>
+  `${formatEuroCompatto(cent)}/${ETICHETTA_PERIODO[tipo]}`;
+
+/**
+ * Servizi ricorrenti, uno per riga: «Manutenzione · € 600/anno oppure € 60/mese» prima dell'accettazione,
+ * solo la periodicità scelta dopo. Le alternative non si sommano mai.
+ */
+function Abbonamenti({ r }: { r: RigaPreventivo }) {
+  const decisi = r.stato === "accettato" || r.stato === "accettato_parzialmente";
+  const voci = r.servizi
+    .map((s) => ({
+      ...s,
+      opzioni: decisi ? s.opzioni.filter((o) => o.accettata === true) : s.opzioni,
+    }))
+    .filter((s) => s.opzioni.length > 0);
+  if (voci.length === 0) return <span className="text-fg-3">—</span>;
+  return (
+    <ul className="flex flex-col gap-0.5 text-sm leading-snug">
+      {voci.map((s) => (
+        <li key={s.chiave} className="text-fg-2">
+          <span className="font-medium text-fg">{s.nome}</span> ·{" "}
+          <span className="tabular-nums">
+            {s.opzioni.map((o, i) => (
+              <span key={o.rigaId}>
+                {i > 0 && <span className="text-fg-3"> oppure </span>}
+                {periodo(o.tipo, o.importoCent)}
+              </span>
+            ))}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function PreventiviTabella({
   righe,
@@ -65,8 +111,10 @@ export function PreventiviTabella({
       dati={righe}
       idRiga={(r) => r.id}
       hrefRiga={(r) => `/preventivi/${r.id}`}
-      testoRicerca={(r) => `${r.numero ?? ""} ${r.cliente ?? ""} ${r.oggetto} ${r.emittente}`}
-      segnapostoRicerca="Numero, cliente, oggetto…"
+      testoRicerca={(r) =>
+        `${r.numero ?? ""} ${r.cliente ?? ""} ${r.oggetto} ${r.emittente} ${r.servizi.map((s) => s.nome).join(" ")}`
+      }
+      segnapostoRicerca="Numero, cliente, oggetto, servizio…"
       vuoto={{
         titolo: "Nessun preventivo",
         descrizione: "Creane uno dal listino o dal configuratore.",
@@ -82,6 +130,7 @@ export function PreventiviTabella({
             ["in_scadenza", "In scadenza"],
             ["in_revisione", "In revisione"],
             ["accettato", "Accettato"],
+            ["accettato_parzialmente", "Accettato parzialmente"],
             ["rifiutato", "Rifiutato"],
             ["scaduto", "Scaduto"],
           ].map(([valore, etichetta]) => ({
@@ -117,26 +166,24 @@ export function PreventiviTabella({
           cella: (r) => <span className="text-fg-2">{r.oggetto}</span>,
         },
         {
-          id: "emittente",
-          intestazione: "Emittente",
-          nascondiSotto: "lg",
-          ordina: (r) => r.emittente,
-          cella: (r) => <span className="text-fg-2">{r.emittente}</span>,
-        },
-        {
           id: "ut",
-          intestazione: "Una tantum netto",
+          intestazione: "Una tantum",
           allinea: "destra",
           ordina: (r) => r.unaTantumCent,
-          cella: (r) => <Importo cent={r.unaTantumCent} lordo={r.unaTantumLordoCent} />,
+          cella: (r) => (
+            <Importo
+              cent={r.unaTantumCent}
+              lordo={r.unaTantumLordoCent}
+              proposta={r.unaTantumPropostaCent}
+            />
+          ),
         },
         {
-          id: "can",
-          intestazione: "Canone netto",
-          allinea: "destra",
-          ordina: (r) => r.canoneCent,
-          nascondiSotto: "md",
-          cella: (r) => <Importo cent={r.canoneCent} lordo={r.canoneLordoCent} suffisso="/a" />,
+          id: "abbonamenti",
+          intestazione: "Abbonamenti",
+          ordina: (r) => r.valoreAnnuoCent,
+          minLarghezza: 200,
+          cella: (r) => <Abbonamenti r={r} />,
         },
         {
           id: "stato",
@@ -160,7 +207,7 @@ export function PreventiviTabella({
       ]}
       azioniRiga={(r) => [
         { etichetta: "Apri", href: `/preventivi/${r.id}`, icona: <ExternalLink /> },
-        ...(r.stato === "accettato"
+        ...(r.stato === "accettato" || r.stato === "accettato_parzialmente"
           ? [{ etichetta: "Crea fattura", href: `/preventivi/${r.id}`, icona: <Receipt /> }]
           : []),
       ]}

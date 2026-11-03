@@ -277,3 +277,207 @@ describe("modello e logo", () => {
     expect(modelloPdfSchema.safeParse({ noteFattura: "x".repeat(1001) }).success).toBe(false);
   });
 });
+
+/** Contenuto grezzo delle pagine: serve a verificare cose che non sono testo, come il colore di una riga barrata. */
+async function contenutoDi(bytes: Uint8Array): Promise<string> {
+  const doc = await PDFDocument.load(bytes);
+  let out = "";
+  for (const [, oggetto] of doc.context.enumerateIndirectObjects()) {
+    if (!(oggetto instanceof PDFRawStream) || oggetto.dict.has(PDFName.of("Subtype"))) continue;
+    out += Buffer.from(decodePDFRawStream(oggetto).decode()).toString("latin1");
+  }
+  return out;
+}
+const ROSSO_OP = /0\.70\d* 0\.13\d* 0\.09\d* rg/;
+
+const G = "g1";
+const conAbbonamenti: DatiPdf = {
+  ...base,
+  righe: [
+    {
+      descrizione: "Sito web",
+      tipo: "una_tantum",
+      quantita: 1,
+      prezzoUnitarioCent: 100000,
+      scontoBp: 0,
+      importoCent: 100000,
+    },
+    {
+      descrizione: "SEO",
+      tipo: "una_tantum",
+      quantita: 1,
+      prezzoUnitarioCent: 30000,
+      scontoBp: 0,
+      importoCent: 30000,
+    },
+    {
+      descrizione: "Manutenzione — canone annuo",
+      tipo: "canone_annuo",
+      gruppoId: G,
+      quantita: 1,
+      prezzoUnitarioCent: 60000,
+      scontoBp: 0,
+      importoCent: 60000,
+    },
+    {
+      descrizione: "Manutenzione — canone mensile",
+      tipo: "canone_mensile",
+      gruppoId: G,
+      quantita: 1,
+      prezzoUnitarioCent: 6000,
+      scontoBp: 0,
+      importoCent: 6000,
+    },
+    {
+      descrizione: "Hosting",
+      tipo: "canone_mensile",
+      quantita: 1,
+      prezzoUnitarioCent: 5000,
+      scontoBp: 0,
+      importoCent: 5000,
+    },
+  ],
+  imponibileCent: 130000,
+  ivaCent: 28600,
+  bolloCent: 0,
+  totaleCent: 158600,
+};
+const decisione = (accettate: string[]): DatiPdf["righe"] =>
+  (conAbbonamenti.righe as DatiPdf["righe"]).map((r) => ({
+    ...r,
+    accettata: accettate.includes(r.descrizione),
+  }));
+
+describe("PDF di un preventivo con abbonamenti", () => {
+  it("prima dell'accettazione separa le sezioni e mostra le alternative con «oppure», senza sommarle", async () => {
+    const bytes = await generaPdf(conAbbonamenti, MODELLO_PDF_PREDEFINITO);
+    const t = await testoDi(bytes);
+    for (const atteso of [
+      "Prestazioni una tantum",
+      "Abbonamenti",
+      "Servizio",
+      "Periodicità",
+      "Annuale",
+      "Mensile",
+      "oppure Manutenzione",
+      "€ 600,00 / anno",
+      "€ 60,00 / mese",
+      "€ 50,00 / mese",
+      "alternative: il cliente sceglie una sola periodicità",
+      "non sono compresi nei totali",
+      "Totale una tantum",
+      "€ 1.586,00",
+    ])
+      expect(t, atteso).toContain(atteso);
+    // il totale una tantum non contiene i canoni (600+60+50)
+    expect(t).not.toContain("€ 2.296,00");
+    expect(t).not.toContain("Non accettata");
+    expect(ROSSO_OP.test(await contenutoDi(bytes))).toBe(false);
+  });
+
+  it("senza IVA non mostra la colonna dei canoni ivati", async () => {
+    const t = await testoDi(
+      await generaPdf({ ...conAbbonamenti, ivaAttiva: false }, MODELLO_PDF_PREDEFINITO),
+    );
+    expect(t).not.toContain("IVA inclusa");
+    expect(t).toContain("Abbonamenti");
+  });
+
+  it("dopo l'accettazione parziale: righe escluse indicate e barrate, totali accettati, offerta originale visibile", async () => {
+    const accettate = ["Sito web", "Manutenzione — canone annuo", "Hosting"];
+    const dati: DatiPdf = {
+      ...conAbbonamenti,
+      righe: decisione(accettate),
+      accettazione: {
+        stato: "accettato_parzialmente",
+        imponibileCent: 100000,
+        ivaCent: 22000,
+        bolloCent: 0,
+        totaleCent: 122000,
+      },
+    };
+    const bytes = await generaPdf(dati, MODELLO_PDF_PREDEFINITO);
+    const t = await testoDi(bytes);
+    for (const atteso of [
+      "Esito",
+      "Parziale",
+      "Non accettata", // la SEO
+      "Alternativa non scelta", // il canone mensile della manutenzione
+      "Imponibile originale",
+      "€ 1.300,00",
+      "Imponibile accettato",
+      "€ 1.000,00",
+      "Totale accettato",
+      "€ 1.220,00",
+    ])
+      expect(t, atteso).toContain(atteso);
+    // le righe escluse restano nel documento
+    expect(t).toContain("SEO");
+    expect(t).toContain("€ 60,00 / mese");
+    expect(ROSSO_OP.test(await contenutoDi(bytes))).toBe(true);
+    // l'avviso sulle alternative non serve più: la scelta è fatta
+    expect(t).not.toContain("il cliente sceglie una sola periodicità");
+  });
+
+  it("accettazione totale: nessuna riga barrata e totali accettati", async () => {
+    const dati: DatiPdf = {
+      ...conAbbonamenti,
+      righe: decisione(["Sito web", "SEO", "Manutenzione — canone mensile", "Hosting"]),
+      accettazione: {
+        stato: "accettato",
+        imponibileCent: 130000,
+        ivaCent: 28600,
+        bolloCent: 0,
+        totaleCent: 158600,
+      },
+    };
+    const bytes = await generaPdf(dati, MODELLO_PDF_PREDEFINITO);
+    const t = await testoDi(bytes);
+    expect(t).toContain("Accettato");
+    expect(t).not.toContain("Parziale");
+    expect(t).toContain("Alternativa non scelta"); // il canone annuo non scelto resta documentato
+    expect(t).not.toContain("Non accettata");
+  });
+
+  it("un intero servizio rifiutato risulta «Non accettata» in entrambe le alternative", async () => {
+    const dati: DatiPdf = {
+      ...conAbbonamenti,
+      righe: decisione(["Sito web", "SEO", "Hosting"]),
+      accettazione: {
+        stato: "accettato_parzialmente",
+        imponibileCent: 130000,
+        ivaCent: 28600,
+        bolloCent: 0,
+        totaleCent: 158600,
+      },
+    };
+    const t = await testoDi(await generaPdf(dati, MODELLO_PDF_PREDEFINITO));
+    expect(t.match(/Non accettata/g)?.length).toBe(2);
+    expect(t).not.toContain("Alternativa non scelta");
+  });
+
+  it("le fatture e i preventivi senza tipo di riga mantengono il layout a tabella unica", async () => {
+    const t = await testoDi(await generaPdf(base, MODELLO_PDF_PREDEFINITO));
+    expect(t).not.toContain("Prestazioni una tantum");
+    expect(t).not.toContain("Abbonamenti");
+  });
+
+  it("molti abbonamenti vanno a pagina nuova senza perdere righe", async () => {
+    const molti: DatiPdf = {
+      ...conAbbonamenti,
+      righe: Array.from({ length: 60 }, (_, i) => ({
+        descrizione: `Servizio ${i + 1}`,
+        tipo: "canone_mensile" as const,
+        quantita: 1,
+        prezzoUnitarioCent: 1000,
+        scontoBp: 0,
+        importoCent: 1000,
+      })),
+    };
+    const bytes = await generaPdf(molti, MODELLO_PDF_PREDEFINITO);
+    const t = await testoDi(bytes);
+    expect(t).toContain("Servizio 1");
+    expect(t).toContain("Servizio 60");
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(1);
+  });
+});
