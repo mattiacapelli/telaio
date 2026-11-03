@@ -54,7 +54,22 @@ test("la barra in basso porta alle sezioni principali e apre il menu completo", 
     "page",
   );
   await barra.getByRole("button", { name: "Menu" }).click();
-  await expect(page.getByRole("dialog").getByRole("link", { name: "Scadenzario" })).toBeVisible();
+  const menu = page.getByRole("dialog");
+  await expect(menu.getByRole("link", { name: "Scadenzario" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Impostazioni" })).toBeVisible();
+  await menu.getByRole("button", { name: "Chiudi il menu" }).click();
+  await expect(menu).toBeHidden();
+});
+
+test("su telefono l'intestazione è solo ricerca: niente menu, percorso o Nuovo", async ({
+  page,
+}) => {
+  await accedi(page);
+  const intestazione = page.locator("header").first();
+  await expect(intestazione.getByRole("button", { name: /Cerca/ })).toBeVisible();
+  await expect(intestazione.getByRole("button", { name: "Apri il menu" })).toHaveCount(0);
+  await expect(intestazione.getByRole("navigation", { name: "Percorso" })).toBeHidden();
+  await expect(intestazione.getByRole("button", { name: /Nuovo/ })).toBeHidden();
 });
 
 test("la barra in basso non c'è sul desktop", async ({ page }) => {

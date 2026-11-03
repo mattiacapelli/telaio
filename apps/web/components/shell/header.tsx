@@ -1,12 +1,12 @@
 "use client";
 
-import { Menu, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { Button, IconButton } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DrawerContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog, DrawerContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ import {
 import { briciole } from "@/lib/nav";
 import { EVENTO_MENU } from "./barra-inferiore";
 import { openPalette } from "./command-palette";
-import { Logo, NavContenuto } from "./sidebar";
+import { MenuMobile } from "./menu-mobile";
 
 const CREA = [
   { label: "Nuovo preventivo", href: "/preventivi/nuovo" },
@@ -45,46 +45,35 @@ export function Header({
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 md:px-6">
       <Dialog open={menuAperto} onOpenChange={setMenuAperto}>
-        <DialogTrigger asChild>
-          <IconButton label="Apri il menu" className="md:hidden">
-            <Menu />
-          </IconButton>
-        </DialogTrigger>
-        <DrawerContent title="Menu" lato="sinistra" senzaIntestazione className="bg-subtle">
-          <div className="-mx-5 -my-4 flex h-full flex-col">
-            <div className="flex h-12 items-center px-3">
-              <Logo />
-            </div>
-            <NavContenuto
-              utente={utente}
-              inAttesa={inAttesa}
-              onNavigate={() => setMenuAperto(false)}
-            />
-          </div>
+        <DrawerContent
+          title="Menu"
+          lato="sinistra"
+          senzaIntestazione
+          className="max-w-none bg-subtle"
+        >
+          <MenuMobile utente={utente} inAttesa={inAttesa} onChiudi={() => setMenuAperto(false)} />
         </DrawerContent>
       </Dialog>
 
-      <Breadcrumb voci={briciole(pathname)} className="flex-1" />
+      {/* Su telefono la navigazione sta nella barra in basso: qui resta solo la ricerca. */}
+      <Breadcrumb voci={briciole(pathname)} className="hidden flex-1 md:block" />
 
       <button
         type="button"
         onClick={openPalette}
-        className="hidden h-8 w-64 cursor-pointer items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-sm text-fg-3 shadow-xs transition-colors duration-150 hover:border-line-strong sm:flex"
+        className="flex h-8 flex-1 cursor-pointer items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-sm text-fg-3 shadow-xs transition-colors duration-150 hover:border-line-strong md:w-64 md:flex-none"
       >
         <Search aria-hidden className="size-4" />
         <span className="flex-1 text-left">Cerca…</span>
-        <kbd className="rounded-sm border border-line bg-subtle px-1 font-sans text-xs text-fg-2">
+        <kbd className="hidden rounded-sm border border-line bg-subtle px-1 font-sans text-xs text-fg-2 md:inline">
           ⌘K
         </kbd>
       </button>
-      <IconButton label="Cerca" onClick={openPalette} className="sm:hidden">
-        <Search />
-      </IconButton>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm">
-            <Plus /> <span className="hidden sm:inline">Nuovo</span>
+          <Button size="sm" className="hidden md:inline-flex">
+            <Plus /> Nuovo
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

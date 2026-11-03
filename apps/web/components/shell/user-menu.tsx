@@ -33,7 +33,7 @@ export function UserMenu({
   nome: string;
   email: string;
   compatto?: boolean;
-  lato?: "right" | "bottom";
+  lato?: "right" | "bottom" | "top";
 }) {
   const router = useRouter();
   const { installabile, istruzioniIos } = useInstallazione();
