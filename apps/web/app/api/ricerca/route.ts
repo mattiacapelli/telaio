@@ -1,3 +1,4 @@
+import { codiceTicket } from "@telaio/core";
 import {
   abbonamenti,
   and,
@@ -12,6 +13,8 @@ import {
   or,
   preventivi,
   progetti,
+  progettoDocumenti,
+  ticket,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
 import { NextResponse } from "next/server";
@@ -32,7 +35,7 @@ export async function GET(request: Request) {
 
   const db = getDb();
   const like = `%${comeLetterale(q)}%`;
-  const [clienti, prev, fatt, prog, abb, basi, moduli] = await Promise.all([
+  const [clienti, prev, fatt, prog, abb, basi, moduli, tick, docs] = await Promise.all([
     twentyDaEnv()
       .elencaClienti({ testo: q, limite: PER_TIPO })
       .catch(() => []),
@@ -98,6 +101,29 @@ export async function GET(request: Request) {
       .from(listinoModuli)
       .where(and(isNull(listinoModuli.deletedAt), ilike(listinoModuli.nome, like)))
       .limit(PER_TIPO),
+    db
+      .select({ t: ticket, codice: progetti.codice })
+      .from(ticket)
+      .innerJoin(progetti, eq(progetti.id, ticket.progettoId))
+      .where(
+        and(
+          isNull(ticket.deletedAt),
+          isNull(progetti.deletedAt),
+          or(ilike(ticket.titolo, like), ilike(ticket.descrizione, like)),
+        ),
+      )
+      .limit(PER_TIPO),
+    db
+      .select({ d: progettoDocumenti, codice: progetti.codice })
+      .from(progettoDocumenti)
+      .innerJoin(progetti, eq(progetti.id, progettoDocumenti.progettoId))
+      .where(
+        and(
+          isNull(progettoDocumenti.deletedAt),
+          or(ilike(progettoDocumenti.nome, like), ilike(progettoDocumenti.descrizione, like)),
+        ),
+      )
+      .limit(PER_TIPO),
   ]);
 
   return NextResponse.json([
@@ -130,6 +156,18 @@ export async function GET(request: Request) {
       titolo: a.descrizione,
       sottotitolo: cliente,
       href: `/abbonamenti/${a.id}`,
+    })),
+    ...tick.map(({ t, codice }) => ({
+      tipo: "ticket",
+      titolo: t.titolo,
+      sottotitolo: codiceTicket(codice, t.numero),
+      href: `/progetti/${t.progettoId}/ticket/${t.numero}`,
+    })),
+    ...docs.map(({ d, codice }) => ({
+      tipo: "documento",
+      titolo: d.nome,
+      sottotitolo: `${codice} · Documento`,
+      href: `/progetti/${d.progettoId}`,
     })),
     ...basi.map((b) => ({
       tipo: "listino",

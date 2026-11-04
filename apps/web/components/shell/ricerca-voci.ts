@@ -132,6 +132,8 @@ const PAROLE_IMPOSTAZIONE: Record<string, readonly string[]> = {
   "fatturazione-elettronica": ["sdi", "xml", "sdi", "elettronica"],
   "modelli-pdf": ["pdf", "layout", "stile", "documenti", "intestazione"],
   email: ["smtp", "mittente", "firma", "posta", "invio"],
+  ticket: ["assegnazione", "assegna", "automatica", "kanban", "lavagna"],
+  archiviazione: ["s3", "bucket", "minio", "file", "documenti", "storage", "cloud"],
   twenty: ["crm", "integrazione", "api key"],
   pagamenti: ["stripe", "carta", "link"],
   mcp: ["ai", "claude", "assistente", "agente"],

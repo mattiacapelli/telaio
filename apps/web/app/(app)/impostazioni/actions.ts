@@ -2,6 +2,7 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import {
+  archivioConfigSchema,
   decodificaLogo,
   formatoValido,
   LOGO_PDF_MAX_BYTE,
@@ -28,11 +29,14 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui/form-modal";
+import { type ModificaChiavi, salvaArchivio } from "@/lib/archivio/config";
+import { archivioPronto, creaBucket, messaggioErrore, provaConnessione } from "@/lib/archivio/s3";
 import { audit } from "@/lib/audit";
 import { inviaEmailPerRagioneSociale } from "@/lib/email-ragione-sociale";
 import { EVENTI_WEBHOOK } from "@/lib/eventi-webhook";
 import { euroCent, flag, leggi, percentualeBp, testoOpt } from "@/lib/form";
 import { requireSession } from "@/lib/session";
+import { salvaTicketImpostazioni } from "@/lib/ticket-impostazioni";
 
 const ok: ActionState = { ok: true };
 const refresh = () => revalidatePath("/", "layout");
@@ -537,4 +541,101 @@ export async function salvaModelloPdfAzione(_: ActionState, form: FormData): Pro
   });
   refresh();
   return { ok: true, message: "Modello salvato" };
+}
+
+// ── Archiviazione documenti (S3) ─────────────────────────────────────────────────────────────
+
+const archivioSchema = archivioConfigSchema.extend({
+  pathStyle: flag,
+  accessKeyId: testoOpt,
+  secretAccessKey: z.string().max(500).optional(),
+  rimuoviChiavi: flag,
+});
+
+/** Salva bucket e impostazioni; le chiavi si cifrano nel database e non tornano mai al browser. */
+export async function salvaArchivioAction(_: ActionState, form: FormData): Promise<ActionState> {
+  const { user } = await requireSession();
+  const r = leggi(archivioSchema, form);
+  if (!r.ok) return r.state;
+  const { accessKeyId, secretAccessKey, rimuoviChiavi, ...config } = r.data;
+  const segreto = secretAccessKey?.trim() ?? "";
+  let chiavi: ModificaChiavi = { azione: "mantieni" };
+  if (rimuoviChiavi) chiavi = { azione: "rimuovi" };
+  else if (accessKeyId || segreto)
+    chiavi = {
+      azione: "imposta",
+      accessKeyId: accessKeyId ?? undefined,
+      secretAccessKey: segreto || undefined,
+    };
+  try {
+    const db = getDb();
+    await salvaArchivio(db, config, chiavi);
+    await audit(db, {
+      userId: user.id,
+      azione: "archivio.configurato",
+      entita: "impostazioni",
+      dettagli: { bucket: config.bucket, endpoint: config.endpoint, chiavi: chiavi.azione },
+    });
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Salvataggio non riuscito" };
+  }
+  refresh();
+  return { ok: true, message: "Archiviazione salvata" };
+}
+
+/** Scrive, legge ed elimina un file di prova nel bucket configurato. */
+export async function provaArchivioAction(): Promise<ActionState> {
+  await requireSession();
+  try {
+    const a = await archivioPronto();
+    await provaConnessione(a);
+    return { ok: true, message: `Connessione riuscita: il bucket «${a.config.bucket}» funziona` };
+  } catch (e) {
+    return { ok: false, message: messaggioErrore(e) };
+  }
+}
+
+export async function creaBucketAction(): Promise<ActionState> {
+  const { user } = await requireSession();
+  try {
+    const a = await archivioPronto();
+    await creaBucket(a);
+    await audit(getDb(), {
+      userId: user.id,
+      azione: "archivio.bucket_creato",
+      entita: "impostazioni",
+      dettagli: { bucket: a.config.bucket },
+    });
+    return { ok: true, message: `Bucket «${a.config.bucket}» creato` };
+  } catch (e) {
+    const nome = (e as { name?: string }).name;
+    if (nome === "BucketAlreadyOwnedByYou") return { ok: true, message: "Il bucket esiste già" };
+    if (nome === "BucketAlreadyExists")
+      return {
+        ok: false,
+        message: "Esiste già un bucket con questo nome (di un altro account): scegline un altro",
+      };
+    return { ok: false, message: messaggioErrore(e) };
+  }
+}
+
+// ── Ticket ───────────────────────────────────────────────────────────────────────────────────
+
+export async function salvaTicketAzione(autoAssegna: boolean): Promise<ActionState> {
+  const { user } = await requireSession();
+  if (typeof autoAssegna !== "boolean") return { ok: false, message: "Valore non valido" };
+  try {
+    const db = getDb();
+    await salvaTicketImpostazioni(db, { autoAssegna });
+    await audit(db, {
+      userId: user.id,
+      azione: "ticket.impostazioni",
+      entita: "impostazioni",
+      dettagli: { autoAssegna },
+    });
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Salvataggio non riuscito" };
+  }
+  refresh();
+  return { ok: true };
 }

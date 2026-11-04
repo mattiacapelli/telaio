@@ -31,6 +31,20 @@ services:
       - "1026:1025"
       - "8026:8025"
 
+  # Archivio dei documenti dei progetti (compatibile S3). Console su http://localhost:9101.
+  # In app: Impostazioni → Archiviazione → endpoint http://localhost:9100, path-style attivo.
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: telaio
+      MINIO_ROOT_PASSWORD: telaio-dev-2026
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    volumes:
+      - telaio_miniodata:/data
+
   # ── App (profilo "app"): `docker compose --profile app up --build` ─────────────────────────────
   # Prova locale delle immagini di produzione (stesso Dockerfile, target web e worker); la migrazione
   # usa l'immagine del worker. Per la produzione vera vedi docker-compose.prod.yml e docs/deploy.md.
@@ -76,5 +90,6 @@ services:
 
 volumes:
   telaio_backups:
+  telaio_miniodata:
   telaio_pgdata:
   telaio_redisdata:

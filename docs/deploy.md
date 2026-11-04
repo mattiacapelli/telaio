@@ -106,19 +106,20 @@ openssl rand -hex 16   # SETUP_TOKEN
 openssl rand -hex 24   # POSTGRES_PASSWORD, poi un altro per REDIS_PASSWORD
 ```
 
-| Variabile                             | Note                                                                                                                                                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `BETTER_AUTH_URL`                     | `https://telaio.mattiacapelli.it`. Da qui derivano cookie, origini consentite e **passkey** (rpID = hostname): se cambia, le passkey registrate non valgono più                                        |
-| `SETUP_TOKEN`                         | codice per la **prima configurazione** (`/setup`), almeno 16 caratteri (`openssl rand -hex 16`). In produzione il wizard non parte senza, e rifiuta il valore di esempio. Dopo il setup puoi toglierlo |
-| `BETTER_AUTH_SECRET`                  | firma i cookie e **cifra i segreti 2FA**: se lo perdi, la 2FA non è più utilizzabile. Si salva nel backup (cifrato)                                                                                    |
-| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | solo caratteri esadecimali: finiscono dentro un URL                                                                                                                                                    |
-| `DATABASE_URL`, `REDIS_URL`           | già costruiti dalle password; host `postgres` e `redis` della rete Docker                                                                                                                              |
-| `TWENTY_API_URL`, `TWENTY_API_KEY`    | senza, in produzione l'elenco clienti resta **vuoto**: i clienti di esempio esistono solo in sviluppo                                                                                                  |
-| `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit). Mittente, firma e prova di invio si gestiscono poi in Impostazioni → Email e mittenti                                          |
-| `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                  |
-| `WEB_PORT`                            | 3100 (porta dedicata a Telaio)                                                                                                                                                                         |
-| `*_MEM_LIMIT`, `*_CPUS`               | limiti di risorse, opzionali                                                                                                                                                                           |
-| `BACKUP_*`                            | vedi sezione Backup                                                                                                                                                                                    |
+| Variabile                             | Note                                                                                                                                                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_URL`                     | `https://telaio.mattiacapelli.it`. Da qui derivano cookie, origini consentite e **passkey** (rpID = hostname): se cambia, le passkey registrate non valgono più                                                          |
+| `SETUP_TOKEN`                         | codice per la **prima configurazione** (`/setup`), almeno 16 caratteri (`openssl rand -hex 16`). In produzione il wizard non parte senza, e rifiuta il valore di esempio. Dopo il setup puoi toglierlo                   |
+| `BETTER_AUTH_SECRET`                  | firma i cookie e **cifra i segreti 2FA**: se lo perdi, la 2FA non è più utilizzabile. Si salva nel backup (cifrato)                                                                                                      |
+| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | solo caratteri esadecimali: finiscono dentro un URL                                                                                                                                                                      |
+| `DATABASE_URL`, `REDIS_URL`           | già costruiti dalle password; host `postgres` e `redis` della rete Docker                                                                                                                                                |
+| `TWENTY_API_URL`, `TWENTY_API_KEY`    | senza, in produzione l'elenco clienti resta **vuoto**: i clienti di esempio esistono solo in sviluppo                                                                                                                    |
+| `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit). Mittente, firma e prova di invio si gestiscono poi in Impostazioni → Email e mittenti                                                            |
+| `S3_*`                                | facoltative: il bucket dei documenti dei progetti si configura da Impostazioni → Archiviazione (chiavi cifrate nel database); qui un ripiego. Il backup del database non contiene i file: proteggili dal lato del bucket |
+| `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                                    |
+| `WEB_PORT`                            | 3100 (porta dedicata a Telaio)                                                                                                                                                                                           |
+| `*_MEM_LIMIT`, `*_CPUS`               | limiti di risorse, opzionali                                                                                                                                                                                             |
+| `BACKUP_*`                            | vedi sezione Backup                                                                                                                                                                                                      |
 
 `TELAIO_VERSION` non va scritta: la imposta il deploy.
 
@@ -150,6 +151,9 @@ sudo nginx -t && sudo systemctl reload nginx
 - Se hai cambiato `WEB_PORT`, aggiorna `server 127.0.0.1:3100;` nell'`upstream` prima del passo 5.3.
 - La configurazione imposta HSTS (senza `includeSubDomains`), gli header forwarded, un limite ai tentativi di accesso,
   e per `/mcp` disattiva il buffering (risposte in streaming).
+- Per il caricamento dei documenti dei progetti (`/api/progetti/<id>/documenti`) il limite del corpo è alzato a 260 MB
+  (10 file da 25 MB); il limite generale resta 10 MB. **Chi ha già installato Nginx deve ricopiare il file e ricaricare
+  Nginx (passo 5.3)**, altrimenti i caricamenti sopra 10 MB ricevono un errore 413.
 
 ## 6. GitHub: GHCR, secrets e ambiente
 

@@ -11,13 +11,13 @@ Servono Node ≥ 22, pnpm e Docker.
 ```bash
 pnpm i
 cp .env.example .env          # poi adatta i valori
-docker compose up -d          # Postgres, Redis, Mailpit
+docker compose up -d          # Postgres, Redis, Mailpit, MinIO
 pnpm db:migrate
 pnpm db:seed
 pnpm dev                      # web su http://localhost:3000 + worker
 ```
 
-Accesso: l'utente creato dal seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, di default `mattia@telaio.local` / `telaio-dev-2026`). Mailpit: http://localhost:8026.
+Accesso: l'utente creato dal seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, di default `mattia@telaio.local` / `telaio-dev-2026`). Mailpit: http://localhost:8026. MinIO (archivio documenti): console http://localhost:9101 (`telaio` / `telaio-dev-2026`); in app Impostazioni → Archiviazione → endpoint `http://localhost:9100`, path-style attivo.
 
 ## Script
 
@@ -81,7 +81,7 @@ Un solo `Dockerfile` (multi-stage) produce due immagini: `web` (Next.js standalo
 (job BullMQ; con altri comandi anche migrazioni e creazione dell'admin). Girano senza privilegi e
 senza dipendenze di sviluppo.
 
-- **Sviluppo:** `docker-compose.yml` avvia Postgres, Redis e Mailpit; `docker compose --profile app up --build`
+- **Sviluppo:** `docker-compose.yml` avvia Postgres, Redis, Mailpit e MinIO; `docker compose --profile app up --build`
   prova anche le immagini di produzione in locale (web su 3000).
 - **Produzione:** `docker-compose.prod.yml` (Postgres 18, Redis 7, migrazioni, web, worker), Nginx sull'host,
   immagini su GHCR con il commit SHA come tag e deploy via GitHub Actions. Salute dell'app su `/api/health`.

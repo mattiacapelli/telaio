@@ -3,7 +3,9 @@ import {
   ETICHETTE_CATEGORIA,
   ETICHETTE_PRIORITA,
   ETICHETTE_STATO_PROGETTO,
+  ETICHETTE_STATO_TICKET,
   ETICHETTE_TIPO_RISORSA,
+  STATI_TICKET,
   type TipoRisorsa,
   urlRisorsaValido,
 } from "@telaio/core";
@@ -11,12 +13,15 @@ import {
   and,
   asc,
   clientiRef,
+  documentiDelProgetto,
   eq,
   getDb,
   isNull,
   preventivi,
   progetti,
   progettoRisorse,
+  sql,
+  ticket,
   users,
 } from "@telaio/db";
 import {
@@ -34,14 +39,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CaricaDocumenti } from "@/components/domain/carica-documenti";
+import { ElencoDocumenti } from "@/components/domain/elenco-documenti";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState } from "@/components/ui/card";
 import { DefList } from "@/components/ui/def-list";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tag } from "@/components/ui/tag";
+import { leggiArchivio } from "@/lib/archivio/config";
 import { formatData } from "@/lib/date";
-import { PRIORITA_PROGETTO, STATO_PREVENTIVO, STATO_PROGETTO } from "@/lib/stati";
+import { PRIORITA_PROGETTO, STATO_PREVENTIVO, STATO_PROGETTO, STATO_TICKET } from "@/lib/stati";
 import { AggiungiRisorsa, CambiaStato, EliminaRisorsa, ModificaRisorsa } from "./modali";
 
 export const metadata = { title: "Progetto" };
@@ -89,7 +97,7 @@ export default async function ProgettoPage({ params }: { params: Promise<{ id: s
     .where(and(eq(progetti.id, id), isNull(progetti.deletedAt)));
   if (!riga) notFound();
   const { p } = riga;
-  const [risorse, [prev]] = await Promise.all([
+  const [risorse, [prev], documenti, perStato, archivio] = await Promise.all([
     db
       .select()
       .from(progettoRisorse)
@@ -107,7 +115,16 @@ export default async function ProgettoPage({ params }: { params: Promise<{ id: s
           .from(preventivi)
           .where(eq(preventivi.id, p.preventivoId))
       : Promise.resolve([]),
+    documentiDelProgetto(db, id),
+    db
+      .select({ stato: ticket.stato, n: sql<number>`count(*)::int` })
+      .from(ticket)
+      .where(and(eq(ticket.progettoId, id), isNull(ticket.deletedAt)))
+      .groupBy(ticket.stato),
+    leggiArchivio(db),
   ]);
+  const nTicket = (s: string) => perStato.find((r) => r.stato === s)?.n ?? 0;
+  const totaleTicket = perStato.reduce((somma, r) => somma + r.n, 0);
   const stato = STATO_PROGETTO[p.stato];
   const priorita = PRIORITA_PROGETTO[p.priorita];
   const principali = [...risorse].sort((a, b) => Number(b.principale) - Number(a.principale));
@@ -141,6 +158,9 @@ export default async function ProgettoPage({ params }: { params: Promise<{ id: s
         }
         azioni={
           <>
+            <Button asChild variant="secondary">
+              <Link href={`/progetti/${p.id}/ticket`}>Ticket</Link>
+            </Button>
             <CambiaStato id={p.id} stato={p.stato} />
             <Button asChild>
               <Link href={`/progetti/${p.id}/modifica`}>Modifica</Link>
@@ -221,6 +241,63 @@ export default async function ProgettoPage({ params }: { params: Promise<{ id: s
                 })}
               </ul>
             )}
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Ticket"
+              description={
+                totaleTicket
+                  ? `${totaleTicket} in totale`
+                  : "Attività, bug e richieste del progetto"
+              }
+              action={
+                <Button asChild variant="secondary" size="sm">
+                  <Link href={`/progetti/${p.id}/ticket`}>Apri la lavagna</Link>
+                </Button>
+              }
+            />
+            {totaleTicket === 0 ? (
+              <EmptyState title="Nessun ticket">
+                Apri la lavagna per creare il primo e seguirne l&apos;avanzamento per colonne.
+              </EmptyState>
+            ) : (
+              <ul className="flex flex-wrap gap-2">
+                {STATI_TICKET.map((s) => (
+                  <li key={s}>
+                    <Badge variant={STATO_TICKET[s]?.variante} dot>
+                      {ETICHETTE_STATO_TICKET[s]} · {nTicket(s)}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Documenti"
+              description="Contratti, specifiche, consegne: i file stanno nel bucket S3 configurato in Impostazioni."
+            />
+            <div className="flex flex-col gap-4">
+              {documenti.length > 0 ? (
+                <ElencoDocumenti
+                  documenti={documenti.map(({ d, caricatoDa }) => ({
+                    id: d.id,
+                    nome: d.nome,
+                    dimensioneByte: d.dimensioneByte,
+                    tipoMime: d.tipoMime,
+                    categoria: d.categoria,
+                    descrizione: d.descrizione,
+                    caricatoDa,
+                    createdAt: d.createdAt,
+                  }))}
+                />
+              ) : (
+                archivio.config && <p className="text-sm text-fg-2">Nessun documento caricato.</p>
+              )}
+              <CaricaDocumenti progettoId={p.id} configurato={!!archivio.config} />
+            </div>
           </Card>
 
           <Card>

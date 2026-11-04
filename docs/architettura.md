@@ -13,7 +13,7 @@ telaio/
 │   └── twenty/     client tipizzato (Zod) per Twenty CRM
 ├── docs/           questa documentazione
 ├── Dockerfile          un'immagine per web, worker e migrazioni (cambia il comando)
-└── docker-compose.yml  Postgres, Redis, Mailpit; profilo "app": migrate, web, worker
+└── docker-compose.yml  Postgres, Redis, Mailpit, MinIO; profilo "app": migrate, web, worker
 ```
 
 ## Responsabilità

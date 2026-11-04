@@ -50,6 +50,13 @@
       "when": 1793698585091,
       "tag": "0006_accettazione_parziale",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793833600957,
+      "tag": "0007_ticket_e_documenti",
+      "breakpoints": true
     }
   ]
 }

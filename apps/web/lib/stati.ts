@@ -60,3 +60,11 @@ export const PRIORITA_PROGETTO: Record<string, { label: string; variante: Varian
   alta: { label: "Alta", variante: "warn" },
   urgente: { label: "Urgente", variante: "bad" },
 };
+
+export const STATO_TICKET: Record<string, { label: string; variante: VarianteStato }> = {
+  backlog: { label: "Backlog", variante: "neutral" },
+  da_fare: { label: "Da fare", variante: "brand" },
+  in_corso: { label: "In corso", variante: "warn" },
+  in_revisione: { label: "In revisione", variante: "brand" },
+  completato: { label: "Completato", variante: "ok" },
+};

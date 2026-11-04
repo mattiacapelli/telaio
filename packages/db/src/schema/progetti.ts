@@ -50,6 +50,8 @@ export const progetti = pgTable(
     dataFinePrevista: date("data_fine_prevista"),
     dataInizioEffettiva: date("data_inizio_effettiva"),
     dataFineEffettiva: date("data_fine_effettiva"),
+    /** ultimo numero assegnato a un ticket del progetto: si incrementa nella transazione del ticket */
+    ultimoTicket: integer("ultimo_ticket").notNull().default(0),
     ...timestamps,
     deletedAt: deletedAt(),
   },

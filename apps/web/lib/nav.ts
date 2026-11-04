@@ -59,6 +59,8 @@ export const SEZIONI_IMPOSTAZIONI = [
   { slug: "fatturazione-elettronica", titolo: "Fatturazione elettronica", gruppo: "Documenti" },
   { slug: "modelli-pdf", titolo: "Modelli PDF", gruppo: "Documenti" },
   { slug: "email", titolo: "Email e mittenti", gruppo: "Documenti" },
+  { slug: "archiviazione", titolo: "Archiviazione", gruppo: "Documenti" },
+  { slug: "ticket", titolo: "Ticket", gruppo: "Progetti" },
   { slug: "twenty", titolo: "Twenty CRM", gruppo: "Integrazioni" },
   { slug: "pagamenti", titolo: "Pagamenti", gruppo: "Integrazioni" },
   { slug: "mcp", titolo: "MCP", gruppo: "Integrazioni" },
@@ -104,6 +106,15 @@ export function briciole(pathname: string): Briciola[] {
   }
   if (segmenti.length === 1) return [{ label: primo.label }];
   const secondo = segmenti[1] ?? "";
+  if (segmenti[0] === "progetti" && segmenti[2] === "ticket") {
+    const lavagna = `/progetti/${secondo}/ticket`;
+    return [
+      primo,
+      { label: "Dettaglio", href: `/progetti/${secondo}` },
+      segmenti[3] ? { label: "Ticket", href: lavagna } : { label: "Ticket" },
+      ...(segmenti[3] ? [{ label: "Dettaglio" }] : []),
+    ];
+  }
   const esteso = ETICHETTE_SEGMENTO[secondo] ?? "Dettaglio";
   return [primo, { label: esteso }];
 }

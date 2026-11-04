@@ -104,7 +104,31 @@ Un progetto è una commessa per un cliente. Nasce **a mano** da Progetti → Nuo
 - **Date effettive** automatiche: il primo passaggio a `in_corso` (o direttamente a `completato`) fissa l'inizio; `completato` fissa la fine; riaprire un progetto completato cancella la fine. Le date già presenti non si sovrascrivono.
 - **Risorse** (`progetto_risorse`): collegamenti esterni (repository, design, produzione, staging, documentazione, infrastruttura, monitoraggio, altro), con ambiente opzionale (`development`, `staging`, `production`) e al più un collegamento principale per progetto (indice univoco parziale). Solo URL `http`/`https`, senza nome utente e password nell'indirizzo. Si eliminano davvero (nessun soft delete: sono semplici collegamenti, l'audit conserva chi li ha tolti). Ogni modifica aggiorna `updated_at` del progetto.
 - **Audit**: `progetto.creato`, `progetto.modificato`, `progetto.stato`, `progetto.creato_da_preventivo`, `progetto_risorsa.creata`, `progetto_risorsa.modificata`, `progetto_risorsa.eliminata`.
-- Pensato per crescere: stato del progetto separato da un futuro stato dei ticket, risorse in una tabella a parte, nessun JSONB al posto delle entità e nessuna dipendenza dalla fatturazione. Fuori da questa fase: campi personalizzati, tipologie configurabili, ticket, kanban, task, time tracking.
+- Pensato per crescere: stato del progetto separato dallo stato dei ticket, risorse in una tabella a parte, nessun JSONB al posto delle entità e nessuna dipendenza dalla fatturazione. Fuori da questa fase: campi personalizzati, tipologie configurabili, task e sotto-attività, time tracking, automazioni.
+
+### Ticket e lavagna kanban
+
+Ogni progetto ha una **lavagna** (`/progetti/[id]/ticket`) e un dettaglio per ogni ticket (`/progetti/[id]/ticket/[numero]`).
+
+- **Ticket** (`ticket`): titolo, descrizione, **tipo** (`attivita`, `bug`, `richiesta`, `assistenza`), **stato**, **priorità** (stessa scala dei progetti), assegnatario, segnalatore (chi lo crea), scadenza. Il **numero** è progressivo per progetto (`progetti.ultimo_ticket`, incrementato nella transazione che crea il ticket: niente buchi né duplicati con richieste in parallelo); il codice mostrato è quello del progetto più il numero (`PRJ-2026-001-7`).
+- **Stato = colonna**: `backlog`, `da_fare`, `in_corso`, `in_revisione`, `completato`; si passa liberamente dall'una all'altra e lo stato del ticket **non** influenza lo stato del progetto, né viceversa. Entrare in `completato` registra `completato_at`, uscirne lo toglie.
+- **Ordine nella colonna**: `posizione` è un numero reale; un ticket inserito tra due vicini prende la media delle loro posizioni, senza riscrivere gli altri. Se tra due vicini non c'è più spazio, la colonna si rinumera a passi di 1000 (regola pura in `@telaio/core`, `posizioneTra`). Un ticket nuovo o che cambia stato dalla modale va in fondo alla colonna.
+- **Lavagna**: trascinamento delle schede tra colonne e dentro la stessa colonna (HTML5, nessuna libreria nuova); sul telefono dove il trascinamento non c'è, il menu «Sposta» di ogni scheda. Creazione rapida dal fondo di ogni colonna (solo il titolo) o dalla modale completa; filtri per testo, assegnatario («assegnati a me», «non assegnati») e priorità. Lo spostamento è ottimistico: se il server lo rifiuta la lavagna torna com'era e compare l'errore.
+- **Assegnazione automatica** (Impostazioni → Ticket, spenta di default, chiave `ticket` in `impostazioni`): con l'interruttore acceso i ticket creati dalla lavagna con il solo titolo vanno a chi li crea, e nella finestra di creazione completa «Assegnato a» parte già da lui (si può cambiare o lasciare vuoto).
+- **Commenti** (`ticket_commenti`): in ordine di scrittura, eliminabili.
+- **Eliminazione**: soft delete (`deleted_at`): il ticket esce dalla lavagna e resta per lo storico.
+- **Audit**: `ticket.creato`, `ticket.modificato`, `ticket.stato`, `ticket.eliminato`, `ticket.commento`, `ticket.commento_eliminato`. I ticket compaiono anche nella ricerca ⌘K.
+
+### Documenti del progetto (archivio S3)
+
+I file non stanno nel database: vanno in un **bucket S3 o compatibile** (Amazon S3, MinIO, Cloudflare R2, Backblaze…). Nel database (`progetto_documenti`) restano nome, dimensione, tipo, categoria (`contratto`, `specifiche`, `design`, `consegna`, `altro`), descrizione, chi l'ha caricato e la **chiave** dell'oggetto, `[cartella/]progetti/<progetto>/<documento>/<nome>`. Un documento può essere allegato a un ticket del **stesso** progetto.
+
+- **Configurazione** in Impostazioni → Archiviazione: indirizzo del servizio (vuoto per Amazon S3), regione, bucket, cartella, path-style, access key e secret key. Il bucket e le chiavi non sono nel codice. Le **chiavi si salvano cifrate** (AES-256-GCM, chiave ricavata da `BETTER_AUTH_SECRET`) e non tornano mai al browser: la pagina mostra solo l'access key ID. Se il segreto dell'app cambia le chiavi salvate non si leggono più e vanno reinserite. In assenza di impostazioni valgono le variabili `S3_*` (ripiego), e senza chiavi il client usa la catena predefinita di AWS (ruolo IAM). «Prova la connessione» scrive, legge ed elimina un oggetto di prova; «Crea il bucket» lo crea se manca.
+- **Caricamento**: passa dal server (`POST /api/progetti/[id]/documenti`), fino a 25 MB per file e 10 file per richiesta; un file sbagliato non blocca gli altri. Se la registrazione nel database fallisce, l'oggetto appena scritto viene tolto dal bucket.
+- **Download**: sempre attraverso il server (`GET /api/documenti/[id]`), con la sessione: il bucket non è mai esposto e non servono URL pubblici. Sempre come allegato (`Content-Disposition: attachment`, `nosniff`, CSP `sandbox`); solo PDF e immagini raster hanno l'anteprima nel browser (`?anteprima=1`). Niente HTML o SVG renderizzati dall'app.
+- **Eliminazione**: il documento sparisce dal progetto (`deleted_at`) e l'oggetto dal bucket; se il bucket non risponde, il file resta nel bucket ma l'app non lo raggiunge più.
+- **Audit**: `documento.caricato`, `documento.eliminato`, `archivio.configurato`, `archivio.bucket_creato`.
+- **Backup**: il backup del database **non** contiene i file. Quelli vanno protetti dal provider del bucket (versioning, replica).
 
 ## Accettazione dei preventivi
 

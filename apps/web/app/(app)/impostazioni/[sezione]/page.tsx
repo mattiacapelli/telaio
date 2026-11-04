@@ -27,12 +27,15 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { ScorriVersoAttivo } from "@/components/ui/scorri-verso-attivo";
+import { leggiArchivio } from "@/lib/archivio/config";
 import { auth, passwordMinima } from "@/lib/auth";
 import { statoSmtp } from "@/lib/email";
 import { SEZIONI_DISATTIVATE, SEZIONI_IMPOSTAZIONI } from "@/lib/nav";
 import { requireSession } from "@/lib/session";
+import { leggiTicketImpostazioni } from "@/lib/ticket-impostazioni";
 import { cn } from "@/lib/utils";
 import { SezioneApi } from "../_sezioni/api";
+import { SezioneArchiviazione } from "../_sezioni/archiviazione";
 import { SezioneDati } from "../_sezioni/dati";
 import { SezioneEmail } from "../_sezioni/email";
 import { SezioneIva } from "../_sezioni/iva";
@@ -41,6 +44,7 @@ import { SezioneMcp } from "../_sezioni/mcp";
 import { SezioneModelliPdf } from "../_sezioni/modelli-pdf";
 import { SezioneRagioniSociali } from "../_sezioni/ragioni-sociali";
 import { SezioneSicurezza } from "../_sezioni/sicurezza";
+import { SezioneTicket } from "../_sezioni/ticket";
 import { SezioneTwenty } from "../_sezioni/twenty";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +54,8 @@ const DESCRIZIONI: Record<string, string> = {
   iva: "Regole IVA, bollo, ritenuta e split payment per ragione sociale.",
   listini: "Basi, moduli aggiuntivi, prezzi netti e compatibilità.",
   email: "Mittenti, firma e prova dell'invio delle email.",
+  archiviazione: "Il bucket S3 dove si conservano i documenti dei progetti.",
+  ticket: "Come si comportano i ticket dei progetti.",
   "modelli-pdf": "Aspetto e testi dei PDF di preventivi e fatture, per ragione sociale.",
   mcp: "Server MCP per gli assistenti AI: strumenti attivi e conferma delle scritture.",
   api: "Chiavi API, permessi e webhook in uscita.",
@@ -133,6 +139,10 @@ export default async function SezionePage({ params }: { params: Promise<{ sezion
         />
       );
     }
+  } else if (sezione === "archiviazione") {
+    contenuto = <SezioneArchiviazione stato={await leggiArchivio(db)} />;
+  } else if (sezione === "ticket") {
+    contenuto = <SezioneTicket autoAssegna={(await leggiTicketImpostazioni(db)).autoAssegna} />;
   } else if (sezione === "mcp") {
     const righe = await db.select().from(impostazioni);
     const valore = (chiave: string) =>

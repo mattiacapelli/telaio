@@ -5,3 +5,4 @@ export * from "./incassi";
 export * from "./listini";
 export * from "./progetti";
 export * from "./sistema";
+export * from "./ticket";

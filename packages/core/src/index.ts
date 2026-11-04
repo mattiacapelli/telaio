@@ -1,4 +1,5 @@
 export * from "./accettazione";
+export * from "./archivio";
 export * from "./email";
 export * from "./iva";
 export * from "./money";
@@ -10,3 +11,4 @@ export * from "./rate";
 export * from "./ricerca";
 export * from "./setup";
 export * from "./solleciti";
+export * from "./ticket";

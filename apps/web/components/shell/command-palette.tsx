@@ -7,9 +7,11 @@ import {
   FileText,
   FolderOpen,
   type LucideIcon,
+  Paperclip,
   Receipt,
   Repeat,
   Search,
+  SquareKanban,
   Tag,
   Users,
 } from "lucide-react";
@@ -22,7 +24,15 @@ import { FUNZIONI, type Funzione, GRUPPI_FUNZIONI } from "./ricerca-voci";
 const EVENTO = "telaio:palette";
 export const openPalette = () => window.dispatchEvent(new Event(EVENTO));
 
-type TipoRisultato = "cliente" | "preventivo" | "fattura" | "progetto" | "abbonamento" | "listino";
+type TipoRisultato =
+  | "cliente"
+  | "preventivo"
+  | "fattura"
+  | "progetto"
+  | "ticket"
+  | "documento"
+  | "abbonamento"
+  | "listino";
 
 interface Risultato {
   tipo: TipoRisultato;
@@ -36,6 +46,8 @@ const TIPI: Record<TipoRisultato, { titolo: string; icona: LucideIcon }> = {
   preventivo: { titolo: "Preventivi", icona: FileText },
   fattura: { titolo: "Fatture", icona: Receipt },
   progetto: { titolo: "Progetti", icona: FolderOpen },
+  ticket: { titolo: "Ticket", icona: SquareKanban },
+  documento: { titolo: "Documenti", icona: Paperclip },
   abbonamento: { titolo: "Abbonamenti", icona: Repeat },
   listino: { titolo: "Listini", icona: Tag },
 };
