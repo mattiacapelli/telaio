@@ -32,6 +32,8 @@ export const useFormState = () => useContext(FormStateContext);
 export function FormModal({
   trigger,
   triggerVariant = "primary",
+  open: apertoDaFuori,
+  onOpenChange,
   triggerSize,
   title,
   description,
@@ -39,7 +41,10 @@ export function FormModal({
   action,
   children,
 }: {
-  trigger: React.ReactNode;
+  /** senza trigger la modale si apre e si chiude da fuori, con `open` e `onOpenChange` */
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   triggerVariant?: ButtonProps["variant"];
   triggerSize?: ButtonProps["size"];
   title: string;
@@ -48,7 +53,12 @@ export function FormModal({
   action: (prev: ActionState, data: FormData) => Promise<ActionState>;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [apertoInterno, setApertoInterno] = useState(false);
+  const open = apertoDaFuori ?? apertoInterno;
+  const setOpen = (v: boolean) => {
+    setApertoInterno(v);
+    onOpenChange?.(v);
+  };
   const [state, formAction, pendingAzione] = useActionState(action, initialState);
   const [inTransizione, avvia] = useTransition();
   const pending = pendingAzione || inTransizione;
@@ -62,11 +72,13 @@ export function FormModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant={triggerVariant} size={triggerSize}>
-          {trigger}
-        </Button>
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger asChild>
+          <Button variant={triggerVariant} size={triggerSize}>
+            {trigger}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent title={title} description={description}>
         {/* onSubmit e non action=: con action= React svuota i campi dopo ogni invio, anche in caso
             d'errore, e chi sbaglia un campo perderebbe quello che ha scritto negli altri. */}

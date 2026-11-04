@@ -13,13 +13,15 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IncassoModal } from "@/components/domain/incasso-modal";
+import { ModificaDataIncasso, ModificaDateFattura } from "@/components/domain/modifica-date";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { DefList } from "@/components/ui/def-list";
+import { Input } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
-import { formatData } from "@/lib/date";
+import { formatData, oggi } from "@/lib/date";
 import { STATO_FATTURA } from "@/lib/stati";
 import { emettiFatturaAction } from "../actions";
 
@@ -79,10 +81,28 @@ export default async function FatturaPage({ params }: { params: Promise<{ id: st
               </Button>
             )}
             {!emessa && (
-              <form action={emettiFatturaAction}>
+              <form action={emettiFatturaAction} className="flex items-center gap-2">
                 <input type="hidden" name="id" value={f.id} />
+                <Input
+                  type="date"
+                  name="dataEmissione"
+                  defaultValue={oggi()}
+                  required
+                  aria-label="Data di emissione"
+                  className="w-auto"
+                />
                 <Button type="submit">Emetti fattura</Button>
               </form>
+            )}
+            {emessa && f.dataEmissione && f.scadenza && (
+              <ModificaDateFattura
+                fattura={{
+                  id: f.id,
+                  anno: f.anno,
+                  dataEmissione: f.dataEmissione,
+                  scadenza: f.scadenza,
+                }}
+              />
             )}
             {emessa && residuo > 0 && (
               <IncassoModal
@@ -99,7 +119,8 @@ export default async function FatturaPage({ params }: { params: Promise<{ id: st
       {!emessa && (
         <p className="-mt-4 text-sm text-fg-2">
           Emettendo la fattura assegni il numero, congeli i dati e la rata entra nello scadenzario:
-          poi non si modifica più.
+          poi non si modifica più. La data di emissione la scegli tu (il numero segue l&apos;anno di
+          quella data); emissione e scadenza si potranno ritoccare anche dopo.
         </p>
       )}
 
@@ -144,7 +165,15 @@ export default async function FatturaPage({ params }: { params: Promise<{ id: st
                       <span>
                         {formatData(v.data)} · {v.descrizione ?? "Incasso"}
                       </span>
-                      <span className="font-medium tabular-nums">{formatEuro(v.importoCent)}</span>
+                      <span className="flex items-center gap-2">
+                        <ModificaDataIncasso
+                          incasso={{ id: v.id, data: v.data }}
+                          trigger="Modifica data"
+                        />
+                        <span className="font-medium tabular-nums">
+                          {formatEuro(v.importoCent)}
+                        </span>
+                      </span>
                     </li>
                   ))}
               </ul>

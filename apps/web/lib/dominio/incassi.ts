@@ -11,7 +11,7 @@ import {
   sql,
 } from "@telaio/db";
 import { z } from "zod";
-import { reData } from "../date";
+import { dataValida, reData } from "../date";
 import { emettiEvento } from "../webhooks";
 
 export const registraIncassoSchema = z.object({
@@ -123,4 +123,23 @@ export async function registraIncasso(db: Database, input: RegistraIncassoInput)
     data: incasso.data,
   });
   return incasso;
+}
+
+/**
+ * Cambia la data di un incasso (anche nel passato o nel futuro) e dello stesso giorno nel
+ * movimento di prima nota che ne è nato. Importo e conto non cambiano: per quelli si annulla
+ * e si registra di nuovo.
+ */
+export async function modificaDataIncasso(db: Database, id: string, data: string) {
+  if (!dataValida(data)) throw new Error("Data non valida");
+  await db.transaction(async (tx) => {
+    const [i] = await tx
+      .select()
+      .from(incassi)
+      .where(and(eq(incassi.id, id), isNull(incassi.deletedAt)))
+      .for("update");
+    if (!i) throw new Error("Incasso non trovato");
+    await tx.update(incassi).set({ data }).where(eq(incassi.id, id));
+    await tx.update(movimenti).set({ data }).where(eq(movimenti.incassoId, id));
+  });
 }

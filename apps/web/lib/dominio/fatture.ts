@@ -14,7 +14,7 @@ import {
   ragioniSociali,
   rate,
 } from "@telaio/db";
-import { oggi } from "../date";
+import { dataValida, oggi } from "../date";
 import { regoleDa } from "../regole";
 import { emettiEvento } from "../webhooks";
 
@@ -129,8 +129,10 @@ export async function emettiFattura(
   db: Database,
   id: string,
   giorniScadenza = GIORNI_SCADENZA_DEFAULT,
+  dataEmissione = oggi(),
 ) {
-  const esito = await emettiFatturaInTransazione(db, id, giorniScadenza);
+  if (!dataValida(dataEmissione)) throw new Error("Data di emissione non valida");
+  const esito = await emettiFatturaInTransazione(db, id, giorniScadenza, dataEmissione);
   await emettiEvento(db, "fattura.emessa", {
     fatturaId: id,
     numero: esito.numero,
@@ -139,7 +141,12 @@ export async function emettiFattura(
   return { numero: esito.numero };
 }
 
-async function emettiFatturaInTransazione(db: Database, id: string, giorniScadenza: number) {
+async function emettiFatturaInTransazione(
+  db: Database,
+  id: string,
+  giorniScadenza: number,
+  dataEmissione: string,
+) {
   return db.transaction(async (tx) => {
     const [f] = await tx
       .select()
@@ -156,7 +163,6 @@ async function emettiFatturaInTransazione(db: Database, id: string, giorniScaden
 
     const righe = await tx.select().from(fatturaRighe).where(eq(fatturaRighe.fatturaId, id));
     const regole = regoleDa(rs);
-    const dataEmissione = oggi();
     const scadenza = aggiungiGiorni(dataEmissione, giorniScadenza);
     const { numero } = await assegnaNumero(tx, {
       ragioneSocialeId: rs.id,
@@ -204,5 +210,51 @@ async function emettiFatturaInTransazione(db: Database, id: string, giorniScaden
       .returning({ id: rate.id });
     if (r) await tx.update(fatture).set({ rataId: r.id }).where(eq(fatture.id, id));
     return { numero, totaleCent: totali.totaleCent };
+  });
+}
+
+/**
+ * Cambia data di emissione e scadenza di una fattura emessa. L'anno resta quello del numero
+ * (la numerazione è progressiva per anno) e una fattura già inviata allo SDI non si tocca.
+ * La scadenza si riflette sulla rata dello scadenzario.
+ */
+export async function modificaDateFattura(
+  db: Database,
+  id: string,
+  input: { dataEmissione: string; scadenza: string },
+) {
+  const { dataEmissione, scadenza } = input;
+  if (!dataValida(dataEmissione)) throw new Error("Data di emissione non valida");
+  if (!dataValida(scadenza)) throw new Error("Scadenza non valida");
+  if (scadenza < dataEmissione) throw new Error("La scadenza non può precedere l'emissione");
+  await db.transaction(async (tx) => {
+    const [f] = await tx
+      .select()
+      .from(fatture)
+      .where(and(eq(fatture.id, id), isNull(fatture.deletedAt)))
+      .for("update");
+    if (!f) throw new Error("Fattura non trovata");
+    if (f.stato === "bozza")
+      throw new Error("La data di emissione si sceglie emettendo la fattura");
+    if (f.sdiIdentificativo || ["inviata_sdi", "consegnata", "scartata"].includes(f.stato))
+      throw new Error("La fattura è già passata dallo SDI: le date non si modificano");
+    if (Number(dataEmissione.slice(0, 4)) !== f.anno)
+      throw new Error(
+        `La data deve restare nel ${f.anno}: il numero ${f.numero} appartiene a quell'anno`,
+      );
+    await tx.update(fatture).set({ dataEmissione, scadenza }).where(eq(fatture.id, id));
+    if (f.rataId) {
+      const [r] = await tx.select().from(rate).where(eq(rate.id, f.rataId)).for("update");
+      if (r && r.stato !== "annullata") {
+        const aperta = r.stato === "da_incassare" || r.stato === "scaduta";
+        await tx
+          .update(rate)
+          .set({
+            scadenza,
+            ...(aperta && { stato: scadenza < oggi() ? "scaduta" : "da_incassare" }),
+          })
+          .where(eq(rate.id, r.id));
+      }
+    }
   });
 }

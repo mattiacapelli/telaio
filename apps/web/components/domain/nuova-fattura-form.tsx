@@ -18,6 +18,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { initialState } from "@/components/ui/form-modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { Switch } from "@/components/ui/switch";
+import { oggi } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 interface Emittente {
@@ -394,6 +395,9 @@ export function NuovaFatturaForm({
           </Card>
 
           <Card className="flex flex-col gap-3">
+            <Field label="Data di emissione" hint="Vale quando emetti; la bozza non ha data">
+              <Input name="dataEmissione" type="date" defaultValue={oggi()} />
+            </Field>
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-col leading-tight">
                 <span className="text-sm font-medium">Già incassata</span>
@@ -409,6 +413,9 @@ export function NuovaFatturaForm({
                   valore={metodo}
                   onChange={setMetodo}
                 />
+                <Field label="Data incasso">
+                  <Input name="dataIncasso" type="date" defaultValue={oggi()} />
+                </Field>
                 <Field label="Conto">
                   <Select name="contoId" required defaultValue={contiEm[0]?.id}>
                     {contiEm.map((c) => (

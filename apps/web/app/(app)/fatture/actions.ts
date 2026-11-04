@@ -6,8 +6,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui/form-modal";
 import { audit } from "@/lib/audit";
-import { oggi } from "@/lib/date";
-import { creaFatturaDaPreventivo, creaFatturaLibera, emettiFattura } from "@/lib/dominio/fatture";
+import { oggi, reData } from "@/lib/date";
+import {
+  creaFatturaDaPreventivo,
+  creaFatturaLibera,
+  emettiFattura,
+  modificaDateFattura,
+} from "@/lib/dominio/fatture";
 import { registraIncasso } from "@/lib/dominio/incassi";
 import { euroCent, flag, leggi, percentualeBp, testoOpt } from "@/lib/form";
 import { requireSession } from "@/lib/session";
@@ -15,8 +20,14 @@ import { requireSession } from "@/lib/session";
 export async function emettiFatturaAction(form: FormData): Promise<void> {
   const { user } = await requireSession();
   const id = String(form.get("id"));
+  const scelta = String(form.get("dataEmissione") ?? "");
   const db = getDb();
-  const { numero } = await emettiFattura(db, id);
+  const { numero } = await emettiFattura(
+    db,
+    id,
+    undefined,
+    reData.test(scelta) ? scelta : undefined,
+  );
   await audit(db, {
     userId: user.id,
     azione: "fattura.emessa",
@@ -56,6 +67,8 @@ const schemaPagina = z.object({
   contoId: testoOpt,
   metodo: z.enum(["bonifico", "contanti", "carta"]).default("bonifico"),
   giorniScadenza: z.coerce.number().int().min(0).max(365).default(30),
+  dataEmissione: z.string().regex(reData, "Data non valida").default(""),
+  dataIncasso: z.string().regex(reData, "Data non valida").default(""),
   righe: z.string(),
 });
 
@@ -133,7 +146,12 @@ export async function salvaFatturaLiberaAction(
       dettagli: { origine: "libera" },
     });
     if (dati.azione === "emetti") {
-      const { numero } = await emettiFattura(db, id, dati.giorniScadenza);
+      const { numero } = await emettiFattura(
+        db,
+        id,
+        dati.giorniScadenza,
+        dati.dataEmissione || undefined,
+      );
       await audit(db, {
         userId: user.id,
         azione: "fattura.emessa",
@@ -145,7 +163,7 @@ export async function salvaFatturaLiberaAction(
         const [f] = await db.select().from(fatture).where(eq(fatture.id, id));
         await registraIncasso(db, {
           contoId: dati.contoId,
-          data: oggi(),
+          data: dati.dataIncasso || dati.dataEmissione || oggi(),
           importoCent: f?.nettoDaPagareCent ?? 0,
           fatturaId: id,
           descrizione: `Incasso fattura ${numero} · ${dati.metodo}`,
@@ -157,4 +175,34 @@ export async function salvaFatturaLiberaAction(
   }
   revalidatePath("/", "layout");
   redirect(`/fatture/${id}`);
+}
+
+const schemaDate = z.object({
+  id: z.uuid(),
+  dataEmissione: z.string().regex(reData, "Data non valida"),
+  scadenza: z.string().regex(reData, "Data non valida"),
+});
+
+export async function modificaDateFatturaAction(
+  _: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const { user } = await requireSession();
+  const r = leggi(schemaDate, form);
+  if (!r.ok) return r.state;
+  try {
+    const db = getDb();
+    await modificaDateFattura(db, r.data.id, r.data);
+    await audit(db, {
+      userId: user.id,
+      azione: "fattura.date_modificate",
+      entita: "fatture",
+      entitaId: r.data.id,
+      dettagli: { dataEmissione: r.data.dataEmissione, scadenza: r.data.scadenza },
+    });
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Modifica non riuscita" };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Date aggiornate" };
 }

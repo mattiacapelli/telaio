@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { ActionState } from "@/components/ui/form-modal";
 import { audit } from "@/lib/audit";
 import { reData } from "@/lib/date";
-import { registraIncasso } from "@/lib/dominio/incassi";
+import { modificaDataIncasso, registraIncasso } from "@/lib/dominio/incassi";
 import { euroCent, leggi, testoOpt } from "@/lib/form";
 import { requireSession } from "@/lib/session";
 
@@ -43,4 +43,37 @@ export async function registraIncassoAction(_: ActionState, form: FormData): Pro
   }
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+const schemaData = z.object({
+  id: z.uuid(),
+  data: z.string().regex(reData, "Data non valida"),
+});
+
+export async function modificaDataIncassoAction(
+  _: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const { user } = await requireSession();
+  const r = leggi(schemaData, form);
+  if (!r.ok) return r.state;
+  try {
+    const db = getDb();
+    await modificaDataIncasso(db, r.data.id, r.data.data);
+    await audit(db, {
+      userId: user.id,
+      azione: "incasso.data_modificata",
+      entita: "incassi",
+      entitaId: r.data.id,
+      dettagli: { data: r.data.data },
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Modifica non riuscita",
+      errors: { data: e instanceof Error ? e.message : "" },
+    };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Data aggiornata" };
 }
