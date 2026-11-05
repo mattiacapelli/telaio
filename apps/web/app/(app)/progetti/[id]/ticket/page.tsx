@@ -51,11 +51,13 @@ export default async function LavagnaPage({ params }: { params: Promise<{ id: st
       />
       <LavagnaTicket
         progettoId={p.id}
-        codiceProgetto={p.codice}
         utenteCorrenteId={user.id}
         utenti={utenti}
         ticket={righe.map(({ t, assegnatario, commenti, documenti }) => ({
           id: t.id,
+          progettoId: p.id,
+          codiceProgetto: p.codice,
+          nomeProgetto: p.nome,
           numero: t.numero,
           titolo: t.titolo,
           tipo: t.tipo,

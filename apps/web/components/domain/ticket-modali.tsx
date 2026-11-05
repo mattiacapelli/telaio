@@ -108,12 +108,16 @@ function CampiTicket({
 
 export function NuovoTicket({
   progettoId,
+  progetti,
   utenti,
   stato,
   etichetta = "Nuovo ticket",
   assegnatarioPredefinito,
 }: {
-  progettoId: string;
+  /** progetto già noto (lavagna del progetto)… */
+  progettoId?: string;
+  /** …oppure i progetti tra cui scegliere (elenco di tutti i ticket) */
+  progetti?: { id: string; etichetta: string }[];
   utenti: Utente[];
   stato?: StatoTicket;
   etichetta?: string;
@@ -132,7 +136,22 @@ export function NuovoTicket({
       submitLabel="Crea"
       action={creaTicketAction}
     >
-      <input type="hidden" name="progettoId" value={progettoId} />
+      {progettoId ? (
+        <input type="hidden" name="progettoId" value={progettoId} />
+      ) : (
+        <Field label="Progetto" name="progettoId">
+          <Select name="progettoId" required defaultValue="">
+            <option value="" disabled>
+              Scegli il progetto
+            </option>
+            {progetti?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.etichetta}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
       <CampiTicket
         utenti={utenti}
         stato={stato}

@@ -235,18 +235,37 @@ export async function eliminaCommento(db: Database, commentoId: string): Promise
 
 // ── Letture ──────────────────────────────────────────────────────────────────────────────────
 
-/** I ticket di un progetto, già nell'ordine della lavagna (colonna per colonna, dall'alto). */
-export async function ticketDelProgetto(db: Database, progettoId: string) {
+/**
+ * I ticket di un progetto, già nell'ordine della lavagna (colonna per colonna, dall'alto); senza
+ * progetto, quelli di tutti i progetti (non eliminati), con le colonne ordinate per urgenza.
+ */
+export async function ticketDelProgetto(db: Database, progettoId?: string) {
   const righe = await db
     .select({
       t: ticket,
+      codiceProgetto: progetti.codice,
+      nomeProgetto: progetti.nome,
       assegnatario: users.name,
       documenti: sql<number>`(select count(*)::int from ${progettoDocumenti} d where d.ticket_id = ${ticket.id} and d.deleted_at is null)`,
       commenti: sql<number>`(select count(*)::int from ${ticketCommenti} c where c.ticket_id = ${ticket.id})`,
     })
     .from(ticket)
+    .innerJoin(progetti, eq(progetti.id, ticket.progettoId))
     .leftJoin(users, eq(users.id, ticket.assegnatarioId))
-    .where(and(eq(ticket.progettoId, progettoId), isNull(ticket.deletedAt)))
-    .orderBy(asc(ticket.posizione), asc(ticket.numero));
+    .where(
+      and(
+        progettoId ? eq(ticket.progettoId, progettoId) : isNull(progetti.deletedAt),
+        isNull(ticket.deletedAt),
+      ),
+    )
+    .orderBy(
+      ...(progettoId
+        ? [asc(ticket.posizione), asc(ticket.numero)]
+        : [
+            sql`case ${ticket.priorita} when 'urgente' then 0 when 'alta' then 1 when 'normale' then 2 else 3 end`,
+            sql`${ticket.scadenza} asc nulls last`,
+            asc(ticket.posizione),
+          ]),
+    );
   return righe;
 }

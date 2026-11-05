@@ -29,7 +29,7 @@ const errore = (e: unknown, predefinito: string): ActionState => ({
   ok: false,
   message: e instanceof Error ? e.message : predefinito,
 });
-const aggiorna = () => revalidatePath("/progetti", "layout");
+const aggiorna = () => revalidatePath("/", "layout");
 
 const conProgetto = ticketDatiSchema.safeExtend({ progettoId: idSchema });
 

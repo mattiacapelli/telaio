@@ -34,6 +34,6 @@ export async function eliminaDocumentoAction(_: ActionState, form: FormData): Pr
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Eliminazione non riuscita" };
   }
-  revalidatePath("/progetti", "layout");
+  revalidatePath("/", "layout");
   return { ok: true, message: "Documento eliminato" };
 }

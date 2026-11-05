@@ -396,7 +396,7 @@ test("assegnazione automatica: si configura e vale per i ticket rapidi e per la 
   await expect(page.getByText("Assegnazione automatica disattivata")).toBeVisible();
 });
 
-test("pagina Ticket: tutti i ticket di tutti i progetti, dalla sidebar e con la scorciatoia", async ({
+test("pagina Ticket: lavagna di tutti i progetti di default, tabella a richiesta, creazione con scelta del progetto", async ({
   page,
 }) => {
   await accedi(page);
@@ -404,16 +404,87 @@ test("pagina Ticket: tutti i ticket di tutti i progetti, dalla sidebar e con la 
   await expect(page).toHaveURL(/\/ticket$/);
   await expect(page.getByRole("heading", { name: "Ticket", exact: true })).toBeVisible();
 
-  // i ticket del progetto di prova, con il nome del progetto e lo stato accanto
+  // di default la lavagna, con il nome del progetto su ogni scheda
+  await expect(page.getByRole("link", { name: "Vista" }).first())
+    .toBeHidden()
+    .catch(() => {});
+  await expect(
+    page.getByRole("navigation", { name: "Vista" }).getByRole("link", { name: "Lavagna" }),
+  ).toHaveAttribute("aria-current", "page");
+  const colonna = (nome: string) => page.getByRole("region", { name: nome });
+  const scheda = colonna("Completato")
+    .locator("[data-ticket]")
+    .filter({ hasText: "Bug del login" });
+  await expect(scheda).toBeVisible();
+  await expect(scheda).toContainText("E2E ticket e documenti");
+
+  // da qui un ticket cambia colonna (senza progetto scelto non si riordina), anche dal menu «Sposta»
+  await page.getByRole("button", { name: "Sposta Bug del login" }).click();
+  await page.getByRole("menuitem", { name: "In revisione" }).click();
+  await expect(colonna("In revisione").getByText("Bug del login")).toBeVisible();
+  await expect
+    .poll(
+      async () =>
+        (
+          await sql`select stato from ticket where progetto_id = ${progettoId} and titolo = 'Bug del login'`
+        )[0].stato,
+    )
+    .toBe("in_revisione");
+
+  // trascinamento tra colonne dalla lavagna generale
+  await colonna("In revisione").getByText("Bug del login").dragTo(colonna("Da fare"));
+  await expect(colonna("Da fare").getByText("Bug del login")).toBeVisible();
+  await expect
+    .poll(
+      async () =>
+        (
+          await sql`select stato from ticket where progetto_id = ${progettoId} and titolo = 'Bug del login'`
+        )[0].stato,
+    )
+    .toBe("da_fare");
+
+  // la creazione rapida compare solo con un progetto scelto
+  await expect(page.getByRole("button", { name: "Crea ticket" })).toHaveCount(0);
+  await page
+    .getByLabel("Progetto", { exact: true })
+    .selectOption({ label: `${CODICE} · E2E ticket e documenti` });
+  await expect(page.getByRole("button", { name: "Crea ticket" })).toHaveCount(5);
+  await page.getByLabel("Progetto", { exact: true }).selectOption("");
+
+  // «Nuovo ticket» chiede il progetto
+  await page.getByRole("button", { name: "Nuovo ticket" }).click();
+  const dialogo = page.getByRole("dialog");
+  await dialogo.getByLabel("Titolo").fill("Creato dalla lavagna generale");
+  await dialogo.getByRole("button", { name: "Crea", exact: true }).click();
+  await expect(dialogo.getByText("Scegli il progetto"))
+    .toBeVisible()
+    .catch(() => {});
+  await dialogo
+    .getByLabel("Progetto")
+    .selectOption({ label: `${CODICE} · E2E ticket e documenti` });
+  await dialogo.getByRole("button", { name: "Crea", exact: true }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(page.getByText("Creato dalla lavagna generale")).toBeVisible();
+  expect(
+    (
+      await sql`select count(*)::int n from ticket where progetto_id = ${progettoId} and titolo = 'Creato dalla lavagna generale'`
+    )[0].n,
+  ).toBe(1);
+
+  // la tabella, con gli stessi ticket
+  await page
+    .getByRole("navigation", { name: "Vista" })
+    .getByRole("link", { name: "Tabella" })
+    .click();
+  await expect(page).toHaveURL(/\/ticket\?vista=tabella$/);
   await page.getByLabel("Cerca in Ticket").fill("Bug del login");
   const riga = page.getByRole("row").filter({ hasText: "Bug del login" });
   await expect(riga).toBeVisible();
   await expect(riga).toContainText("E2E ticket e documenti");
-  await expect(riga).toContainText("Completato");
   await riga.click();
   await expect(page).toHaveURL(new RegExp(`/progetti/${progettoId}/ticket/\\d+$`));
 
-  // scorciatoia G poi T
+  // scorciatoia G poi T: torna alla lavagna
   await page.goto("/");
   await expect(page.getByRole("heading").first()).toBeVisible();
   await expect(async () => {
@@ -421,10 +492,4 @@ test("pagina Ticket: tutti i ticket di tutti i progetti, dalla sidebar e con la 
     await page.keyboard.press("t");
     await expect(page).toHaveURL(/\/ticket$/, { timeout: 1000 });
   }).toPass();
-
-  // in elenco ci sono tutti e soli i ticket vivi del progetto
-  const [{ n }] =
-    await sql`select count(*)::int n from ticket where progetto_id = ${progettoId} and deleted_at is null`;
-  await page.getByLabel("Cerca in Ticket").fill("E2E-TKT-001");
-  await expect(page.getByRole("row").filter({ hasText: "E2E-TKT-001" })).toHaveCount(n);
 });

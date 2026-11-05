@@ -47,6 +47,9 @@ import { cn } from "@/lib/utils";
 
 export interface TicketCard {
   id: string;
+  progettoId: string;
+  codiceProgetto: string;
+  nomeProgetto: string;
   numero: number;
   titolo: string;
   tipo: TipoTicket;
@@ -107,16 +110,15 @@ export function riposiziona(
 
 function Scheda({
   t,
-  codiceProgetto,
-  progettoId,
+  mostraProgetto,
   trascinato,
   onDragStart,
   onDragEnd,
   onSposta,
 }: {
   t: TicketCard;
-  codiceProgetto: string;
-  progettoId: string;
+  /** nella lavagna di tutti i progetti la scheda dice a quale appartiene */
+  mostraProgetto: boolean;
   trascinato: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -140,8 +142,13 @@ function Scheda({
         trascinato && "opacity-40",
       )}
     >
+      {mostraProgetto && (
+        <span className="truncate text-xs text-fg-3" title={t.codiceProgetto}>
+          {t.nomeProgetto}
+        </span>
+      )}
       <Link
-        href={`/progetti/${progettoId}/ticket/${t.numero}`}
+        href={`/progetti/${t.progettoId}/ticket/${t.numero}`}
         draggable={false}
         className="text-sm leading-snug font-medium text-fg after:absolute after:inset-0 hover:underline"
       >
@@ -153,7 +160,7 @@ function Scheda({
           aria-label={ETICHETTE_TIPO_TICKET[t.tipo]}
           role="img"
         />
-        <span className="tabular-nums" title={codiceTicket(codiceProgetto, t.numero)}>
+        <span className="tabular-nums" title={codiceTicket(t.codiceProgetto, t.numero)}>
           #{t.numero}
         </span>
         <Priorita
@@ -257,16 +264,20 @@ function AggiungiRapido({
   );
 }
 
-/** Lavagna kanban di un progetto: colonne per stato, trascinamento, filtri e creazione rapida. */
+/**
+ * Lavagna kanban: colonne per stato, trascinamento, filtri e creazione rapida. Con `progettoId` è
+ * quella di un progetto; senza, mostra i ticket di tutti i progetti (con `progetti` per filtrarli):
+ * lì un ticket si sposta di colonna, e si riordina dentro la colonna solo con un progetto scelto.
+ */
 export function LavagnaTicket({
   progettoId,
-  codiceProgetto,
+  progetti,
   ticket: iniziali,
   utenti,
   utenteCorrenteId,
 }: {
-  progettoId: string;
-  codiceProgetto: string;
+  progettoId?: string;
+  progetti?: { id: string; etichetta: string }[];
   ticket: TicketCard[];
   utenti: { id: string; nome: string }[];
   utenteCorrenteId: string;
@@ -280,6 +291,9 @@ export function LavagnaTicket({
   const [cerca, setCerca] = useState("");
   const [assegnatario, setAssegnatario] = useState("");
   const [priorita, setPriorita] = useState("");
+  const [progettoFiltro, setProgettoFiltro] = useState("");
+  const progettoAttivo = progettoId ?? (progettoFiltro || undefined);
+  const riordinabile = !!progettoAttivo;
 
   // Dopo ogni salvataggio il server rimanda i dati: la lavagna riparte da quelli.
   useEffect(() => setTicket(iniziali), [iniziali]);
@@ -288,13 +302,17 @@ export function LavagnaTicket({
     const q = cerca.trim().toLowerCase();
     return ticket.filter(
       (t) =>
-        (!q || `${t.titolo} ${t.numero} ${t.assegnatario ?? ""}`.toLowerCase().includes(q)) &&
+        (!q ||
+          `${t.titolo} ${t.numero} ${t.nomeProgetto} ${t.assegnatario ?? ""}`
+            .toLowerCase()
+            .includes(q)) &&
         (!assegnatario ||
           (assegnatario === "nessuno" ? !t.assegnatarioId : t.assegnatarioId === assegnatario)) &&
-        (!priorita || t.priorita === priorita),
+        (!priorita || t.priorita === priorita) &&
+        (!progettoFiltro || t.progettoId === progettoFiltro),
     );
-  }, [ticket, cerca, assegnatario, priorita]);
-  const filtrato = !!cerca.trim() || !!assegnatario || !!priorita;
+  }, [ticket, cerca, assegnatario, priorita, progettoFiltro]);
+  const filtrato = !!cerca.trim() || !!assegnatario || !!priorita || !!progettoFiltro;
 
   async function sposta(id: string, stato: StatoTicket, primaDi: string | null) {
     const prima = ticket;
@@ -332,6 +350,21 @@ export function LavagnaTicket({
             className="pl-8"
           />
         </div>
+        {progetti && (
+          <Select
+            value={progettoFiltro}
+            onChange={(e) => setProgettoFiltro(e.target.value)}
+            aria-label="Progetto"
+            className="w-auto max-w-56"
+          >
+            <option value="">Tutti i progetti</option>
+            {progetti.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.etichetta}
+              </option>
+            ))}
+          </Select>
+        )}
         <Select
           value={assegnatario}
           onChange={(e) => setAssegnatario(e.target.value)}
@@ -378,7 +411,7 @@ export function LavagnaTicket({
                 if (!trascinato) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
-                const primaDi = primaDiSotto(e.currentTarget, e.clientY);
+                const primaDi = riordinabile ? primaDiSotto(e.currentTarget, e.clientY) : null;
                 if (bersaglio?.stato !== stato || bersaglio.primaDi !== primaDi)
                   setBersaglio({ stato, primaDi });
               }}
@@ -406,13 +439,15 @@ export function LavagnaTicket({
               <div className="flex min-h-12 flex-col gap-2">
                 {nella.map((t) => (
                   <div key={t.id} className="flex flex-col gap-2">
-                    {sopra && bersaglio?.primaDi === t.id && trascinato !== t.id && (
-                      <div aria-hidden className="h-0.5 rounded-full bg-brand" />
-                    )}
+                    {sopra &&
+                      riordinabile &&
+                      bersaglio?.primaDi === t.id &&
+                      trascinato !== t.id && (
+                        <div aria-hidden className="h-0.5 rounded-full bg-brand" />
+                      )}
                     <Scheda
                       t={t}
-                      codiceProgetto={codiceProgetto}
-                      progettoId={progettoId}
+                      mostraProgetto={!progettoId}
                       trascinato={trascinato === t.id}
                       onDragStart={() => setTrascinato(t.id)}
                       onDragEnd={() => {
@@ -423,7 +458,7 @@ export function LavagnaTicket({
                     />
                   </div>
                 ))}
-                {sopra && bersaglio?.primaDi === null && (
+                {sopra && riordinabile && bersaglio?.primaDi === null && (
                   <div aria-hidden className="h-0.5 rounded-full bg-brand" />
                 )}
                 {nella.length === 0 && !sopra && (
@@ -432,11 +467,14 @@ export function LavagnaTicket({
                   </p>
                 )}
               </div>
-              <AggiungiRapido
-                stato={stato}
-                progettoId={progettoId}
-                onCreato={() => router.refresh()}
-              />
+              {progettoAttivo && (
+                <AggiungiRapido
+                  key={progettoAttivo}
+                  stato={stato}
+                  progettoId={progettoAttivo}
+                  onCreato={() => router.refresh()}
+                />
+              )}
             </section>
           );
         })}

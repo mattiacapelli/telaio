@@ -202,6 +202,24 @@ describe.skipIf(!URL_SERVER)("ticket e documenti (Postgres reale)", () => {
     });
   });
 
+  describe("elenco di tutti i progetti", () => {
+    it("senza progetto: tutti i ticket non eliminati, gli urgenti prima", async () => {
+      await creaTicket(t.db, progettoId, { titolo: "normale", priorita: "normale" }, "u1");
+      await creaTicket(t.db, altroProgettoId, { titolo: "urgente", priorita: "urgente" }, "u1");
+      await creaTicket(t.db, progettoId, { titolo: "bassa", priorita: "bassa" }, "u1");
+      const eliminato = await nuovo("eliminato");
+      await eliminaTicket(t.db, eliminato.id);
+      const tutti = await ticketDelProgetto(t.db);
+      expect(tutti.map((r) => r.t.titolo)).toEqual(["urgente", "normale", "bassa"]);
+      expect(tutti[0]).toMatchObject({ nomeProgetto: "App" });
+      expect(tutti[0]?.codiceProgetto).toMatch(/^PRJ-/);
+      // il filtro per progetto resta quello di prima
+      expect((await ticketDelProgetto(t.db, altroProgettoId)).map((r) => r.t.titolo)).toEqual([
+        "urgente",
+      ]);
+    });
+  });
+
   describe("eliminazione e commenti", () => {
     it("il ticket eliminato esce dalla lavagna ma resta nel database", async () => {
       const a = await nuovo("a");
