@@ -170,6 +170,11 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
         stato={<Tag tone={stato?.tone}>{stato?.label ?? p.stato}</Tag>}
         azioni={
           <>
+            {p.stato === "bozza" && (
+              <Button asChild variant="secondary">
+                <Link href={`/preventivi/${p.id}/modifica`}>Modifica</Link>
+              </Button>
+            )}
             <Button asChild variant="secondary">
               <a href={`/api/pdf/preventivi/${p.id}`}>Scarica PDF</a>
             </Button>

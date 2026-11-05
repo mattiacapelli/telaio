@@ -69,6 +69,8 @@ Per ragione sociale, tipo documento e anno, formato configurabile con `{AAAA}`, 
 
 All'emissione (`inviato` per i preventivi, `emessa` per le fatture) si salva `snapshot` = emittente + cliente + regole IVA + totali. Le modifiche successive alle impostazioni non toccano i documenti emessi.
 
+**Modifica della bozza.** Finché il preventivo è in `bozza` si può riaprire nell'editor (`/preventivi/[id]/modifica`, tasto «Modifica» nel dettaglio) e cambiare tutto: emittente, cliente, oggetto, validità, righe, prezzi e alternative. Righe e totali si ricalcolano come alla creazione, lo snapshot si rinfresca (emittente, cliente, regole) e il preventivo resta lo stesso, senza numero. La validità conta dalla data di creazione. Dopo l'invio non si modifica più: il tasto sparisce e la pagina di modifica rimanda al dettaglio. Audit: `preventivo.modificato`. Le note, che l'editor non mostra, si conservano.
+
 ## Solleciti: sempre con conferma
 
 Nessun sollecito parte da solo. Il worker (job `solleciti`, ogni mattina) **propone** una bozza per ogni rata scaduta e non incassata; l'invio avviene solo quando l'utente la rivede in Scadenzario, sceglie il destinatario e preme «Invia sollecito».

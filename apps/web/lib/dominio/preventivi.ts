@@ -216,6 +216,21 @@ export async function creaPreventivoDaListino(
   });
 }
 
+/** Le chiavi di gruppo del client diventano identificativi veri, uno per gruppo. */
+function righeDaInput(input: RigaLibera[]) {
+  const gruppi = new Map<string, string>();
+  return input.map(({ gruppoAlternativa, ...r }, i) => ({
+    ...r,
+    posizione: i,
+    importoCent: importoRiga(r),
+    gruppoAlternativaId: gruppoAlternativa
+      ? (gruppi.get(gruppoAlternativa) ??
+        gruppi.set(gruppoAlternativa, randomUUID()).get(gruppoAlternativa) ??
+        null)
+      : null,
+  }));
+}
+
 /**
  * Crea una bozza di preventivo da righe libere: ognuna può venire da un listino o essere scritta
  * a mano, e il listino non è mai obbligatorio. Il totale riguarda le sole righe una tantum.
@@ -242,18 +257,7 @@ export async function creaPreventivoLibero(
   }
 
   const regole: RegoleFiscali = regoleDa(rs);
-  // Le chiavi di gruppo del client diventano identificativi veri, uno per gruppo.
-  const gruppi = new Map<string, string>();
-  const righe = dati.righe.map(({ gruppoAlternativa, ...r }, i) => ({
-    ...r,
-    posizione: i,
-    importoCent: importoRiga(r),
-    gruppoAlternativaId: gruppoAlternativa
-      ? (gruppi.get(gruppoAlternativa) ??
-        gruppi.set(gruppoAlternativa, randomUUID()).get(gruppoAlternativa) ??
-        null)
-      : null,
-  }));
+  const righe = righeDaInput(dati.righe);
   const totali = calcolaTotali(
     righe.filter((r) => r.tipo === "una_tantum"),
     regole,
@@ -295,4 +299,80 @@ export async function creaPreventivoLibero(
   });
   await emettiEvento(db, "preventivo.creato", { preventivoId: creato.id });
   return creato;
+}
+
+/**
+ * Riscrive una bozza: emittente, cliente, oggetto, note, validità e righe. Solo la bozza si
+ * modifica (dopo l'invio numero, emittente e totali sono congelati). Righe e totali si
+ * ricalcolano come alla creazione; la validità conta dalla data di creazione della bozza.
+ */
+export async function aggiornaPreventivoBozza(
+  db: Database,
+  id: string,
+  input: CreaPreventivoLiberoInput,
+): Promise<void> {
+  const dati = creaPreventivoLiberoSchema.parse(input);
+
+  const [rs] = await db
+    .select()
+    .from(ragioniSociali)
+    .where(and(eq(ragioniSociali.id, dati.ragioneSocialeId), isNull(ragioniSociali.deletedAt)));
+  if (!rs) throw new Error("Ragione sociale non trovata");
+
+  let clienteRefId: string | null = null;
+  let clienteSnapshot: Record<string, unknown> = {};
+  if (dati.clienteTwentyId) {
+    const r = await risolviClienteRef(db, dati.clienteTwentyId);
+    clienteRefId = r.id;
+    clienteSnapshot = r.cliente;
+  }
+
+  const regole: RegoleFiscali = regoleDa(rs);
+  const righe = righeDaInput(dati.righe);
+  const totali = calcolaTotali(
+    righe.filter((r) => r.tipo === "una_tantum"),
+    regole,
+  );
+
+  await db.transaction(async (tx) => {
+    const [p] = await tx
+      .select()
+      .from(preventivi)
+      .where(and(eq(preventivi.id, id), isNull(preventivi.deletedAt)))
+      .for("update");
+    if (!p) throw new Error("Preventivo non trovato");
+    if (p.stato !== "bozza") throw new Error("Si può modificare solo un preventivo in bozza");
+
+    await tx
+      .update(preventivi)
+      .set({
+        ragioneSocialeId: rs.id,
+        clienteRefId,
+        oggetto: dati.oggetto ?? righe[0]?.descrizione.slice(0, 120) ?? "Preventivo",
+        note: dati.note || null,
+        validoFino: dati.validitaGiorni
+          ? aggiungiGiorni(p.createdAt.toISOString().slice(0, 10), dati.validitaGiorni)
+          : null,
+        snapshot: {
+          emittente: {
+            id: rs.id,
+            nome: rs.nome,
+            partitaIva: rs.partitaIva,
+            codiceFiscale: rs.codiceFiscale,
+            indirizzo: rs.indirizzo,
+            citta: rs.citta,
+          },
+          cliente: clienteSnapshot,
+          regole: { ...regole },
+        },
+        imponibileCent: totali.imponibileCent,
+        ivaCent: totali.ivaCent,
+        bolloCent: totali.bolloCent,
+        totaleCent: totali.totaleCent,
+      })
+      .where(eq(preventivi.id, id));
+    await tx.delete(preventivoRighe).where(eq(preventivoRighe.preventivoId, id));
+    if (righe.length > 0)
+      await tx.insert(preventivoRighe).values(righe.map((r) => ({ ...r, preventivoId: id })));
+  });
 }

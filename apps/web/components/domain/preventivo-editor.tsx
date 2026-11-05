@@ -15,7 +15,10 @@ import {
 import { BookOpen, Check, Copy, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { creaPreventivoAction } from "@/app/(app)/configuratore/actions";
+import {
+  aggiornaPreventivoBozzaAction,
+  creaPreventivoAction,
+} from "@/app/(app)/configuratore/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -52,6 +55,16 @@ interface RigaForm {
 
 let contatore = 0;
 const nuovaChiave = () => `r${++contatore}`;
+
+/** Una bozza già salvata, da riaprire nell'editor. */
+export interface BozzaIniziale {
+  id: string;
+  ragioneSocialeId: string;
+  oggetto: string;
+  note: string;
+  validitaGiorni: number;
+  righe: Omit<RigaForm, "chiave">[];
+}
 
 const rigaVuota = (tipo: Tipo = "una_tantum"): RigaForm => ({
   chiave: nuovaChiave(),
@@ -148,15 +161,25 @@ export function PreventivoEditor({
   emittenti,
   clienti,
   clienteIniziale,
+  bozza,
 }: {
   emittenti: EmittenteCfg[];
   clienti: { id: string; nome: string }[];
   clienteIniziale?: string;
+  /** se c'è, l'editor modifica questa bozza invece di crearne una nuova */
+  bozza?: BozzaIniziale;
 }) {
-  const [stato, azione, pending] = useActionState(creaPreventivoAction, initialState);
-  const [emittenteId, setEmittenteId] = useState(emittenti[0]?.id ?? "");
-  const [righe, setRighe] = useState<RigaForm[]>(() => [rigaVuota()]);
-  const [validita, setValidita] = useState(30);
+  const [stato, azione, pending] = useActionState(
+    bozza ? aggiornaPreventivoBozzaAction : creaPreventivoAction,
+    initialState,
+  );
+  const [emittenteId, setEmittenteId] = useState(bozza?.ragioneSocialeId ?? emittenti[0]?.id ?? "");
+  const [righe, setRighe] = useState<RigaForm[]>(() =>
+    bozza && bozza.righe.length > 0
+      ? bozza.righe.map((r) => ({ ...r, chiave: nuovaChiave() }))
+      : [rigaVuota()],
+  );
+  const [validita, setValidita] = useState(bozza?.validitaGiorni ?? 30);
   const [listinoAperto, setListinoAperto] = useState(false);
   const [listinoId, setListinoId] = useState("");
   const [ricerca, setRicerca] = useState("");
@@ -473,6 +496,8 @@ export function PreventivoEditor({
 
   return (
     <form action={azione} className="contents">
+      {bozza && <input type="hidden" name="id" value={bozza.id} />}
+      {bozza && <input type="hidden" name="note" value={bozza.note} />}
       <input type="hidden" name="ragioneSocialeId" value={emittenteId} />
       <input type="hidden" name="validitaGiorni" value={validita} />
       <input
@@ -488,16 +513,26 @@ export function PreventivoEditor({
       />
 
       <PageHeader
-        titolo="Nuovo preventivo"
-        descrizione="L'emittente decide numerazione e IVA. Scrivi le righe a mano o prendile da un listino: il listino non è obbligatorio. Il numero arriva quando lo invii al cliente."
+        titolo={bozza ? "Modifica bozza" : "Nuovo preventivo"}
+        descrizione={
+          bozza
+            ? "Finché è in bozza puoi cambiare tutto: emittente, cliente, righe e prezzi. Dopo l'invio numero e totali sono congelati."
+            : "L'emittente decide numerazione e IVA. Scrivi le righe a mano o prendile da un listino: il listino non è obbligatorio. Il numero arriva quando lo invii al cliente."
+        }
         stato={<Badge dot>Bozza</Badge>}
         azioni={
           <>
             <Button asChild variant="ghost">
-              <Link href="/preventivi">Annulla</Link>
+              <Link href={bozza ? `/preventivi/${bozza.id}` : "/preventivi"}>Annulla</Link>
             </Button>
             <Button type="submit" disabled={!tutteValide || pending}>
-              {pending ? "Creazione…" : "Salva bozza"}
+              {pending
+                ? bozza
+                  ? "Salvataggio…"
+                  : "Creazione…"
+                : bozza
+                  ? "Salva modifiche"
+                  : "Salva bozza"}
             </Button>
           </>
         }
@@ -567,11 +602,13 @@ export function PreventivoEditor({
             </Field>
             <Field label="Validità">
               <Select value={validita} onChange={(e) => setValidita(Number(e.target.value))}>
-                {VALIDITA.map((g) => (
-                  <option key={g} value={g}>
-                    {g} giorni
-                  </option>
-                ))}
+                {[...new Set([...VALIDITA, validita])]
+                  .sort((a, b) => a - b)
+                  .map((g) => (
+                    <option key={g} value={g}>
+                      {g} giorni
+                    </option>
+                  ))}
               </Select>
             </Field>
             <Field
@@ -579,7 +616,7 @@ export function PreventivoEditor({
               hint="Se vuoto usa la descrizione della prima riga"
               className="sm:col-span-2"
             >
-              <Input name="oggetto" />
+              <Input name="oggetto" defaultValue={bozza?.oggetto} />
             </Field>
           </Card>
 

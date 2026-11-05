@@ -107,6 +107,8 @@ export function briciole(pathname: string): Briciola[] {
   }
   if (segmenti.length === 1) return [{ label: primo.label }];
   const secondo = segmenti[1] ?? "";
+  if (segmenti[2] === "modifica" && segmenti.length === 3)
+    return [primo, { label: "Dettaglio", href: `${base}/${secondo}` }, { label: "Modifica" }];
   if (segmenti[0] === "progetti" && segmenti[2] === "ticket") {
     const lavagna = `/progetti/${secondo}/ticket`;
     return [
