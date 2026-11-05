@@ -395,3 +395,36 @@ test("assegnazione automatica: si configura e vale per i ticket rapidi e per la 
   await interruttore.click();
   await expect(page.getByText("Assegnazione automatica disattivata")).toBeVisible();
 });
+
+test("pagina Ticket: tutti i ticket di tutti i progetti, dalla sidebar e con la scorciatoia", async ({
+  page,
+}) => {
+  await accedi(page);
+  await page.getByRole("link", { name: "Ticket", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/ticket$/);
+  await expect(page.getByRole("heading", { name: "Ticket", exact: true })).toBeVisible();
+
+  // i ticket del progetto di prova, con il nome del progetto e lo stato accanto
+  await page.getByLabel("Cerca in Ticket").fill("Bug del login");
+  const riga = page.getByRole("row").filter({ hasText: "Bug del login" });
+  await expect(riga).toBeVisible();
+  await expect(riga).toContainText("E2E ticket e documenti");
+  await expect(riga).toContainText("Completato");
+  await riga.click();
+  await expect(page).toHaveURL(new RegExp(`/progetti/${progettoId}/ticket/\\d+$`));
+
+  // scorciatoia G poi T
+  await page.goto("/");
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await expect(async () => {
+    await page.keyboard.press("g");
+    await page.keyboard.press("t");
+    await expect(page).toHaveURL(/\/ticket$/, { timeout: 1000 });
+  }).toPass();
+
+  // in elenco ci sono tutti e soli i ticket vivi del progetto
+  const [{ n }] =
+    await sql`select count(*)::int n from ticket where progetto_id = ${progettoId} and deleted_at is null`;
+  await page.getByLabel("Cerca in Ticket").fill("E2E-TKT-001");
+  await expect(page.getByRole("row").filter({ hasText: "E2E-TKT-001" })).toHaveCount(n);
+});

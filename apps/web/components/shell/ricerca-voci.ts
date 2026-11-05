@@ -113,6 +113,7 @@ const PAROLE_PAGINA: Record<string, readonly string[]> = {
   "/clienti": ["anagrafica", "twenty", "contatti", "aziende"],
   "/preventivi": ["offerte", "proposte"],
   "/progetti": ["commesse", "lavori"],
+  "/ticket": ["kanban", "lavagna", "attività", "bug", "richieste", "assistenza", "task"],
   "/listini": ["prezzi", "moduli", "basi", "voci"],
   "/fatture": ["fatturazione", "emesse"],
   "/incassi": ["pagamenti", "entrate", "versamenti"],
