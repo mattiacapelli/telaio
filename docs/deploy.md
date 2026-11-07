@@ -192,16 +192,18 @@ In _Settings → Environments → New environment → `production`_ (consigliato
 | `VPS_SSH_KEY`         | chiave **privata** `telaio-deploy` (tutto il file, con le righe BEGIN/END)                                                                                                                 |
 | `VPS_SSH_KNOWN_HOSTS` | output di `ssh-keyscan -t ed25519 <host>`, **confrontato a mano** con l'impronta mostrata dal VPS (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`). Il deploy rifiuta host sconosciuti |
 
-Variabili (_Settings → Secrets and variables → Actions → Variables_), tutte opzionali:
+Variabili (_Settings → Secrets and variables → Actions → Variables_):
 
-| Variabile           | Predefinito                       | Uso                                            |
-| ------------------- | --------------------------------- | ---------------------------------------------- |
-| `VPS_SSH_PORT`      | `22`                                      | porta SSH |
-| `VPS_DEPLOY_PATH`   | `/opt/apps/telaio`                        | cartella sul nuovo VPS |
-| `TELAIO_URL`        | `https://telaio.mattiacapelli.it`         | URL usato per la verifica finale |
-| `DEPLOY_AUTOMATICO` | prima `false`, poi `true`                  | opt-in per il deploy automatico su `v2` |
+| Variabile           | Predefinito                       | Uso                                     |
+| ------------------- | --------------------------------- | --------------------------------------- |
+| `VPS_SSH_PORT`      | `22`                              | porta SSH                               |
+| `VPS_DEPLOY_PATH`   | `/opt/apps/telaio`                | cartella sul nuovo VPS                  |
+| `TELAIO_URL`        | `https://telaio.mattiacapelli.it` | URL usato per la verifica finale        |
+| `DEPLOY_AUTOMATICO` | prima `false`, poi `true`         | opt-in per il deploy automatico su `v2` |
 
-`DEPLOY_AUTOMATICO` va creata come **variabile di repository** (Settings → Secrets and variables → Actions → Variables), perché il workflow chiamante la legge prima di entrare nell'ambiente `production`. Per semplicità puoi salvare lì anche le altre tre variabili.\n\nPer avere una **conferma manuale** prima di ogni deploy: nell'ambiente `production` attiva _Required reviewers_.
+`DEPLOY_AUTOMATICO` va creata come **variabile di repository** (Settings → Secrets and variables → Actions → Variables), perché il workflow chiamante la legge prima di entrare nell'ambiente `production`. Per semplicità puoi salvare lì anche le altre tre variabili.
+
+Per avere una **conferma manuale** prima di ogni deploy: nell'ambiente `production` attiva _Required reviewers_.
 
 ### Pipeline
 
@@ -429,14 +431,14 @@ configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 | La pipeline fallisce su «Le immagini esistono su GHCR»       | il job `immagini` non è riuscito, o la versione non è mai stata pubblicata: controlla la scheda Actions                                                                    |
 | `denied` / `unauthorized` al pull                            | login a GHCR mancante o pacchetto non accessibile al repository (_Package settings → Manage Actions access_)                                                               |
 | `Host key verification failed`                               | `VPS_SSH_KNOWN_HOSTS` mancante o non corrispondente al server                                                                                                              |
-| Il deploy riesce ma la verifica esterna fallisce             | Nginx UI o certificato: `docker exec nginx-ui nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS e rete Docker `proxy`                         |
+| Il deploy riesce ma la verifica esterna fallisce             | Nginx UI o certificato: `docker exec nginx-ui nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS e rete Docker `proxy`                             |
 | `502 Bad Gateway`                                            | il web non è in ascolto: `./deploy/compose.sh ps` e `logs web`                                                                                                             |
 | `/api/health` risponde 503                                   | guarda quale tra `database` e `redis` è `errore`: `./deploy/compose.sh ps`, `logs postgres` o `logs redis`                                                                 |
 | `port is already allocated` su 3100                          | porta occupata: cambia `WEB_PORT` e l'upstream Nginx                                                                                                                       |
 | Migrazioni fallite                                           | il deploy si ferma prima di toccare web e worker. Leggi l'errore (`./deploy/compose.sh logs migrate`), correggi e ripubblica                                               |
 | Login che non funziona dietro Nginx, errore «Invalid origin» | `BETTER_AUTH_URL` diverso dall'indirizzo reale (http/https, dominio)                                                                                                       |
 | `/setup` mostra «Configurazione non disponibile»             | in produzione manca `SETUP_TOKEN`, è troppo corto (< 16 caratteri) o è ancora il valore di esempio: correggi `.env.production` e riavvia (`./deploy/compose.sh up -d web`) |
-| `/setup` chiede un codice che non ricordo                    | è il `SETUP_TOKEN` di `/opt/apps/telaio/.env.production`                                                                                                                        |
+| `/setup` chiede un codice che non ricordo                    | è il `SETUP_TOKEN` di `/opt/apps/telaio/.env.production`                                                                                                                  |
 | Le passkey smettono di funzionare                            | è cambiato il dominio in `BETTER_AUTH_URL`: vanno registrate di nuovo                                                                                                      |
 | La 2FA non accetta più i codici                              | `BETTER_AUTH_SECRET` cambiato: ripristina quello originale (sta nel backup cifrato). Come ultima risorsa, i codici di recupero                                             |
 | La PWA mostra una versione vecchia                           | il Service Worker si aggiorna su richiesta dell'utente: compare l'avviso «È disponibile un aggiornamento»                                                                  |
