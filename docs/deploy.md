@@ -1,20 +1,23 @@
 # Deploy in produzione
 
-Telaio gira su un VPS (Ubuntu 24.04) con Docker Compose. Nginx sull'host fa da reverse proxy HTTPS verso
-`127.0.0.1:3100`. Le immagini si costruiscono su GitHub Actions, si pubblicano su GHCR con il commit SHA
-come tag e il deploy avviene via SSH.
+Telaio gira sul nuovo VPS Ubuntu 24.04 con Docker Compose. Il reverse proxy è Nginx UI nel container
+`nginx-ui`: il servizio web è collegato alla rete Docker esterna `proxy` con alias `telaio-web`.
+Le immagini vengono costruite su GitHub Actions, pubblicate su GHCR con il commit SHA come tag e distribuite via SSH.
 
 ```
-Internet ──443──▶ Nginx (host, Let's Encrypt)
-                     │
-                     ▼ 127.0.0.1:3100
+Internet ──443──▶ nginx-ui (Docker, Let's Encrypt)
+                         │
+                         ▼ rete Docker esterna "proxy" → telaio-web:3000
               ┌─────────────── Docker Compose (progetto telaio-prod) ───────────────┐
-              │  web ──┐                                                            │
-              │        ├── rete "backend" (interna, senza uscita) ── postgres 18    │
-              │  worker┘                                          └─ redis 7        │
+              │  web ──┬── rete "proxy" (condivisa con nginx-ui)                    │
+              │        ├── rete "backend" (interna) ── postgres 18                  │
+              │  worker┘                              └─ redis 7                    │
               │  migrate (job una tantum, prima di web e worker)                    │
               └─────────────────────────────────────────────────────────────────────┘
 ```
+
+La porta locale `127.0.0.1:3100` resta disponibile solo per diagnostica e health check dal VPS.
+PostgreSQL e Redis non pubblicano porte host.
 
 - Un solo `Dockerfile` (multi-stage) con due immagini: `telaio-web` (Next.js standalone) e `telaio-worker`
   (job BullMQ; con un altro comando esegue anche le migrazioni).
@@ -36,11 +39,11 @@ Internet ──443──▶ Nginx (host, Let's Encrypt)
 
 ## 1. Prerequisiti
 
-- Un VPS con Ubuntu 24.04, accesso `sudo`, Docker Engine con il plugin Compose v2 (≥ 2.20).
-- Il dominio `telaio.mattiacapelli.it` che punta al VPS.
-- Il repository su GitHub con GitHub Actions abilitate.
-- Se sul VPS girano già altri siti o container: nulla di quanto segue li tocca. Si aggiunge un virtual host Nginx,
-  un progetto Compose (`telaio-prod`) e una cartella `/opt/telaio`.
+- Il nuovo VPS Ubuntu 24.04 con Docker Engine e Docker Compose.
+- La rete Docker esterna `proxy` già esistente e condivisa con `nginx-ui`.
+- Il dominio `telaio.mattiacapelli.it` puntato a `13.140.222.243`.
+- Il repository GitHub con GitHub Actions abilitate.
+- Il deploy aggiunge il progetto Compose `telaio-prod` in `/opt/apps/telaio`; web si collega a `proxy`, mentre PostgreSQL e Redis restano nella rete backend interna.
 
 ## 2. DNS
 
@@ -57,9 +60,12 @@ dig +short telaio.mattiacapelli.it
 # Utente dedicato al deploy (nessuna password, accesso solo con chiave SSH)
 sudo adduser --disabled-password --gecos "" deploy
 sudo usermod -aG docker deploy
-sudo install -d -o deploy -g deploy -m 750 /opt/telaio
+sudo install -d -o deploy -g deploy -m 750 /opt/apps/telaio
 sudo install -d -o deploy -g deploy -m 700 /var/backups/telaio
 sudo install -m 640 -o deploy -g deploy /dev/null /var/log/telaio-backup.log
+
+# La rete proxy esistente deve essere visibile a Docker Compose.
+docker network inspect proxy >/dev/null
 
 # Chiave SSH solo per il deploy (generala sul tuo computer, non sul VPS):
 #   ssh-keygen -t ed25519 -C "telaio-deploy" -f telaio-deploy
@@ -72,14 +78,14 @@ sudo chown deploy:deploy /home/deploy/.ssh/authorized_keys && sudo chmod 600 /ho
 > L'utente nel gruppo `docker` equivale a root sul server. Per questo la chiave SSH è dedicata, vive solo nei
 > secrets di GitHub e il suo accesso si può revocare togliendola da `authorized_keys`.
 
-**Porta 3100.** Il web ascolta solo su `127.0.0.1:3100`. Verifica che sia libera:
+**Porta 3100.** Il web pubblica `127.0.0.1:3100` solo per diagnostica locale. Nginx UI non usa questa porta:
+raggiunge `telaio-web:3000` sulla rete Docker esterna `proxy`. Verifica che la porta locale sia libera:
 
 ```bash
 sudo ss -ltnp | grep ':3100' || echo "libera"
 ```
 
-Se è occupata, scegli un'altra porta: imposta `WEB_PORT` in `.env.production` e cambia la porta nell'`upstream`
-del file Nginx (passo 5).
+Se è occupata, modifica `WEB_PORT` in `.env.production`; l'alias Docker resta `telaio-web:3000`.
 
 ### Installazione di Docker (solo se manca)
 
@@ -93,12 +99,12 @@ docker --version && docker compose version   # se rispondono, salta questo blocc
 Sul VPS, come utente `deploy`:
 
 ```bash
-cd /opt/telaio
-# dal tuo computer:  scp .env.production.example deploy@<host>:/opt/telaio/.env.production
+cd /opt/apps/telaio
+# dal tuo computer:  scp .env.production.example deploy@<host>:/opt/apps/telaio/.env.production
 chmod 600 .env.production
 ```
 
-Modifica `/opt/telaio/.env.production` e sostituisci ogni `CAMBIA-…`:
+Modifica `/opt/apps/telaio/.env.production` e sostituisci ogni `CAMBIA-…`:
 
 ```bash
 openssl rand -hex 32   # BETTER_AUTH_SECRET
@@ -123,37 +129,42 @@ openssl rand -hex 24   # POSTGRES_PASSWORD, poi un altro per REDIS_PASSWORD
 
 `TELAIO_VERSION` non va scritta: la imposta il deploy.
 
-## 5. Nginx e certificato HTTPS
+## 5. Nginx UI e certificato HTTPS
 
-Si aggiunge **un solo** virtual host; gli altri siti non vengono modificati. I comandi sono nell'ordine in cui vanno
-eseguiti, dalla cartella del repository (o dopo aver copiato i file in `/opt/telaio/deploy/nginx/`).
+Il reverse proxy è il container Docker `nginx-ui`. Non installare un secondo Nginx sull'host e non modificare
+i virtual host di Twenty (`crm.mattiacapelli.it`) o della dashboard (`nginx.mattiacapelli.it`).
+
+Il DNS A di `telaio.mattiacapelli.it` deve puntare a `13.140.222.243`. Il webroot HTTP-01 condiviso con Nginx UI
+è `/opt/infrastructure/www`; Certbot è installato sull'host.
+
+Dopo aver copiato i file del repository in `/opt/apps/telaio`:
 
 ```bash
-sudo apt install -y nginx certbot          # se già presenti, nessun effetto
-sudo install -d /var/www/certbot
+CONF=/opt/infrastructure/nginx/sites-available/telaio.conf
+ENABLED=/opt/infrastructure/nginx/sites-enabled/telaio.conf
 
-# 5.1 Versione provvisoria: serve solo per ottenere il certificato
-sudo cp deploy/nginx/telaio.mattiacapelli.it.bootstrap.conf /etc/nginx/sites-available/telaio.mattiacapelli.it
-sudo ln -s /etc/nginx/sites-available/telaio.mattiacapelli.it /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+# 5.1 Virtual host provvisorio per la challenge Let's Encrypt
+sudo cp /opt/apps/telaio/deploy/nginx/telaio.mattiacapelli.it.bootstrap.conf "$CONF"
+sudo ln -s ../sites-available/telaio.conf "$ENABLED"
+docker exec nginx-ui nginx -t && docker exec nginx-ui nginx -s reload
 
-# 5.2 Certificato (challenge HTTP-01 con webroot)
-sudo certbot certonly --webroot -w /var/www/certbot -d telaio.mattiacapelli.it \
-  --agree-tos -m <la-tua-email> --deploy-hook "systemctl reload nginx"
+# 5.2 Certificato con webroot condiviso
+sudo certbot certonly --webroot -w /opt/infrastructure/www -d telaio.mattiacapelli.it \
+  --agree-tos -m <la-tua-email> \
+  --deploy-hook /etc/letsencrypt/renewal-hooks/deploy/20-reload-nginx-ui.sh
 
-# 5.3 Configurazione definitiva
-sudo cp deploy/nginx/telaio.mattiacapelli.it.conf /etc/nginx/sites-available/telaio.mattiacapelli.it
-sudo nginx -t && sudo systemctl reload nginx
+# 5.3 Virtual host definitivo: proxy verso telaio-web:3000 sulla rete Docker proxy
+sudo cp /opt/apps/telaio/deploy/nginx/telaio.mattiacapelli.it.conf "$CONF"
+docker exec nginx-ui nginx -t && docker exec nginx-ui nginx -s reload
 ```
 
-- Il rinnovo è automatico (timer `certbot.timer` di Ubuntu); l'`--deploy-hook` ricarica Nginx dopo ogni rinnovo.
-  Prova con `sudo certbot renew --dry-run`.
-- Se hai cambiato `WEB_PORT`, aggiorna `server 127.0.0.1:3100;` nell'`upstream` prima del passo 5.3.
-- La configurazione imposta HSTS (senza `includeSubDomains`), gli header forwarded, un limite ai tentativi di accesso,
-  e per `/mcp` disattiva il buffering (risposte in streaming).
-- Per il caricamento dei documenti dei progetti (`/api/progetti/<id>/documenti`) il limite del corpo è alzato a 260 MB
-  (10 file da 25 MB); il limite generale resta 10 MB. **Chi ha già installato Nginx deve ricopiare il file e ricaricare
-  Nginx (passo 5.3)**, altrimenti i caricamenti sopra 10 MB ricevono un errore 413.
+La configurazione definitiva usa il resolver Docker `127.0.0.11` per risolvere dinamicamente l'alias `telaio-web`.
+Può quindi essere caricata anche prima del primo deploy, quando il container applicativo non esiste ancora.
+
+- Il rinnovo è gestito da `certbot.timer`; il deploy hook `20-reload-nginx-ui.sh` ricarica il container Nginx UI.
+- Il virtual host imposta HSTS (senza `includeSubDomains`), header forwarded, limite ai tentativi di accesso e
+  buffering disattivato per `/mcp` (risposte in streaming).
+- Il limite upload generale è 10 MB; per i documenti progetto è 260 MB.
 
 ## 6. GitHub: GHCR, secrets e ambiente
 
@@ -185,17 +196,17 @@ Variabili (_Settings → Secrets and variables → Actions → Variables_), tutt
 
 | Variabile           | Predefinito                       | Uso                                            |
 | ------------------- | --------------------------------- | ---------------------------------------------- |
-| `VPS_SSH_PORT`      | `22`                              | porta SSH                                      |
-| `VPS_DEPLOY_PATH`   | `/opt/telaio`                     | cartella sul VPS                               |
-| `TELAIO_URL`        | `https://telaio.mattiacapelli.it` | indirizzo usato per la verifica finale         |
-| `DEPLOY_AUTOMATICO` | (non impostata)                   | `false` spegne il deploy a ogni push su `main` |
+| `VPS_SSH_PORT`      | `22`                                      | porta SSH |
+| `VPS_DEPLOY_PATH`   | `/opt/apps/telaio`                        | cartella sul nuovo VPS |
+| `TELAIO_URL`        | `https://telaio.mattiacapelli.it`         | URL usato per la verifica finale |
+| `DEPLOY_AUTOMATICO` | prima `false`, poi `true`                  | opt-in per il deploy automatico su `v2` |
 
 Per avere una **conferma manuale** prima di ogni deploy: nell'ambiente `production` attiva _Required reviewers_.
 
 ### Pipeline
 
-- `ci-cd.yml`: su ogni PR lint, typecheck, test e build delle immagini (senza pubblicare). Su `main`, in più, pubblica
-  le immagini (tag = SHA completo, mai `latest`) e lancia il deploy.
+- `ci-cd.yml`: su ogni PR esegue lint, typecheck, test e build senza pubblicare. Su push a `main` o `v2`
+  pubblica immagini su GHCR con tag SHA completo; solo push su `v2` con `DEPLOY_AUTOMATICO=true` avvia il deploy.
 - `_deploy.yml`: workflow riutilizzabile. Verifica che le immagini esistano su GHCR, copia `docker-compose.prod.yml`
   e `deploy/` sul VPS (del commit che si sta pubblicando), esegue `deploy/deploy.sh` e controlla `/api/health`
   da internet, verificando anche che risponda la versione attesa.
@@ -207,13 +218,14 @@ allo SHA del commit.
 
 ## 7. Primo deploy (procedura)
 
-1. **DNS** (sezione 2) e **VPS** (sezione 3) pronti.
-2. **`.env.production`** compilato sul VPS (sezione 4).
-3. **Nginx e certificato** (sezione 5): senza, il deploy riesce ma la verifica finale da internet fallisce.
-4. **Secrets e ambiente `production`** su GitHub (sezione 6).
-5. Fai il merge su `main` (o lancia _Deploy manuale_ con lo SHA di un commit già costruito). La pipeline:
-   costruisce e pubblica le immagini → copia gli script → `deploy.sh`: scarica le immagini, avvia Postgres e Redis,
-   applica le migrazioni, avvia web e worker, controlla `/api/health`.
+1. **DNS**: record A `telaio` verso `13.140.222.243`; verifica che `proxy` esista sul VPS.
+2. **VPS**: utente SSH `deploy` nel gruppo `docker`, directory `/opt/apps/telaio` e chiave dedicata.
+3. **`.env.production`** compilato sul VPS (sezione 4).
+4. **Nginx UI e certificato** configurati (sezione 5).
+5. **Secrets/variabili GitHub** configurati (sezione 6). Lascia `DEPLOY_AUTOMATICO=false`.
+6. Esegui un push su `v2`: CI verifica e pubblica le immagini GHCR, senza fare deploy.
+7. In Actions lancia `Deploy manuale` con lo SHA completo appena pubblicato. Dopo il collaudo imposta
+   `DEPLOY_AUTOMATICO=true` per attivare i deploy automatici sui push successivi a `v2`.
 6. **Prima configurazione dal browser.** Apri `https://telaio.mattiacapelli.it`: il database è vuoto, quindi
    l'app ti porta da sola su `/setup`. Inserisci il `SETUP_TOKEN` e segui i sei passi (azienda, primo amministratore,
    sicurezza, preferenze, conferma). Non servono script né accesso SSH. Vedi la sezione «Prima configurazione».
@@ -222,8 +234,8 @@ allo SHA del commit.
 8. **Attiva i backup** (sezione 9): cron e copia offsite. Fallo subito: il primo deploy non ha avuto un backup
    precedente da cui ripartire.
 
-Per fare tutto a mano senza GitHub (diagnosi): copia `docker-compose.prod.yml` e `deploy/` in `/opt/telaio` e
-lancia `./deploy/deploy.sh <sha>` dopo il login a GHCR.
+Per diagnosi manuale: copia `docker-compose.prod.yml` e `deploy/` in `/opt/apps/telaio`, poi esegui
+`./deploy/deploy.sh <sha>` dopo aver effettuato il login a GHCR.
 
 ## Prima configurazione (wizard)
 
@@ -251,7 +263,7 @@ Al primo avvio con un database senza stato di configurazione, ogni indirizzo del
 Non esiste una procedura di «password dimenticata» via email. Se perdi l'accesso, si interviene dal server, dove
 l'hash si genera con la stessa funzione di Better Auth contenuta nell'immagine del worker. Provato su uno stack reale.
 
-**Password dimenticata** (come utente `deploy`, in `/opt/telaio`):
+**Password dimenticata** (come utente `deploy`, in `/opt/apps/telaio`):
 
 ```bash
 read -r -s -p "Nuova password: " NUOVA_PASSWORD; echo; export NUOVA_PASSWORD
@@ -299,7 +311,7 @@ Un push su `main` fa partire la pipeline. `deploy/deploy.sh <sha>` esegue, nell'
 5. aggiorna web e worker e aspetta che i loro healthcheck siano sani;
 6. verifica `/api/health` in locale (stato `ok` **e** versione uguale a quella pubblicata);
 7. se la verifica fallisce, **torna alla versione precedente** e il deploy risulta fallito;
-8. salva la versione in `/opt/telaio/.versione` (la precedente in `.versione-precedente`).
+8. salva la versione in `/opt/apps/telaio/.versione` (la precedente in `.versione-precedente`).
 
 **Regola per le migrazioni.** Le migrazioni girano mentre la versione vecchia è ancora in esecuzione, e un rollback
 riporta il codice vecchio sul database nuovo. Quindi devono essere _retrocompatibili_: aggiungere colonne, tabelle e
@@ -308,10 +320,11 @@ indici va bene; rinominare o eliminare colonne si fa in due release (prima si sm
 Controlli utili:
 
 ```bash
-cd /opt/telaio
+cd /opt/apps/telaio
 ./deploy/compose.sh ps                      # stato dei servizi
 ./deploy/compose.sh logs -f web             # log (con rotazione: 5 file da 10 MB per servizio)
-curl -s http://127.0.0.1:3100/api/health    # {"stato":"ok","database":"ok","redis":"ok","versione":"<sha>"}
+curl -s http://127.0.0.1:3100/api/health    # health check locale sul VPS
+# Nginx UI instrada il traffico pubblico verso telaio-web:3000 sulla rete Docker proxy
 cat .versione                               # versione in esecuzione
 ```
 
@@ -341,7 +354,7 @@ age-keygen -o telaio-backup.key         # TIENI la chiave privata FUORI dal VPS 
 rclone config                           # crea un remoto (Backblaze B2, S3, Hetzner Storage Box…)
 ```
 
-In `/opt/telaio/.env.production`:
+In `/opt/apps/telaio/.env.production`:
 
 ```bash
 BACKUP_AGE_RECIPIENT=age1…                       # chiave pubblica
@@ -355,8 +368,8 @@ cancella nulla da remoto. Il job notturno interno del worker (02:30) tiene inolt
 ### Pianificazione
 
 ```bash
-sudo cp /opt/telaio/deploy/cron/telaio-backup /etc/cron.d/telaio-backup
-sudo cp /opt/telaio/deploy/cron/telaio-backup.logrotate /etc/logrotate.d/telaio-backup
+sudo cp /opt/apps/telaio/deploy/cron/telaio-backup /etc/cron.d/telaio-backup
+sudo cp /opt/apps/telaio/deploy/cron/telaio-backup.logrotate /etc/logrotate.d/telaio-backup
 ```
 
 Backup ogni notte alle 03:30 e, la domenica, verifica automatica dell'ultimo backup (entrambi come utente `deploy`). Per controllare che i backup
@@ -366,7 +379,7 @@ girino, `/var/backups/telaio/ultimo-backup-ok` contiene l'orario dell'ultimo riu
 ### Verifica dell'integrità
 
 ```bash
-cd /opt/telaio
+cd /opt/apps/telaio
 ls -lt /var/backups/telaio | head
 ./deploy/restore.sh --verifica /var/backups/telaio/telaio-<data>.dump
 ```
@@ -382,17 +395,17 @@ ripristinato non è una garanzia.
 ### Rollback applicativo (il codice, non i dati)
 
 _Actions → Deploy manuale → Run workflow_ con lo SHA della versione precedente (lo trovi in
-`/opt/telaio/.versione-precedente` o nella cronologia dei commit). Il deploy rifà gli stessi passi, incluso il backup.
+`/opt/apps/telaio/.versione-precedente` o nella cronologia dei commit). Il deploy rifà gli stessi passi, incluso il backup.
 Se le migrazioni sono retrocompatibili (sezione 8), il codice vecchio funziona sul database nuovo.
 
-Senza GitHub: `ssh deploy@<host> "cd /opt/telaio && ./deploy/deploy.sh <sha>"` (dopo il login a GHCR).
+Senza GitHub: `ssh deploy@<host> "cd /opt/apps/telaio && ./deploy/deploy.sh <sha>"` (dopo il login a GHCR).
 
 ### Ripristino del database
 
 Quando i dati sono danneggiati o una migrazione è andata male in modo non retrocompatibile:
 
 ```bash
-cd /opt/telaio
+cd /opt/apps/telaio
 ls -lt /var/backups/telaio                       # scegli il backup (c'è anche "prima-del-deploy")
 ./deploy/restore.sh --ripristina /var/backups/telaio/telaio-<data>.dump
 ```
@@ -408,7 +421,7 @@ Da un backup offsite: copia il `.dump.age` sul VPS e usa `BACKUP_AGE_IDENTITY` c
 ### Perdita totale del VPS
 
 Nuovo VPS → sezioni 2-6 → recupera `env-<data>.age` dalla copia offsite e decifralo con la chiave age
-(`age -d -i telaio-backup.key env-<data>.age > /opt/telaio/.env.production`: contiene **lo stesso**
+(`age -d -i telaio-backup.key env-<data>.age > /opt/apps/telaio/.env.production`: contiene **lo stesso**
 `BETTER_AUTH_SECRET`) → primo deploy → **non** completare il wizard: `restore.sh --ripristina` con l'ultimo backup riporta anche lo stato di
 configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 
@@ -420,14 +433,14 @@ configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 | La pipeline fallisce su «Le immagini esistono su GHCR»       | il job `immagini` non è riuscito, o la versione non è mai stata pubblicata: controlla la scheda Actions                                                                    |
 | `denied` / `unauthorized` al pull                            | login a GHCR mancante o pacchetto non accessibile al repository (_Package settings → Manage Actions access_)                                                               |
 | `Host key verification failed`                               | `VPS_SSH_KNOWN_HOSTS` mancante o non corrispondente al server                                                                                                              |
-| Il deploy riesce ma la verifica esterna fallisce             | Nginx o certificato: `sudo nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS; porta dell'`upstream` diversa da `WEB_PORT`                               |
+| Il deploy riesce ma la verifica esterna fallisce             | Nginx UI o certificato: `docker exec nginx-ui nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS e rete Docker `proxy`                         |
 | `502 Bad Gateway`                                            | il web non è in ascolto: `./deploy/compose.sh ps` e `logs web`                                                                                                             |
 | `/api/health` risponde 503                                   | guarda quale tra `database` e `redis` è `errore`: `./deploy/compose.sh ps`, `logs postgres` o `logs redis`                                                                 |
 | `port is already allocated` su 3100                          | porta occupata: cambia `WEB_PORT` e l'upstream Nginx                                                                                                                       |
 | Migrazioni fallite                                           | il deploy si ferma prima di toccare web e worker. Leggi l'errore (`./deploy/compose.sh logs migrate`), correggi e ripubblica                                               |
 | Login che non funziona dietro Nginx, errore «Invalid origin» | `BETTER_AUTH_URL` diverso dall'indirizzo reale (http/https, dominio)                                                                                                       |
 | `/setup` mostra «Configurazione non disponibile»             | in produzione manca `SETUP_TOKEN`, è troppo corto (< 16 caratteri) o è ancora il valore di esempio: correggi `.env.production` e riavvia (`./deploy/compose.sh up -d web`) |
-| `/setup` chiede un codice che non ricordo                    | è il `SETUP_TOKEN` di `/opt/telaio/.env.production`                                                                                                                        |
+| `/setup` chiede un codice che non ricordo                    | è il `SETUP_TOKEN` di `/opt/apps/telaio/.env.production`                                                                                                                        |
 | Le passkey smettono di funzionare                            | è cambiato il dominio in `BETTER_AUTH_URL`: vanno registrate di nuovo                                                                                                      |
 | La 2FA non accetta più i codici                              | `BETTER_AUTH_SECRET` cambiato: ripristina quello originale (sta nel backup cifrato). Come ultima risorsa, i codici di recupero                                             |
 | La PWA mostra una versione vecchia                           | il Service Worker si aggiorna su richiesta dell'utente: compare l'avviso «È disponibile un aggiornamento»                                                                  |
@@ -440,4 +453,4 @@ configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 - Le immagini di base (`postgres:18-alpine`, `redis:7-alpine`) seguono i tag delle convenzioni del progetto; per le patch
   di sicurezza ricrea i container con `./deploy/compose.sh pull postgres redis && ./deploy/compose.sh up -d`.
 - I container web e worker girano senza privilegi (utente `node`, `cap_drop: ALL`, `no-new-privileges`).
-- I segreti stanno solo in `/opt/telaio/.env.production` (600) e nei secrets di GitHub; non entrano mai nelle immagini.
+- I segreti stanno solo in `/opt/apps/telaio/.env.production` (600) e nei secrets di GitHub; non entrano mai nelle immagini.
