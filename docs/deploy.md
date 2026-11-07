@@ -201,7 +201,7 @@ Variabili (_Settings → Secrets and variables → Actions → Variables_), tutt
 | `TELAIO_URL`        | `https://telaio.mattiacapelli.it`         | URL usato per la verifica finale |
 | `DEPLOY_AUTOMATICO` | prima `false`, poi `true`                  | opt-in per il deploy automatico su `v2` |
 
-Per avere una **conferma manuale** prima di ogni deploy: nell'ambiente `production` attiva _Required reviewers_.
+`DEPLOY_AUTOMATICO` va creata come **variabile di repository** (Settings → Secrets and variables → Actions → Variables), perché il workflow chiamante la legge prima di entrare nell'ambiente `production`. Per semplicità puoi salvare lì anche le altre tre variabili.\n\nPer avere una **conferma manuale** prima di ogni deploy: nell'ambiente `production` attiva _Required reviewers_.
 
 ### Pipeline
 
@@ -218,24 +218,20 @@ allo SHA del commit.
 
 ## 7. Primo deploy (procedura)
 
-1. **DNS**: record A `telaio` verso `13.140.222.243`; verifica che `proxy` esista sul VPS.
-2. **VPS**: utente SSH `deploy` nel gruppo `docker`, directory `/opt/apps/telaio` e chiave dedicata.
-3. **`.env.production`** compilato sul VPS (sezione 4).
-4. **Nginx UI e certificato** configurati (sezione 5).
-5. **Secrets/variabili GitHub** configurati (sezione 6). Lascia `DEPLOY_AUTOMATICO=false`.
-6. Esegui un push su `v2`: CI verifica e pubblica le immagini GHCR, senza fare deploy.
-7. In Actions lancia `Deploy manuale` con lo SHA completo appena pubblicato. Dopo il collaudo imposta
-   `DEPLOY_AUTOMATICO=true` per attivare i deploy automatici sui push successivi a `v2`.
-6. **Prima configurazione dal browser.** Apri `https://telaio.mattiacapelli.it`: il database è vuoto, quindi
-   l'app ti porta da sola su `/setup`. Inserisci il `SETUP_TOKEN` e segui i sei passi (azienda, primo amministratore,
-   sicurezza, preferenze, conferma). Non servono script né accesso SSH. Vedi la sezione «Prima configurazione».
-7. Accedi con l'email e la password scelte. Se hai lasciato attiva la guida, ti porta in _Profilo e sicurezza_ per
-   attivare la 2FA e registrare una passkey.
-8. **Attiva i backup** (sezione 9): cron e copia offsite. Fallo subito: il primo deploy non ha avuto un backup
-   precedente da cui ripartire.
+1. **DNS**: crea il record A `telaio` verso `13.140.222.243`; non creare un record AAAA perché questo VPS non pubblica IPv6.
+2. **VPS**: crea l'utente SSH `deploy`, aggiungilo al gruppo `docker`, prepara `/opt/apps/telaio` e installa la chiave dedicata per GitHub Actions.
+3. **Variabili**: crea `/opt/apps/telaio/.env.production` con i segreti generati sul VPS (sezione 4). Non copiarlo nel repository.
+4. **Proxy**: installa prima il virtual host bootstrap su Nginx UI, emetti il certificato Let's Encrypt e poi attiva il virtual host definitivo (sezione 5).
+5. **GitHub**: crea l'ambiente `production`, inserisci i quattro secrets e configura le variabili (sezione 6). Mantieni `DEPLOY_AUTOMATICO=false`.
+6. **Build**: esegui un push su `v2`. GitHub Actions esegue CI e pubblica le immagini GHCR, ma non fa deploy.
+7. **Primo deploy**: da Actions → Deploy manuale → Run workflow, inserisci lo SHA completo del commit appena pubblicato. Il workflow copia Compose e script, avvia database e Redis, applica le migrazioni, avvia web e worker e verifica `/api/health`.
+8. **Setup**: apri `https://telaio.mattiacapelli.it/setup`, inserisci il `SETUP_TOKEN` e completa la creazione dell'azienda e del primo amministratore.
+9. **Autodeploy**: dopo aver verificato login, health check e collegamento a Twenty, imposta la variabile di repository `DEPLOY_AUTOMATICO=true`. I push successivi su `v2` faranno deploy automatico.
+
+I backup pianificati (cron e copia offsite) non vengono installati in questa procedura. Il deploy mantiene comunque il backup locale di sicurezza prima degli aggiornamenti successivi al primo rilascio.
 
 Per diagnosi manuale: copia `docker-compose.prod.yml` e `deploy/` in `/opt/apps/telaio`, poi esegui
-`./deploy/deploy.sh <sha>` dopo aver effettuato il login a GHCR.
+`./deploy/deploy.sh <sha>` dopo il login a GHCR.
 
 ## Prima configurazione (wizard)
 
