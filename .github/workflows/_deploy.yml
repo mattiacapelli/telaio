@@ -34,7 +34,7 @@ jobs:
       cancel-in-progress: false
     env:
       VERSIONE: ${{ inputs.versione }}
-      PERCORSO: ${{ vars.VPS_DEPLOY_PATH || '/opt/telaio' }}
+      PERCORSO: ${{ vars.VPS_DEPLOY_PATH || '/opt/apps/telaio' }}
       PORTA_SSH: ${{ vars.VPS_SSH_PORT || '22' }}
       URL_APP: ${{ vars.TELAIO_URL || 'https://telaio.mattiacapelli.it' }}
     steps:
