@@ -1,4 +1,4 @@
-# Telaio in produzione (VPS). Il reverse proxy è Nginx sull'host: il web ascolta solo su 127.0.0.1.
+# Telaio in produzione (VPS). Nginx UI raggiunge web sulla rete Docker esterna `proxy`; la porta 3100 resta solo su loopback.
 # Non si usa a mano: `deploy/deploy.sh <versione>` pubblica una versione e `deploy/compose.sh` lancia
 # docker compose con il file di variabili e la versione corrente. Vedi docs/deploy.md.
 #
@@ -104,8 +104,14 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-}
-    # backend è interna (senza uscita verso internet): edge serve per Twenty, SMTP e webhook in uscita.
-    networks: [backend, edge]
+    # Il proxy Nginx UI raggiunge web tramite l'alias telaio-web sulla rete esterna proxy.
+    # backend resta interna per DB/Redis; edge consente a web di chiamare servizi esterni.
+    networks:
+      backend: {}
+      edge: {}
+      proxy:
+        aliases:
+          - telaio-web
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
@@ -141,6 +147,10 @@ networks:
   backend:
     internal: true
   edge: {}
+  # Rete esterna già condivisa con il container nginx-ui.
+  proxy:
+    external: true
+    name: proxy
 
 volumes:
   pgdata:
