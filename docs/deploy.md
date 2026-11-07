@@ -151,7 +151,7 @@ docker exec nginx-ui nginx -t && docker exec nginx-ui nginx -s reload
 # 5.2 Certificato con webroot condiviso
 sudo certbot certonly --webroot -w /opt/infrastructure/www -d telaio.mattiacapelli.it \
   --agree-tos -m <la-tua-email> \
-  --deploy-hook /etc/letsencrypt/renewal-hooks/deploy/20-reload-nginx-ui.sh
+  --deploy-hook "docker exec nginx-ui nginx -s reload"
 
 # 5.3 Virtual host definitivo: proxy verso telaio-web:3000 sulla rete Docker proxy
 sudo cp /opt/apps/telaio/deploy/nginx/telaio.mattiacapelli.it.conf "$CONF"
@@ -161,7 +161,7 @@ docker exec nginx-ui nginx -t && docker exec nginx-ui nginx -s reload
 La configurazione definitiva usa il resolver Docker `127.0.0.11` per risolvere dinamicamente l'alias `telaio-web`.
 Può quindi essere caricata anche prima del primo deploy, quando il container applicativo non esiste ancora.
 
-- Il rinnovo è gestito da `certbot.timer`; il deploy hook `20-reload-nginx-ui.sh` ricarica il container Nginx UI.
+- Il rinnovo è gestito da `certbot.timer`; il deploy hook esegue `docker exec nginx-ui nginx -s reload`.
 - Il virtual host imposta HSTS (senza `includeSubDomains`), header forwarded, limite ai tentativi di accesso e
   buffering disattivato per `/mcp` (risposte in streaming).
 - Il limite upload generale è 10 MB; per i documenti progetto è 260 MB.
