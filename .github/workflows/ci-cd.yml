@@ -1,8 +1,8 @@
 # CI/CD di Telaio.
 #   pull request → lint, typecheck, test e build delle immagini (senza pubblicarle)
-#   push su main → in più: pubblica le immagini su GHCR (tag = SHA del commit) e fa il deploy sul VPS
-# Il deploy automatico si disattiva impostando la variabile di repository DEPLOY_AUTOMATICO=false;
-# per una versione specifica (o un rollback) usa il workflow «Deploy manuale».
+#   push su main o v2 → pubblica le immagini su GHCR (tag = SHA del commit)
+#   push su v2 → deploy automatico solo se la variabile di repository DEPLOY_AUTOMATICO=true
+# Il primo deploy si esegue con «Deploy manuale»; per disattivare l'autodeploy imposta DEPLOY_AUTOMATICO=false.
 name: CI/CD
 
 on:
@@ -88,7 +88,7 @@ jobs:
   deploy:
     name: Deploy in produzione
     needs: immagini
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_AUTOMATICO != 'false'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/v2' && vars.DEPLOY_AUTOMATICO == 'true'
     permissions:
       contents: read
       packages: read
