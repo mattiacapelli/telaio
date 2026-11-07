@@ -6,7 +6,7 @@
 #   VPS_SSH_KEY          chiave privata SSH (solo per il deploy)
 #   VPS_SSH_KNOWN_HOSTS  riga di known_hosts del VPS (ssh-keyscan -t ed25519 <host>, verificata a mano)
 # Variabili (opzionali):
-#   VPS_SSH_PORT (22), VPS_DEPLOY_PATH (/opt/telaio), TELAIO_URL (https://telaio.mattiacapelli.it)
+#   VPS_SSH_PORT (22), VPS_DEPLOY_PATH (/opt/apps/telaio), TELAIO_URL (https://telaio.mattiacapelli.it)
 name: Deploy (riutilizzabile)
 
 on:
