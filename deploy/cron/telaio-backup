@@ -6,6 +6,6 @@ SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Ogni notte alle 03:30 (il job interno del worker fa la sua copia locale alle 02:30).
-30 3 * * * deploy /opt/telaio/deploy/backup.sh >> /var/log/telaio-backup.log 2>&1
+30 3 * * * deploy /opt/apps/telaio/deploy/backup.sh >> /var/log/telaio-backup.log 2>&1
 # Ogni domenica alle 05:00 prova a ripristinare l'ultimo backup in un database temporaneo.
-0 5 * * 0 deploy /opt/telaio/deploy/restore.sh --verifica "$(ls -1t /var/backups/telaio/telaio-*.dump | head -1)" >> /var/log/telaio-backup.log 2>&1
+0 5 * * 0 deploy /opt/apps/telaio/deploy/restore.sh --verifica "$(ls -1t /var/backups/telaio/telaio-*.dump | head -1)" >> /var/log/telaio-backup.log 2>&1
