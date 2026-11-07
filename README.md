@@ -83,7 +83,7 @@ senza dipendenze di sviluppo.
 
 - **Sviluppo:** `docker-compose.yml` avvia Postgres, Redis, Mailpit e MinIO; `docker compose --profile app up --build`
   prova anche le immagini di produzione in locale (web su 3000).
-- **Produzione:** `docker-compose.prod.yml` (Postgres 18, Redis 7, migrazioni, web, worker), Nginx sull'host,
+- **Produzione:** `docker-compose.prod.yml` (Postgres 18, Redis 7, migrazioni, web, worker), Nginx UI in Docker sulla rete condivisa `proxy`,
   immagini su GHCR con il commit SHA come tag e deploy via GitHub Actions. Salute dell'app su `/api/health`.
   Guida completa (DNS, VPS, secrets, primo deploy, backup, rollback, troubleshooting): [docs/deploy.md](docs/deploy.md).
 - Le variabili di produzione sono in `.env.production.example`; il file vero sta solo sul VPS.
