@@ -63,7 +63,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       .from(preventivi)
       .innerJoin(ragioniSociali, eq(ragioniSociali.id, preventivi.ragioneSocialeId))
       .where(sql`${preventivi.clienteRefId} = ${refId} and ${preventivi.deletedAt} is null`)
-      .orderBy(desc(preventivi.createdAt)),
+      .orderBy(desc(preventivi.dataPreventivo), desc(preventivi.createdAt)),
     db
       .select({ i: incassi, conto: conti.nome, tipo: conti.tipo })
       .from(incassi)
@@ -251,9 +251,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
                     <Td>
                       <Tag tone={s?.tone}>{s?.label ?? p.stato}</Tag>
                     </Td>
-                    <Td className="tabular-nums text-fg-2">
-                      {formatData(p.createdAt.toISOString())}
-                    </Td>
+                    <Td className="tabular-nums text-fg-2">{formatData(p.dataPreventivo)}</Td>
                   </tr>
                 );
               })}

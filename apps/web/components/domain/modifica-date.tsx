@@ -1,5 +1,6 @@
 import { modificaDateFatturaAction } from "@/app/(app)/fatture/actions";
 import { modificaDataIncassoAction } from "@/app/(app)/incassi/actions";
+import { modificaDataPreventivoAction } from "@/app/(app)/preventivi/[id]/actions";
 import type { ButtonProps } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { FormModal } from "@/components/ui/form-modal";
@@ -69,6 +70,35 @@ export function ModificaDateFattura({
           <Input name="scadenza" type="date" required defaultValue={fattura.scadenza} />
         </Field>
       </div>
+    </FormModal>
+  );
+}
+
+/** Modale «Modifica data» di un preventivo già inviato: resta nell'anno del suo numero. */
+export function ModificaDataPreventivo({
+  preventivo,
+}: {
+  preventivo: { id: string; anno: number; data: string };
+}) {
+  return (
+    <FormModal
+      trigger="Modifica data"
+      triggerVariant="secondary"
+      title="Modifica la data del preventivo"
+      description={`Deve restare nel ${preventivo.anno}, anno del numero. La scadenza si sposta di altrettanto.`}
+      action={modificaDataPreventivoAction}
+    >
+      <input type="hidden" name="id" value={preventivo.id} />
+      <Field label="Data" name="data">
+        <Input
+          name="data"
+          type="date"
+          required
+          min={`${preventivo.anno}-01-01`}
+          max={`${preventivo.anno}-12-31`}
+          defaultValue={preventivo.data}
+        />
+      </Field>
     </FormModal>
   );
 }

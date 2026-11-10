@@ -57,6 +57,13 @@
       "when": 1793833600957,
       "tag": "0007_ticket_e_documenti",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794329557093,
+      "tag": "0008_data_preventivo",
+      "breakpoints": true
     }
   ]
 }

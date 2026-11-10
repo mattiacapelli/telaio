@@ -69,6 +69,8 @@ Per ragione sociale, tipo documento e anno, formato configurabile con `{AAAA}`, 
 
 All'emissione (`inviato` per i preventivi, `emessa` per le fatture) si salva `snapshot` = emittente + cliente + regole IVA + totali. Le modifiche successive alle impostazioni non toccano i documenti emessi.
 
+**Data del preventivo.** Ogni preventivo ha una data (`data_preventivo`): di norma oggi, ma nell'editor si può mettere una data passata, per registrare preventivi già fatti. La data decide l'`anno` e quindi la numerazione (il numero segue l'anno di quella data), e la validità conta da lì. In bozza la data si cambia dall'editor (anche verso un altro anno); dopo l'invio con «Modifica data» (o `modifica_data_preventivo` da MCP), ma solo dentro l'anno del numero, e la scadenza si sposta di altrettanto. Elenco, dettaglio, PDF e scheda cliente mostrano questa data, non quella di creazione. I preventivi esistenti hanno ricevuto come data il giorno di creazione (migrazione `0008`). Audit: `preventivo.data_modificata`.
+
 **Modifica della bozza.** Finché il preventivo è in `bozza` si può riaprire nell'editor (`/preventivi/[id]/modifica`, tasto «Modifica» nel dettaglio) e cambiare tutto: emittente, cliente, oggetto, validità, righe, prezzi e alternative. Righe e totali si ricalcolano come alla creazione, lo snapshot si rinfresca (emittente, cliente, regole) e il preventivo resta lo stesso, senza numero. La validità conta dalla data di creazione. Dopo l'invio non si modifica più: il tasto sparisce e la pagina di modifica rimanda al dettaglio. Audit: `preventivo.modificato`. Le note, che l'editor non mostra, si conservano.
 
 ## Solleciti: sempre con conferma

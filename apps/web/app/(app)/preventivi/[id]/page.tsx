@@ -32,6 +32,7 @@ import { notFound } from "next/navigation";
 import { creaFatturaDaPreventivoAction } from "@/app/(app)/fatture/actions";
 import { CreaProgettoDaPreventivo } from "@/app/(app)/progetti/crea-da-preventivo";
 import { AccettaPreventivo } from "@/components/domain/accetta-preventivo";
+import { ModificaDataPreventivo } from "@/components/domain/modifica-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -174,6 +175,11 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
               <Button asChild variant="secondary">
                 <Link href={`/preventivi/${p.id}/modifica`}>Modifica</Link>
               </Button>
+            )}
+            {p.stato !== "bozza" && (
+              <ModificaDataPreventivo
+                preventivo={{ id: p.id, anno: p.anno, data: p.dataPreventivo }}
+              />
             )}
             <Button asChild variant="secondary">
               <a href={`/api/pdf/preventivi/${p.id}`}>Scarica PDF</a>
@@ -542,8 +548,8 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
             <DefList
               voci={[
                 {
-                  etichetta: "Creato il",
-                  valore: formatData(p.createdAt.toISOString()),
+                  etichetta: "Data del preventivo",
+                  valore: formatData(p.dataPreventivo),
                   numerico: true,
                 },
                 { etichetta: "Valido fino al", valore: formatData(p.validoFino), numerico: true },

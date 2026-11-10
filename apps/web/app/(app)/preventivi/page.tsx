@@ -60,7 +60,7 @@ export default async function PreventiviPage() {
       .innerJoin(ragioniSociali, eq(ragioniSociali.id, preventivi.ragioneSocialeId))
       .leftJoin(clientiRef, eq(clientiRef.id, preventivi.clienteRefId))
       .where(isNull(preventivi.deletedAt))
-      .orderBy(desc(preventivi.createdAt))
+      .orderBy(desc(preventivi.dataPreventivo), desc(preventivi.createdAt))
       .limit(500),
   ]);
   const righePerPreventivo = new Map<string, (typeof preventivoRighe.$inferSelect)[]>();
@@ -90,10 +90,10 @@ export default async function PreventiviPage() {
   const attesa = tutti.filter(({ p }) => p.stato === "inviato" || p.stato === "in_revisione");
   const attesaNetto = attesa.reduce((s, { p }) => s + p.imponibileCent, 0);
   const attesaLordo = attesa.reduce((s, { p }) => s + p.totaleCent, 0);
-  const limite = new Date(Date.now() - 90 * 86400000);
+  const limite = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   const chiusi = tutti.filter(
     ({ p }) =>
-      p.createdAt >= limite &&
+      p.dataPreventivo >= limite &&
       ["accettato", "accettato_parzialmente", "rifiutato", "scaduto"].includes(p.stato),
   );
   const accettazione = chiusi.length
@@ -136,7 +136,7 @@ export default async function PreventiviPage() {
       etichettaStato: scad
         ? `Scade tra ${giorniA(p.validoFino ?? dataOggi, dataOggi)} gg`
         : (ETICHETTE[p.stato] ?? p.stato),
-      data: p.createdAt.toISOString().slice(0, 10),
+      data: p.dataPreventivo,
     };
   });
 

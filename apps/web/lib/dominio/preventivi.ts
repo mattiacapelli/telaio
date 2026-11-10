@@ -21,7 +21,7 @@ import {
   ragioniSociali,
 } from "@telaio/db";
 import { z } from "zod";
-import { oggi } from "../date";
+import { dataValida, oggi, reData } from "../date";
 import { regoleDa } from "../regole";
 import { emettiEvento } from "../webhooks";
 import { risolviClienteRef } from "./cliente-ref";
@@ -31,6 +31,13 @@ function aggiungiGiorni(data: string, giorni: number): string {
   d.setUTCDate(d.getUTCDate() + giorni);
   return d.toISOString().slice(0, 10);
 }
+
+/** Data del documento: vuota = oggi; accetta anche date passate (preventivi già fatti). */
+const dataPreventivo = z
+  .string()
+  .regex(reData, "Data nel formato AAAA-MM-GG")
+  .refine(dataValida, "Data non valida")
+  .optional();
 
 export const creaPreventivoSchema = z.object({
   ragioneSocialeId: z.uuid(),
@@ -44,6 +51,8 @@ export const creaPreventivoSchema = z.object({
   scontoUnaTantumBp: z.number().int().min(0).max(10000).default(0),
   /** giorni di validità dall'emissione; vuoto = nessuna scadenza */
   validitaGiorni: z.number().int().min(1).max(365).optional(),
+  /** data del preventivo (AAAA-MM-GG): vuota = oggi; può essere passata. La validità conta da qui. */
+  data: dataPreventivo,
 });
 export type CreaPreventivoInput = z.infer<typeof creaPreventivoSchema>;
 
@@ -73,6 +82,7 @@ export const creaPreventivoLiberoSchema = z
     oggetto: z.string().trim().min(1).optional(),
     note: z.string().trim().optional(),
     validitaGiorni: z.number().int().min(1).max(365).optional(),
+    data: dataPreventivo,
   })
   .superRefine((v, ctx) => {
     const errore = erroreGruppi(
@@ -213,6 +223,7 @@ export async function creaPreventivoDaListino(
     oggetto: dati.oggetto ?? `${base.b.nome}${moduli.length ? ` + ${moduli.length} moduli` : ""}`,
     note: dati.note,
     validitaGiorni: dati.validitaGiorni,
+    data: dati.data,
   });
 }
 
@@ -263,17 +274,19 @@ export async function creaPreventivoLibero(
     regole,
   );
 
+  const dataDoc = dati.data ?? oggi();
   const creato = await db.transaction(async (tx) => {
     const [p] = await tx
       .insert(preventivi)
       .values({
         ragioneSocialeId: rs.id,
         clienteRefId,
-        anno: new Date().getFullYear(),
+        anno: Number(dataDoc.slice(0, 4)),
+        dataPreventivo: dataDoc,
         stato: "bozza",
         oggetto: dati.oggetto ?? righe[0]?.descrizione.slice(0, 120) ?? "Preventivo",
         note: dati.note || null,
-        validoFino: dati.validitaGiorni ? aggiungiGiorni(oggi(), dati.validitaGiorni) : null,
+        validoFino: dati.validitaGiorni ? aggiungiGiorni(dataDoc, dati.validitaGiorni) : null,
         snapshot: {
           emittente: {
             id: rs.id,
@@ -342,6 +355,7 @@ export async function aggiornaPreventivoBozza(
       .for("update");
     if (!p) throw new Error("Preventivo non trovato");
     if (p.stato !== "bozza") throw new Error("Si può modificare solo un preventivo in bozza");
+    const dataDoc = dati.data ?? p.dataPreventivo;
 
     await tx
       .update(preventivi)
@@ -350,9 +364,9 @@ export async function aggiornaPreventivoBozza(
         clienteRefId,
         oggetto: dati.oggetto ?? righe[0]?.descrizione.slice(0, 120) ?? "Preventivo",
         note: dati.note || null,
-        validoFino: dati.validitaGiorni
-          ? aggiungiGiorni(p.createdAt.toISOString().slice(0, 10), dati.validitaGiorni)
-          : null,
+        anno: Number(dataDoc.slice(0, 4)),
+        dataPreventivo: dataDoc,
+        validoFino: dati.validitaGiorni ? aggiungiGiorni(dataDoc, dati.validitaGiorni) : null,
         snapshot: {
           emittente: {
             id: rs.id,
@@ -390,4 +404,40 @@ export async function eliminaPreventivoBozza(db: Database, id: string) {
     await tx.update(preventivi).set({ deletedAt: new Date() }).where(eq(preventivi.id, id));
   });
   return { id, eliminato: true };
+}
+
+/**
+ * Cambia la data di un preventivo già inviato. Deve restare nell'anno del suo numero (la
+ * numerazione è progressiva per anno); la scadenza si sposta di altrettanto, così la validità
+ * resta quella di prima. In bozza la data si cambia dall'editor.
+ */
+export async function modificaDataPreventivo(db: Database, id: string, data: string) {
+  if (!dataValida(data)) throw new Error("Data non valida");
+  await db.transaction(async (tx) => {
+    const [p] = await tx
+      .select()
+      .from(preventivi)
+      .where(and(eq(preventivi.id, id), isNull(preventivi.deletedAt)))
+      .for("update");
+    if (!p) throw new Error("Preventivo non trovato");
+    if (p.stato === "bozza")
+      throw new Error("In bozza la data si cambia modificando il preventivo");
+    if (Number(data.slice(0, 4)) !== p.anno)
+      throw new Error(
+        `La data deve restare nel ${p.anno}: il numero ${p.numero} appartiene a quell'anno`,
+      );
+    const giorni = Math.round(
+      (new Date(`${data}T00:00:00Z`).getTime() -
+        new Date(`${p.dataPreventivo}T00:00:00Z`).getTime()) /
+        86_400_000,
+    );
+    await tx
+      .update(preventivi)
+      .set({
+        dataPreventivo: data,
+        validoFino: p.validoFino ? aggiungiGiorni(p.validoFino, giorni) : null,
+      })
+      .where(eq(preventivi.id, id));
+  });
+  return { id, data };
 }

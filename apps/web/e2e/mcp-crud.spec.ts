@@ -446,12 +446,49 @@ test("preventivi, fatture, incassi, prima nota, abbonamenti e rate", async () =>
     oggetto: `${NOME} da eliminare`,
     righe: [righe[0]],
   });
+  // data passata: l'anno e la scadenza la seguono; in bozza la data si cambia con modifica_preventivo_bozza
+  const annoPassato = new Date().getFullYear() - 1;
+  expect((await ok("dettaglio_preventivo", { id: bozza2 })).preventivo.dataPreventivo).toBe(
+    new Date().toISOString().slice(0, 10),
+  );
+  const { id: bozzaPassata } = await ok("crea_preventivo_libero", {
+    ragioneSocialeId: rsId,
+    oggetto: `${NOME} datato`,
+    data: `${annoPassato}-05-10`,
+    validitaGiorni: 30,
+    righe: [righe[0]],
+  });
+  expect((await ok("dettaglio_preventivo", { id: bozzaPassata })).preventivo).toMatchObject({
+    dataPreventivo: `${annoPassato}-05-10`,
+    anno: annoPassato,
+    validoFino: `${annoPassato}-06-09`,
+  });
+  expect(
+    await ko("modifica_data_preventivo", { id: bozzaPassata, data: `${annoPassato}-05-11` }),
+  ).toContain("bozza");
+  expect(
+    await ko("crea_preventivo_libero", {
+      ragioneSocialeId: rsId,
+      righe: [righe[0]],
+      data: "2026-02-31",
+    }),
+  ).toBeTruthy();
+  await ok("elimina_preventivo_bozza", { id: bozzaPassata });
   await ok("elimina_preventivo_bozza", { id: bozza2 });
   expect(await ko("dettaglio_preventivo", { id: bozza2 })).toContain("non trovato");
 
   // invio e accettazione parziale (solo la prestazione una tantum): non si modifica più
   await sql`update preventivi set cliente_ref_id = ${clienteId} where id = ${prevId}`;
   await ok("cambia_stato_preventivo", { id: prevId, stato: "inviato" });
+  // dopo l'invio la data si sposta solo dentro l'anno del numero
+  const annoNumero = (await ok("dettaglio_preventivo", { id: prevId })).preventivo.anno;
+  await ok("modifica_data_preventivo", { id: prevId, data: `${annoNumero}-01-05` });
+  expect((await ok("dettaglio_preventivo", { id: prevId })).preventivo.dataPreventivo).toBe(
+    `${annoNumero}-01-05`,
+  );
+  expect(
+    await ko("modifica_data_preventivo", { id: prevId, data: `${annoNumero - 1}-12-31` }),
+  ).toContain(`${annoNumero}`);
   expect(
     await ko("modifica_preventivo_bozza", { id: prevId, ragioneSocialeId: rsId, righe }),
   ).toContain("bozza");

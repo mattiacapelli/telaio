@@ -420,7 +420,7 @@ export const STRUMENTI_MCP: StrumentoMcp[] = [
   {
     nome: "crea_preventivo_libero",
     descrizione:
-      "Crea una bozza di preventivo con righe scritte a mano o da listino (una tantum, canoni, alternative annuale/mensile).",
+      "Crea una bozza di preventivo con righe scritte a mano o da listino (una tantum, canoni, alternative annuale/mensile); `data` permette una data passata.",
     scrittura: true,
     stato: "attivo",
     gruppo: "Preventivi",
@@ -436,6 +436,14 @@ export const STRUMENTI_MCP: StrumentoMcp[] = [
   {
     nome: "elimina_preventivo_bozza",
     descrizione: "Elimina un preventivo in bozza.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Preventivi",
+  },
+  {
+    nome: "modifica_data_preventivo",
+    descrizione:
+      "Cambia la data di un preventivo già inviato (resta nell'anno del numero; la scadenza si sposta di altrettanto). In bozza la data si cambia con modifica_preventivo_bozza.",
     scrittura: true,
     stato: "attivo",
     gruppo: "Preventivi",

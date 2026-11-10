@@ -40,6 +40,7 @@ import {
   creaPreventivoLibero,
   creaPreventivoLiberoSchema,
   eliminaPreventivoBozza,
+  modificaDataPreventivo,
 } from "../dominio/preventivi";
 import { emettiEvento } from "../webhooks";
 import { type Strumento, strumento } from "./base";
@@ -60,6 +61,9 @@ export const CONTABILITA: Record<string, Strumento> = {
   ),
   elimina_preventivo_bozza: strumento({ id }, (db, { id: preventivoId }) =>
     eliminaPreventivoBozza(db, preventivoId),
+  ),
+  modifica_data_preventivo: strumento({ id, data }, (db, { id: preventivoId, data: nuova }) =>
+    modificaDataPreventivo(db, preventivoId, nuova),
   ),
   accetta_preventivo: strumento(
     { id, ...accettazioneInputSchema.shape },

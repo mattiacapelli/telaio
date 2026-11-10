@@ -61,7 +61,10 @@ export const preventivi = pgTable(
     twentyOpportunityId: text("twenty_opportunity_id"),
     /** assegnato all'invio, in modo atomico */
     numero: text("numero"),
+    /** anno della data del preventivo: è quello della numerazione */
     anno: integer("anno").notNull(),
+    /** data del documento: di norma oggi, ma si può mettere una data passata (preventivi già fatti) */
+    dataPreventivo: date("data_preventivo").notNull().default(sql`CURRENT_DATE`),
     stato: statoPreventivoEnum("stato").notNull().default("bozza"),
     oggetto: text("oggetto").notNull(),
     note: text("note"),

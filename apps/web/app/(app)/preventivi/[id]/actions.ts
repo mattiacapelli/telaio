@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui/form-modal";
 import { audit } from "@/lib/audit";
+import { modificaDataPreventivo } from "@/lib/dominio/preventivi";
 import { cambiaStatoPreventivo } from "@/lib/dominio/preventivi-stato";
 import { requireSession } from "@/lib/session";
 import { emettiEvento } from "@/lib/webhooks";
@@ -114,4 +115,31 @@ export async function accettaPreventivoAction(
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Accettazione non riuscita" };
   }
+}
+
+/** Cambia la data di un preventivo già inviato; resta nell'anno del suo numero. */
+export async function modificaDataPreventivoAction(
+  _: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const { user } = await requireSession();
+  const id = z.uuid().safeParse(form.get("id"));
+  const data = String(form.get("data") ?? "");
+  if (!id.success) return { ok: false, message: "Preventivo non valido" };
+  try {
+    const db = getDb();
+    await modificaDataPreventivo(db, id.data, data);
+    await audit(db, {
+      userId: user.id,
+      azione: "preventivo.data_modificata",
+      entita: "preventivi",
+      entitaId: id.data,
+      dettagli: { data },
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Modifica non riuscita";
+    return { ok: false, message, errors: { data: message } };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Data aggiornata" };
 }

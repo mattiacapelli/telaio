@@ -62,7 +62,7 @@ export async function datiPdfPreventivo(db: Database, id: string): Promise<Docum
   const dati: DatiPdf = {
     tipo: "preventivo",
     numero: p.numero,
-    data: p.createdAt.toISOString().slice(0, 10),
+    data: p.dataPreventivo,
     scadenza: p.validoFino,
     oggetto: p.oggetto,
     note: p.note,

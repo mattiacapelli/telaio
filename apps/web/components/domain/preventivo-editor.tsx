@@ -26,6 +26,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { initialState } from "@/components/ui/form-modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "@/components/ui/toast";
+import { oggi } from "@/lib/date";
 import type { EmittenteCfg } from "@/lib/emittenti-cfg";
 import type { VoceCfg } from "@/lib/listini-cfg";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,8 @@ export interface BozzaIniziale {
   oggetto: string;
   note: string;
   validitaGiorni: number;
+  /** data del preventivo (AAAA-MM-GG) */
+  data: string;
   righe: Omit<RigaForm, "chiave">[];
 }
 
@@ -600,7 +603,13 @@ export function PreventivoEditor({
                 ))}
               </Select>
             </Field>
-            <Field label="Validità">
+            <Field
+              label="Data del preventivo"
+              hint="Oggi, oppure una data passata se il preventivo è già stato fatto. Il numero segue l'anno di questa data."
+            >
+              <Input name="data" type="date" required defaultValue={bozza?.data ?? oggi()} />
+            </Field>
+            <Field label="Validità" hint="Conta dalla data del preventivo">
               <Select value={validita} onChange={(e) => setValidita(Number(e.target.value))}>
                 {[...new Set([...VALIDITA, validita])]
                   .sort((a, b) => a - b)

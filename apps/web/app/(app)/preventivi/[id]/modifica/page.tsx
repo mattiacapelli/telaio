@@ -53,7 +53,7 @@ export default async function ModificaPreventivoPage({
   const giorni = p.validoFino
     ? Math.round(
         (new Date(`${p.validoFino}T00:00:00Z`).getTime() -
-          new Date(`${p.createdAt.toISOString().slice(0, 10)}T00:00:00Z`).getTime()) /
+          new Date(`${p.dataPreventivo}T00:00:00Z`).getTime()) /
           86_400_000,
       )
     : 30;
@@ -72,6 +72,7 @@ export default async function ModificaPreventivoPage({
         oggetto: p.oggetto,
         note: p.note ?? "",
         validitaGiorni,
+        data: p.dataPreventivo,
         righe: righe.map((r) => ({
           descrizione: r.descrizione,
           tipo: r.tipo,

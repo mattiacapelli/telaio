@@ -30,6 +30,7 @@ export async function creaPreventivoAction(_: ActionState, form: FormData): Prom
     oggetto: String(form.get("oggetto") ?? "") || undefined,
     note: String(form.get("note") ?? "") || undefined,
     validitaGiorni: Number(form.get("validitaGiorni") ?? 0) || undefined,
+    data: String(form.get("data") ?? "") || undefined,
   });
   if (!parsed.success)
     return {
@@ -70,6 +71,7 @@ export async function aggiornaPreventivoBozzaAction(
     oggetto: String(form.get("oggetto") ?? "") || undefined,
     note: String(form.get("note") ?? "") || undefined,
     validitaGiorni: Number(form.get("validitaGiorni") ?? 0) || undefined,
+    data: String(form.get("data") ?? "") || undefined,
   });
   if (!parsed.success)
     return {
