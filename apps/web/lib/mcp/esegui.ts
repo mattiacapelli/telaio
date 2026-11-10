@@ -25,7 +25,10 @@ import { registraIncasso, registraIncassoSchema } from "../dominio/incassi";
 import { creaPreventivoDaListino, creaPreventivoSchema } from "../dominio/preventivi";
 import { regoleDa } from "../regole";
 import { type Strumento, strumento } from "./base";
+import { ANAGRAFICHE } from "./strumenti-anagrafiche";
+import { CONTABILITA } from "./strumenti-contabilita";
 import { EXTRA } from "./strumenti-extra";
+import { PROGETTI } from "./strumenti-progetti";
 
 export const emettiFatturaSchema = z.object({
   fatturaId: z.uuid(),
@@ -187,7 +190,13 @@ const BASE: Record<string, Strumento> = {
   ),
 };
 
-export const STRUMENTI: Record<string, Strumento> = { ...BASE, ...EXTRA };
+export const STRUMENTI: Record<string, Strumento> = {
+  ...BASE,
+  ...EXTRA,
+  ...ANAGRAFICHE,
+  ...CONTABILITA,
+  ...PROGETTI,
+};
 
 /** Valida i parametri di uno strumento e applica i default; lancia se non sono validi. */
 export function preparaInput(nome: string, input: unknown): Record<string, unknown> {

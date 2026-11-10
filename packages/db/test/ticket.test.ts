@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   documentiDelProgetto,
   eliminaDocumento,
+  modificaDocumento,
   registraDocumento,
 } from "../src/documenti-progetto";
 import { creaProgetto } from "../src/progetti";
@@ -285,6 +286,32 @@ describe.skipIf(!URL_SERVER)("ticket e documenti (Postgres reale)", () => {
       );
       expect(await documentiDelProgetto(t.db, progettoId, { ticketId: mio.id })).toHaveLength(1);
       expect((await ticketDelProgetto(t.db, progettoId))[0]?.documenti).toBe(1);
+    });
+
+    it("modifica categoria, descrizione e ticket; il ticket deve essere dello stesso progetto", async () => {
+      const mio = await nuovo("mio");
+      const altrui = await nuovo("altrui", "da_fare", altroProgettoId);
+      const d = await registraDocumento(t.db, doc());
+      await modificaDocumento(t.db, d.id, {
+        categoria: "design",
+        descrizione: "v2",
+        ticketId: mio.id,
+      });
+      let [r] = await documentiDelProgetto(t.db, progettoId);
+      expect(r?.d).toMatchObject({ categoria: "design", descrizione: "v2", ticketId: mio.id });
+      await expect(modificaDocumento(t.db, d.id, { ticketId: altrui.id })).rejects.toThrow(
+        "non appartiene a questo progetto",
+      );
+      // senza indicare il ticket resta com'è; con null si stacca
+      await modificaDocumento(t.db, d.id, { descrizione: null });
+      [r] = await documentiDelProgetto(t.db, progettoId);
+      expect(r?.d).toMatchObject({ descrizione: null, ticketId: mio.id });
+      await modificaDocumento(t.db, d.id, { ticketId: null });
+      [r] = await documentiDelProgetto(t.db, progettoId);
+      expect(r?.d.ticketId).toBeNull();
+      await expect(
+        modificaDocumento(t.db, "00000000-0000-0000-0000-000000000000", {}),
+      ).rejects.toThrow("Documento non trovato");
     });
 
     it("la chiave dell'oggetto è unica e il progetto deve esistere", async () => {

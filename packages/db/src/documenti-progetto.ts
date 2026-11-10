@@ -119,3 +119,45 @@ export async function eliminaDocumento(
     return { progettoId: d.progettoId, nome: d.nome, chiave: d.chiave };
   });
 }
+
+/** Cambia categoria, descrizione e ticket a cui è allegato (`null` lo stacca); il file non si tocca. */
+export async function modificaDocumento(
+  db: Database,
+  id: string,
+  input: { categoria?: string; descrizione?: string | null; ticketId?: string | null },
+): Promise<{ progettoId: string }> {
+  return db.transaction(async (tx) => {
+    const [d] = await tx
+      .select()
+      .from(progettoDocumenti)
+      .where(and(eq(progettoDocumenti.id, id), isNull(progettoDocumenti.deletedAt)))
+      .for("update");
+    if (!d) throw new Error("Documento non trovato");
+    const parsed = documentoDatiSchema.parse({
+      categoria: input.categoria ?? d.categoria,
+      descrizione: input.descrizione === undefined ? d.descrizione : input.descrizione,
+    });
+    if (input.ticketId) {
+      const [t] = await tx
+        .select({ id: ticket.id })
+        .from(ticket)
+        .where(
+          and(
+            eq(ticket.id, input.ticketId),
+            eq(ticket.progettoId, d.progettoId),
+            isNull(ticket.deletedAt),
+          ),
+        );
+      if (!t) throw new Error("Il ticket non appartiene a questo progetto");
+    }
+    await tx
+      .update(progettoDocumenti)
+      .set({
+        categoria: parsed.categoria,
+        descrizione: parsed.descrizione,
+        ...(input.ticketId !== undefined && { ticketId: input.ticketId }),
+      })
+      .where(eq(progettoDocumenti.id, id));
+    return { progettoId: d.progettoId };
+  });
+}

@@ -376,3 +376,18 @@ export async function aggiornaPreventivoBozza(
       await tx.insert(preventivoRighe).values(righe.map((r) => ({ ...r, preventivoId: id })));
   });
 }
+
+/** Si elimina solo una bozza: dopo l'invio il preventivo ha numero e storia, e si rifiuta o scade. */
+export async function eliminaPreventivoBozza(db: Database, id: string) {
+  await db.transaction(async (tx) => {
+    const [p] = await tx
+      .select()
+      .from(preventivi)
+      .where(and(eq(preventivi.id, id), isNull(preventivi.deletedAt)))
+      .for("update");
+    if (!p) throw new Error("Preventivo non trovato");
+    if (p.stato !== "bozza") throw new Error("Si può eliminare solo un preventivo in bozza");
+    await tx.update(preventivi).set({ deletedAt: new Date() }).where(eq(preventivi.id, id));
+  });
+  return { id, eliminato: true };
+}

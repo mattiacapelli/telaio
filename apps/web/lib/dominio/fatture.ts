@@ -14,6 +14,7 @@ import {
   ragioniSociali,
   rate,
 } from "@telaio/db";
+import { z } from "zod";
 import { dataValida, oggi } from "../date";
 import { regoleDa } from "../regole";
 import { emettiEvento } from "../webhooks";
@@ -257,4 +258,109 @@ export async function modificaDateFattura(
       }
     }
   });
+}
+
+export const fatturaBozzaModificaSchema = z
+  .object({
+    clienteRefId: z.uuid().optional(),
+    cliente: z
+      .object({
+        nome: z.string().trim().min(1),
+        partitaIva: z.string().nullish(),
+        codiceFiscale: z.string().nullish(),
+        indirizzo: z.string().nullish(),
+        sdiPec: z.string().nullish(),
+        privato: z.boolean().optional(),
+      })
+      .optional(),
+    note: z.string().trim().max(2000).nullish(),
+    righe: z
+      .array(
+        z.object({
+          descrizione: z.string().trim().min(1),
+          quantita: z.number().int().min(1).default(1),
+          prezzoUnitarioCent: z.number().int().min(0),
+          scontoBp: z.number().int().min(0).max(10000).default(0),
+        }),
+      )
+      .min(1, "Aggiungi almeno una riga")
+      .optional(),
+  })
+  .refine(
+    (v) => !(v.clienteRefId && v.cliente),
+    "Indica un cliente dell'anagrafica oppure uno occasionale, non entrambi",
+  );
+
+/** Modifica una bozza di fattura: cliente, note e righe (che si sostituiscono per intero). Totali ricalcolati. */
+export async function modificaFatturaBozza(db: Database, id: string, input: unknown) {
+  const dati = fatturaBozzaModificaSchema.parse(input);
+  if (Object.keys(dati).length === 0) throw new Error("Nessun campo da modificare");
+  await db.transaction(async (tx) => {
+    const [f] = await tx
+      .select()
+      .from(fatture)
+      .where(and(eq(fatture.id, id), isNull(fatture.deletedAt)))
+      .for("update");
+    if (!f) throw new Error("Fattura non trovata");
+    if (f.stato !== "bozza") throw new Error("Si può modificare solo una fattura in bozza");
+
+    let snapshot = f.snapshot;
+    let clienteRefId = f.clienteRefId;
+    if (dati.clienteRefId) {
+      const [c] = await tx.select().from(clientiRef).where(eq(clientiRef.id, dati.clienteRefId));
+      if (!c) throw new Error("Cliente non trovato");
+      clienteRefId = c.id;
+      snapshot = {
+        ...snapshot,
+        cliente: {
+          nome: c.nome,
+          partitaIva: c.partitaIva,
+          codiceFiscale: c.codiceFiscale,
+          pec: c.pec,
+          codiceSdi: c.codiceSdi,
+        },
+      };
+    } else if (dati.cliente) {
+      clienteRefId = null;
+      snapshot = { ...snapshot, cliente: { ...dati.cliente } };
+    }
+
+    const regole = snapshot.regole as unknown as RegoleFiscali;
+    await tx
+      .update(fatture)
+      .set({
+        clienteRefId,
+        snapshot,
+        ...(dati.note !== undefined && { note: dati.note || null }),
+        ...(dati.righe && totaliFattura(dati.righe, regole)),
+      })
+      .where(eq(fatture.id, id));
+    if (dati.righe) {
+      await tx.delete(fatturaRighe).where(eq(fatturaRighe.fatturaId, id));
+      await tx.insert(fatturaRighe).values(
+        dati.righe.map((r, i) => ({
+          fatturaId: id,
+          posizione: i,
+          ...r,
+          importoCent: importoRiga(r),
+        })),
+      );
+    }
+  });
+  return { id };
+}
+
+/** Si elimina solo una bozza: una fattura emessa ha numero e rata, e non sparisce. */
+export async function eliminaFatturaBozza(db: Database, id: string) {
+  await db.transaction(async (tx) => {
+    const [f] = await tx
+      .select()
+      .from(fatture)
+      .where(and(eq(fatture.id, id), isNull(fatture.deletedAt)))
+      .for("update");
+    if (!f) throw new Error("Fattura non trovata");
+    if (f.stato !== "bozza") throw new Error("Si può eliminare solo una fattura in bozza");
+    await tx.update(fatture).set({ deletedAt: new Date() }).where(eq(fatture.id, id));
+  });
+  return { id, eliminata: true };
 }
