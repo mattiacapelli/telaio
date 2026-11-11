@@ -18,8 +18,8 @@ import {
 } from "@telaio/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CaricaDocumenti } from "@/components/domain/carica-documenti";
-import { ElencoDocumenti } from "@/components/domain/elenco-documenti";
+import { AllegaDocumenti } from "@/components/domain/allega-documenti";
+import { ElencoDocumenti, rigaDocumento } from "@/components/domain/elenco-documenti";
 import {
   EliminaCommento,
   EliminaTicket,
@@ -133,19 +133,13 @@ export default async function TicketPage({
             <div className="flex flex-col gap-4">
               {documenti.length > 0 && (
                 <ElencoDocumenti
-                  documenti={documenti.map(({ d, caricatoDa }) => ({
-                    id: d.id,
-                    nome: d.nome,
-                    dimensioneByte: d.dimensioneByte,
-                    tipoMime: d.tipoMime,
-                    categoria: d.categoria,
-                    descrizione: d.descrizione,
-                    caricatoDa,
-                    createdAt: d.createdAt,
-                  }))}
+                  documenti={documenti.map(({ d, caricatoDa }) => rigaDocumento(d, caricatoDa))}
                 />
               )}
-              <CaricaDocumenti progettoId={id} ticketId={t.id} configurato={!!archivio.config} />
+              <AllegaDocumenti
+                destinazione={{ progettoId: id, ticketId: t.id }}
+                configurato={!!archivio.config}
+              />
             </div>
           </Card>
 

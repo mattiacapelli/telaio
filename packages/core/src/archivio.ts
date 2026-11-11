@@ -95,14 +95,22 @@ export function nomeFileSicuro(nome: string): string {
   return senzaPunti.slice(0, 150 - estensione.length) + estensione;
 }
 
-/** Chiave dell'oggetto nel bucket. L'id del documento la rende unica anche con nomi uguali. */
+/** A chi appartiene un allegato: ogni oggetto del bucket sta nella «cartella» del suo primo proprietario. */
+export const CARTELLE_ALLEGATO = ["progetti", "preventivi", "clienti"] as const;
+export type CartellaAllegato = (typeof CARTELLE_ALLEGATO)[number];
+
+/**
+ * Chiave dell'oggetto nel bucket. L'id del documento la rende unica anche con nomi uguali.
+ * Lo stesso oggetto può poi essere allegato ad altre entità senza copiarlo: la chiave non cambia.
+ */
 export function chiaveOggetto(opzioni: {
   prefisso: string;
-  progettoId: string;
+  cartella: CartellaAllegato;
+  proprietarioId: string;
   documentoId: string;
   nome: string;
 }): string {
-  return `${normalizzaPrefisso(opzioni.prefisso)}progetti/${opzioni.progettoId}/${opzioni.documentoId}/${nomeFileSicuro(opzioni.nome)}`;
+  return `${normalizzaPrefisso(opzioni.prefisso)}${opzioni.cartella}/${opzioni.proprietarioId}/${opzioni.documentoId}/${nomeFileSicuro(opzioni.nome)}`;
 }
 
 /** «1,2 MB», «340 KB», «12 B». */
@@ -125,4 +133,21 @@ export const documentoDatiSchema = z.object({
     .max(500, "Al massimo 500 caratteri")
     .nullish()
     .transform((v) => (v ? v : null)),
+});
+
+/** Un link allegato: titolo e indirizzo http(s), mai `javascript:` o simili. */
+export const linkDatiSchema = z.object({
+  titolo: z.string().trim().min(1, "Scrivi un titolo").max(200, "Al massimo 200 caratteri"),
+  url: z
+    .string()
+    .trim()
+    .max(2000, "Indirizzo troppo lungo")
+    .refine((v) => {
+      try {
+        const u = new URL(v);
+        return (u.protocol === "http:" || u.protocol === "https:") && !u.username && !u.password;
+      } catch {
+        return false;
+      }
+    }, "Indirizzo non valido: deve iniziare con http:// o https://, senza utente e password"),
 });

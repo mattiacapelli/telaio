@@ -224,6 +224,11 @@ test("l'elenco degli strumenti comprende il CRUD di ogni entità; la chiave di s
     "scarica_documento",
     "modifica_documento",
     "elimina_documento",
+    "elenca_allegati",
+    "allegati_cliente",
+    "elenca_archivio",
+    "aggiungi_link",
+    "collega_documenti_archivio",
     // già presenti
     "elenca_preventivi",
     "crea_fattura_libera",
@@ -814,6 +819,110 @@ test("progetti, risorse, ticket, commenti e impostazioni dei ticket", async () =
   // un progetto non si cancella: si annulla
   await ok("cambia_stato_progetto", { id, stato: "annullato" });
   expect((await ok("dettaglio_progetto", { id })).progetto.stato).toBe("annullato");
+});
+
+test("allegati: link, file su preventivi e clienti, archivio condiviso", async () => {
+  const [{ id: rsId }] = await sql`select id from ragioni_sociali where nome = ${`${NOME} RS`}`;
+  const [{ id: clienteId }] =
+    await sql`select id from clienti_ref where nome = ${`${NOME} cliente`}`;
+  const { id: progettoId } = await ok("crea_progetto", { nome: `${NOME} progetto allegati` });
+  const { id: prevId } = await ok("crea_preventivo_libero", {
+    ragioneSocialeId: rsId,
+    oggetto: `${NOME} preventivo allegati`,
+    righe: [{ descrizione: "Sito", tipo: "una_tantum", quantita: 1, prezzoUnitarioCent: 1000 }],
+  });
+  const contenuto = Buffer.from("Brief E2E\n");
+
+  // file su preventivo: nella sua cartella del bucket
+  const brief = await ok("carica_documento", {
+    preventivoId: prevId,
+    nome: "brief.txt",
+    contenutoBase64: contenuto.toString("base64"),
+    tipoMime: "text/plain",
+  });
+  const [riga] = await sql`select chiave from progetto_documenti where id = ${brief.id}`;
+  expect(riga.chiave).toBe(`${PREFISSO}/preventivi/${prevId}/${brief.id}/brief.txt`);
+
+  // un solo proprietario alla volta
+  expect(
+    await ko("carica_documento", {
+      progettoId,
+      preventivoId: prevId,
+      nome: "x.txt",
+      contenutoBase64: "eA==",
+    }),
+  ).toContain("uno solo");
+  expect(await ko("aggiungi_link", { titolo: "x", url: "https://x.it" })).toContain("uno solo");
+
+  // link: solo http(s)
+  const link = await ok("aggiungi_link", {
+    clienteRefId: clienteId,
+    titolo: "Cartella condivisa",
+    url: "https://drive.example.com/cartella",
+    categoria: "consegna",
+  });
+  expect(
+    await ko("aggiungi_link", { progettoId, titolo: "x", url: "javascript:alert(1)" }),
+  ).toContain("Indirizzo non valido");
+  const allegatiCliente = await ok<{ id: string; tipo: string; url: string }[]>("elenca_allegati", {
+    clienteRefId: clienteId,
+  });
+  expect(allegatiCliente).toMatchObject([
+    { id: link.id, tipo: "link", url: "https://drive.example.com/cartella" },
+  ]);
+  expect(await ko("scarica_documento", { id: link.id })).toContain("link");
+
+  // l'archivio elenca il file una volta; si allega al progetto senza copiarlo
+  const archivio = await ok<{ documentoId: string; nome: string; origine: string }[]>(
+    "elenca_archivio",
+    { testo: "brief" },
+  );
+  const voce = archivio.find((a) => a.documentoId === brief.id);
+  expect(voce?.origine).toMatch(/^Preventivo/);
+  const { allegati } = await ok("collega_documenti_archivio", {
+    progettoId,
+    documentoIds: [brief.id],
+  });
+  expect(allegati).toHaveLength(1);
+  expect(
+    await ko("collega_documenti_archivio", { progettoId, documentoIds: [brief.id] }),
+  ).toContain("già allegato");
+  const [r2] = await sql`select chiave from progetto_documenti where id = ${allegati[0].id}`;
+  expect(r2.chiave).toBe(riga.chiave);
+  const scaricato = await ok("scarica_documento", { id: allegati[0].id });
+  expect(Buffer.from(scaricato.contenutoBase64, "base64")).toEqual(contenuto);
+
+  // tutto ciò che riguarda il cliente: il suo link, e il preventivo ora che gli appartiene
+  await sql`update preventivi set cliente_ref_id = ${clienteId} where id = ${prevId}`;
+  const tutti = await ok<{ nome: string; preventivo: string | null; progetto: string | null }[]>(
+    "allegati_cliente",
+    { clienteRefId: clienteId },
+  );
+  expect(tutti.map((t) => t.nome).sort()).toEqual(["Cartella condivisa", "brief.txt"]);
+
+  // eliminare un allegato non toglie il file finché serve a un altro
+  await ok("elimina_documento", { id: brief.id });
+  expect((await ok("scarica_documento", { id: allegati[0].id })).nome).toBe("brief.txt");
+
+  // eliminando la bozza del preventivo se ne vanno gli allegati
+  const { id: prev2 } = await ok("crea_preventivo_libero", {
+    ragioneSocialeId: rsId,
+    oggetto: `${NOME} bozza con allegati`,
+    righe: [{ descrizione: "Sito", tipo: "una_tantum", quantita: 1, prezzoUnitarioCent: 1000 }],
+  });
+  const f2 = await ok("carica_documento", {
+    preventivoId: prev2,
+    nome: "da-eliminare.txt",
+    contenutoBase64: "eA==",
+  });
+  await ok("elimina_preventivo_bozza", { id: prev2 });
+  const [tolto] = await sql`select deleted_at from progetto_documenti where id = ${f2.id}`;
+  expect(tolto.deleted_at).not.toBeNull();
+  expect(await ko("scarica_documento", { id: f2.id })).toContain("non trovato");
+
+  await ok("elimina_preventivo_bozza", { id: prevId });
+  await ok("elimina_documento", { id: allegati[0].id });
+  await ok("elimina_documento", { id: link.id });
 });
 
 test("un client MCP senza chiave o con chiave sbagliata non entra", async () => {

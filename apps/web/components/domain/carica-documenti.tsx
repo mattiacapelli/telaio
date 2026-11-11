@@ -14,6 +14,7 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { type Destinazione, indirizzoCaricamento } from "./allegati-destinazione";
 
 interface Esito {
   caricati: { id: string; nome: string }[];
@@ -21,14 +22,12 @@ interface Esito {
   errore?: string;
 }
 
-/** Carica file nell'archivio del progetto (o di un suo ticket): scelta o trascinamento, con avanzamento. */
+/** Carica file nell'archivio e li allega alla destinazione: scelta o trascinamento, con avanzamento. */
 export function CaricaDocumenti({
-  progettoId,
-  ticketId,
+  destinazione,
   configurato,
 }: {
-  progettoId: string;
-  ticketId?: string;
+  destinazione: Destinazione;
   configurato: boolean;
 }) {
   const router = useRouter();
@@ -68,9 +67,10 @@ export function CaricaDocumenti({
     for (const f of file) dati.append("file", f);
     dati.set("categoria", categoria);
     dati.set("descrizione", descrizione);
-    if (ticketId) dati.set("ticketId", ticketId);
+    if ("ticketId" in destinazione && destinazione.ticketId)
+      dati.set("ticketId", destinazione.ticketId);
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/progetti/${progettoId}/documenti`);
+    xhr.open("POST", indirizzoCaricamento(destinazione));
     xhr.upload.onprogress = (e) =>
       e.lengthComputable && setAvanzamento(Math.round((e.loaded / e.total) * 100));
     xhr.onerror = () => {

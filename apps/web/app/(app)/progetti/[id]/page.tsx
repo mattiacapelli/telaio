@@ -39,8 +39,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CaricaDocumenti } from "@/components/domain/carica-documenti";
-import { ElencoDocumenti } from "@/components/domain/elenco-documenti";
+import { AllegaDocumenti } from "@/components/domain/allega-documenti";
+import { ElencoDocumenti, rigaDocumento } from "@/components/domain/elenco-documenti";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState } from "@/components/ui/card";
@@ -276,27 +276,21 @@ export default async function ProgettoPage({ params }: { params: Promise<{ id: s
 
           <Card>
             <CardHeader
-              title="Documenti"
-              description="Contratti, specifiche, consegne: i file stanno nel bucket S3 configurato in Impostazioni."
+              title="Documenti e link"
+              description="Contratti, specifiche, consegne: i file stanno nel bucket S3 configurato in Impostazioni; puoi anche allegare link."
             />
             <div className="flex flex-col gap-4">
               {documenti.length > 0 ? (
                 <ElencoDocumenti
-                  documenti={documenti.map(({ d, caricatoDa }) => ({
-                    id: d.id,
-                    nome: d.nome,
-                    dimensioneByte: d.dimensioneByte,
-                    tipoMime: d.tipoMime,
-                    categoria: d.categoria,
-                    descrizione: d.descrizione,
-                    caricatoDa,
-                    createdAt: d.createdAt,
-                  }))}
+                  documenti={documenti.map(({ d, caricatoDa }) => rigaDocumento(d, caricatoDa))}
                 />
               ) : (
-                archivio.config && <p className="text-sm text-fg-2">Nessun documento caricato.</p>
+                <p className="text-sm text-fg-2">Nessun documento o link.</p>
               )}
-              <CaricaDocumenti progettoId={p.id} configurato={!!archivio.config} />
+              <AllegaDocumenti
+                destinazione={{ progettoId: p.id }}
+                configurato={!!archivio.config}
+              />
             </div>
           </Card>
 

@@ -1,13 +1,26 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  allegatiDelCliente,
+  allegatiDi,
+  collegaDocumentiEsistenti,
   documentiDelProgetto,
+  eliminaAllegatiPreventivo,
   eliminaDocumento,
+  fileInArchivio,
   modificaDocumento,
   registraDocumento,
-} from "../src/documenti-progetto";
+  registraLink,
+} from "../src/allegati";
 import { creaProgetto } from "../src/progetti";
-import { progettoDocumenti, ticket, users } from "../src/schema";
+import {
+  clientiRef,
+  preventivi,
+  progettoDocumenti,
+  ragioniSociali,
+  ticket,
+  users,
+} from "../src/schema";
 import {
   commentaTicket,
   creaTicket,
@@ -272,6 +285,7 @@ describe.skipIf(!URL_SERVER)("ticket e documenti (Postgres reale)", () => {
 
       const tolto = await eliminaDocumento(t.db, a.id);
       expect(tolto.nome).toBe("contratto.pdf");
+      expect(tolto.chiaveDaRimuovere).toBe(elenco[1]?.d.chiave);
       expect((await documentiDelProgetto(t.db, progettoId)).map((r) => r.d.id)).toEqual([b.id]);
       expect(await t.db.select().from(progettoDocumenti)).toHaveLength(2);
       await expect(eliminaDocumento(t.db, a.id)).rejects.toThrow("Documento non trovato");
@@ -314,13 +328,215 @@ describe.skipIf(!URL_SERVER)("ticket e documenti (Postgres reale)", () => {
       ).rejects.toThrow("Documento non trovato");
     });
 
-    it("la chiave dell'oggetto è unica e il progetto deve esistere", async () => {
-      const d = doc();
-      await registraDocumento(t.db, d);
-      await expect(registraDocumento(t.db, doc({ chiave: d.chiave }))).rejects.toThrow();
+    it("il proprietario deve esistere", async () => {
       await expect(
         registraDocumento(t.db, doc({ progettoId: "00000000-0000-0000-0000-000000000000" })),
       ).rejects.toThrow("Progetto non trovato");
+      await expect(
+        registraDocumento(t.db, doc({ progettoId: undefined, preventivoId: crypto.randomUUID() })),
+      ).rejects.toThrow("Preventivo non trovato");
+      await expect(
+        registraDocumento(t.db, doc({ progettoId: undefined, clienteRefId: crypto.randomUUID() })),
+      ).rejects.toThrow("Cliente non trovato");
+    });
+
+    describe("link, preventivi, clienti e file condivisi", () => {
+      let clienteId: string;
+      let preventivoId: string;
+
+      beforeEach(async () => {
+        const [rs] = await t.db.insert(ragioniSociali).values({ nome: "MC Digital" }).returning();
+        const [c] = await t.db
+          .insert(clientiRef)
+          .values({ twentyCompanyId: "tw-1", nome: "Trattoria" })
+          .returning();
+        clienteId = c?.id ?? "";
+        const [p] = await t.db
+          .insert(preventivi)
+          .values({
+            ragioneSocialeId: rs?.id ?? "",
+            clienteRefId: clienteId,
+            anno: 2026,
+            oggetto: "Sito",
+            snapshot: { emittente: {}, cliente: {}, regole: {} },
+          })
+          .returning();
+        preventivoId = p?.id ?? "";
+      });
+
+      const file = (proprietario: Record<string, string>, over: Record<string, unknown> = {}) => ({
+        id: crypto.randomUUID(),
+        ...proprietario,
+        nome: "brief.pdf",
+        chiave: `k/${crypto.randomUUID()}/brief.pdf`,
+        dimensioneByte: 10,
+        tipoMime: "application/pdf",
+        ...over,
+      });
+
+      it("un link si allega e si elenca; solo http(s)", async () => {
+        const l = await registraLink(t.db, {
+          progettoId,
+          titolo: " Figma ",
+          url: "https://figma.com/f/1",
+          categoria: "design",
+        });
+        const [r] = await documentiDelProgetto(t.db, progettoId);
+        expect(r?.d).toMatchObject({
+          id: l.id,
+          tipo: "link",
+          nome: "Figma",
+          url: "https://figma.com/f/1",
+          chiave: null,
+          dimensioneByte: null,
+          categoria: "design",
+        });
+        await expect(
+          registraLink(t.db, { progettoId, titolo: "x", url: "javascript:alert(1)" }),
+        ).rejects.toThrow();
+        const e = await eliminaDocumento(t.db, l.id);
+        expect(e).toMatchObject({ tipo: "link", chiaveDaRimuovere: null });
+      });
+
+      it("i file stanno sul preventivo e sul cliente, e i ticket solo sui progetti", async () => {
+        await registraDocumento(t.db, file({ preventivoId }));
+        await registraDocumento(t.db, file({ clienteRefId: clienteId }));
+        await registraLink(t.db, { preventivoId, titolo: "Brief", url: "https://x.it" });
+        expect(await allegatiDi(t.db, { preventivoId })).toHaveLength(2);
+        expect(await allegatiDi(t.db, { clienteRefId: clienteId })).toHaveLength(1);
+        expect(await documentiDelProgetto(t.db, progettoId)).toHaveLength(0);
+        const tk = await nuovo("t");
+        await expect(
+          registraDocumento(t.db, file({ preventivoId }, { ticketId: tk.id })),
+        ).rejects.toThrow("solo per un progetto");
+      });
+
+      it("il database impone un solo proprietario e coerenza tra file e link", async () => {
+        await expect(
+          t.db.insert(progettoDocumenti).values({ nome: "x", chiave: "k", dimensioneByte: 1 }),
+        ).rejects.toThrow();
+        await expect(
+          t.db.insert(progettoDocumenti).values({
+            progettoId,
+            preventivoId,
+            nome: "x",
+            chiave: "k",
+            dimensioneByte: 1,
+          }),
+        ).rejects.toThrow();
+        await expect(
+          t.db.insert(progettoDocumenti).values({ progettoId, tipo: "link", nome: "x" }),
+        ).rejects.toThrow();
+      });
+
+      it("un file dell'archivio si allega altrove senza copiarlo: l'oggetto resta finché serve", async () => {
+        const a = await registraDocumento(t.db, file({ progettoId }));
+        const [orig] = await documentiDelProgetto(t.db, progettoId);
+        const creati = await collegaDocumentiEsistenti(t.db, {
+          preventivoId,
+          documentoIds: [a.id, a.id],
+          caricatoDaId: "u1",
+        });
+        expect(creati).toHaveLength(1);
+        const [copia] = await allegatiDi(t.db, { preventivoId });
+        expect(copia?.d).toMatchObject({
+          chiave: orig?.d.chiave,
+          nome: "brief.pdf",
+          caricatoDaId: "u1",
+        });
+        expect(copia?.d.id).not.toBe(a.id);
+
+        // già allegato: no doppioni; ma al ticket dello stesso progetto sì
+        await expect(
+          collegaDocumentiEsistenti(t.db, { preventivoId, documentoIds: [a.id] }),
+        ).rejects.toThrow("già allegato");
+        const tk = await nuovo("t");
+        await collegaDocumentiEsistenti(t.db, {
+          progettoId,
+          ticketId: tk.id,
+          documentoIds: [a.id],
+        });
+
+        // l'oggetto lascia il bucket solo con l'ultimo allegato che lo usa
+        expect((await eliminaDocumento(t.db, a.id)).chiaveDaRimuovere).toBeNull();
+        expect((await eliminaDocumento(t.db, creati[0]?.id ?? "")).chiaveDaRimuovere).toBeNull();
+        const [ultimo] = await documentiDelProgetto(t.db, progettoId);
+        expect((await eliminaDocumento(t.db, ultimo?.d.id ?? "")).chiaveDaRimuovere).toBe(
+          orig?.d.chiave,
+        );
+        await expect(
+          collegaDocumentiEsistenti(t.db, { preventivoId, documentoIds: [a.id] }),
+        ).rejects.toThrow("non è più nell'archivio");
+        await expect(
+          collegaDocumentiEsistenti(t.db, { preventivoId, documentoIds: [] }),
+        ).rejects.toThrow("almeno un file");
+      });
+
+      it("l'archivio elenca un file per oggetto, con origine e ricerca", async () => {
+        const a = await registraDocumento(t.db, file({ progettoId }, { nome: "Contratto.pdf" }));
+        await collegaDocumentiEsistenti(t.db, { preventivoId, documentoIds: [a.id] });
+        await registraDocumento(t.db, file({ clienteRefId: clienteId }, { nome: "Logo_100%.png" }));
+        await registraLink(t.db, { progettoId, titolo: "Solo link", url: "https://x.it" });
+        const tutti = await fileInArchivio(t.db);
+        expect(tutti.map((f) => f.nome).sort()).toEqual(["Contratto.pdf", "Logo_100%.png"]);
+        expect(tutti.find((f) => f.nome === "Contratto.pdf")?.origine).toMatch(/^Progetto PRJ-/);
+        expect(tutti.find((f) => f.nome.startsWith("Logo"))?.origine).toBe("Cliente Trattoria");
+        expect((await fileInArchivio(t.db, { testo: "contr" })).map((f) => f.nome)).toEqual([
+          "Contratto.pdf",
+        ]);
+        // % e _ nella ricerca valgono come caratteri, non come jolly
+        expect(await fileInArchivio(t.db, { testo: "%" })).toHaveLength(1);
+        expect(await fileInArchivio(t.db, { testo: "_" })).toHaveLength(1);
+        expect(await fileInArchivio(t.db, { testo: "inesistente" })).toHaveLength(0);
+      });
+
+      it("la scheda del cliente raccoglie i suoi file, quelli dei progetti e dei preventivi", async () => {
+        const [rs] = await t.db.select().from(ragioniSociali);
+        const [altro] = await t.db
+          .insert(clientiRef)
+          .values({ twentyCompanyId: "tw-2", nome: "Altro" })
+          .returning();
+        const mio = (await creaProgetto(t.db, { dati: { nome: "Sito" }, clienteRefId: clienteId }))
+          .id;
+        const [pAltro] = await t.db
+          .insert(preventivi)
+          .values({
+            ragioneSocialeId: rs?.id ?? "",
+            clienteRefId: altro?.id,
+            anno: 2026,
+            oggetto: "Altro",
+            snapshot: { emittente: {}, cliente: {}, regole: {} },
+          })
+          .returning();
+        await registraDocumento(t.db, file({ clienteRefId: clienteId }, { nome: "diretto" }));
+        await registraDocumento(t.db, file({ progettoId: mio }, { nome: "di-progetto" }));
+        await registraDocumento(t.db, file({ preventivoId }, { nome: "di-preventivo" }));
+        await registraDocumento(t.db, file({ progettoId }, { nome: "progetto-senza-cliente" }));
+        await registraDocumento(
+          t.db,
+          file({ preventivoId: pAltro?.id ?? "" }, { nome: "di-altri" }),
+        );
+        const r = await allegatiDelCliente(t.db, clienteId);
+        expect(r.map((x) => x.d.nome).sort()).toEqual(["di-preventivo", "di-progetto", "diretto"]);
+        expect(r.find((x) => x.d.nome === "di-progetto")?.progetto?.codice).toMatch(/^PRJ-/);
+        expect(r.find((x) => x.d.nome === "di-preventivo")?.preventivo?.id).toBe(preventivoId);
+        expect(r.find((x) => x.d.nome === "diretto")?.progetto?.id ?? null).toBeNull();
+      });
+
+      it("eliminando un preventivo in bozza se ne vanno gli allegati, e i file solo se non servono altrove", async () => {
+        const solo = await registraDocumento(t.db, file({ preventivoId }, { nome: "solo" }));
+        const cond = await registraDocumento(t.db, file({ preventivoId }, { nome: "cond" }));
+        await collegaDocumentiEsistenti(t.db, { progettoId, documentoIds: [cond.id] });
+        await registraLink(t.db, { preventivoId, titolo: "L", url: "https://x.it" });
+        const [soloRiga] = await t.db
+          .select()
+          .from(progettoDocumenti)
+          .where(eq(progettoDocumenti.id, solo.id));
+        const chiavi = await t.db.transaction((tx) => eliminaAllegatiPreventivo(tx, preventivoId));
+        expect(chiavi).toEqual([soloRiga?.chiave]);
+        expect(await allegatiDi(t.db, { preventivoId })).toHaveLength(0);
+        expect(await documentiDelProgetto(t.db, progettoId)).toHaveLength(1);
+      });
     });
   });
 });

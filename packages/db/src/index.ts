@@ -2,9 +2,9 @@ export { and, asc, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, or, sql }
 export { alias } from "drizzle-orm/pg-core";
 export * from "./accettazione";
 export * from "./admin";
+export * from "./allegati";
 export * from "./client";
 export * from "./documenti-pdf";
-export * from "./documenti-progetto";
 export * from "./fattura-da-preventivo";
 export * from "./impostazioni-documenti";
 export * from "./numerazione";

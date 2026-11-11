@@ -114,13 +114,25 @@ export async function GET(request: Request) {
       )
       .limit(PER_TIPO),
     db
-      .select({ d: progettoDocumenti, codice: progetti.codice })
+      .select({
+        d: progettoDocumenti,
+        codice: progetti.codice,
+        numero: preventivi.numero,
+        cliente: clientiRef.nome,
+        clienteTwentyId: clientiRef.twentyCompanyId,
+      })
       .from(progettoDocumenti)
-      .innerJoin(progetti, eq(progetti.id, progettoDocumenti.progettoId))
+      .leftJoin(progetti, eq(progetti.id, progettoDocumenti.progettoId))
+      .leftJoin(preventivi, eq(preventivi.id, progettoDocumenti.preventivoId))
+      .leftJoin(clientiRef, eq(clientiRef.id, progettoDocumenti.clienteRefId))
       .where(
         and(
           isNull(progettoDocumenti.deletedAt),
-          or(ilike(progettoDocumenti.nome, like), ilike(progettoDocumenti.descrizione, like)),
+          or(
+            ilike(progettoDocumenti.nome, like),
+            ilike(progettoDocumenti.descrizione, like),
+            ilike(progettoDocumenti.url, like),
+          ),
         ),
       )
       .limit(PER_TIPO),
@@ -163,11 +175,15 @@ export async function GET(request: Request) {
       sottotitolo: codiceTicket(codice, t.numero),
       href: `/progetti/${t.progettoId}/ticket/${t.numero}`,
     })),
-    ...docs.map(({ d, codice }) => ({
+    ...docs.map(({ d, codice, numero, cliente, clienteTwentyId }) => ({
       tipo: "documento",
       titolo: d.nome,
-      sottotitolo: `${codice} · Documento`,
-      href: `/progetti/${d.progettoId}`,
+      sottotitolo: `${d.progettoId ? codice : d.preventivoId ? `Preventivo ${numero ?? "in bozza"}` : cliente} · ${d.tipo === "link" ? "Link" : "Documento"}`,
+      href: d.progettoId
+        ? `/progetti/${d.progettoId}`
+        : d.preventivoId
+          ? `/preventivi/${d.preventivoId}`
+          : `/clienti/${clienteTwentyId}`,
     })),
     ...basi.map((b) => ({
       tipo: "listino",

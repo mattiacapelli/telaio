@@ -15,6 +15,7 @@ import {
 } from "@telaio/core";
 import {
   abbonamenti,
+  allegatiDi,
   and,
   asc,
   eq,
@@ -32,6 +33,8 @@ import { notFound } from "next/navigation";
 import { creaFatturaDaPreventivoAction } from "@/app/(app)/fatture/actions";
 import { CreaProgettoDaPreventivo } from "@/app/(app)/progetti/crea-da-preventivo";
 import { AccettaPreventivo } from "@/components/domain/accetta-preventivo";
+import { AllegaDocumenti } from "@/components/domain/allega-documenti";
+import { ElencoDocumenti, rigaDocumento } from "@/components/domain/elenco-documenti";
 import { ModificaDataPreventivo } from "@/components/domain/modifica-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +43,7 @@ import { DefList } from "@/components/ui/def-list";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { leggiArchivio } from "@/lib/archivio/config";
 import { formatData, oggi } from "@/lib/date";
 import { STATO_PREVENTIVO, STATO_PROGETTO } from "@/lib/stati";
 import { cambiaStatoPreventivoAction } from "./actions";
@@ -63,29 +67,32 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
   const db = getDb();
   const [p] = await db.select().from(preventivi).where(eq(preventivi.id, id));
   if (!p) notFound();
-  const [righe, [rs], progettiCollegati, [fattura], abbonamentiCreati] = await Promise.all([
-    db
-      .select()
-      .from(preventivoRighe)
-      .where(eq(preventivoRighe.preventivoId, id))
-      .orderBy(asc(preventivoRighe.posizione)),
-    db.select().from(ragioniSociali).where(eq(ragioniSociali.id, p.ragioneSocialeId)),
-    progettiDelPreventivo(db, id),
-    db
-      .select({ id: fatture.id, numero: fatture.numero })
-      .from(fatture)
-      .where(
-        and(
-          eq(fatture.preventivoId, id),
-          eq(fatture.origine, "preventivo"),
-          isNull(fatture.deletedAt),
+  const [righe, [rs], progettiCollegati, [fattura], abbonamentiCreati, allegati, archivio] =
+    await Promise.all([
+      db
+        .select()
+        .from(preventivoRighe)
+        .where(eq(preventivoRighe.preventivoId, id))
+        .orderBy(asc(preventivoRighe.posizione)),
+      db.select().from(ragioniSociali).where(eq(ragioniSociali.id, p.ragioneSocialeId)),
+      progettiDelPreventivo(db, id),
+      db
+        .select({ id: fatture.id, numero: fatture.numero })
+        .from(fatture)
+        .where(
+          and(
+            eq(fatture.preventivoId, id),
+            eq(fatture.origine, "preventivo"),
+            isNull(fatture.deletedAt),
+          ),
         ),
-      ),
-    db
-      .select({ id: abbonamenti.id, rigaId: abbonamenti.preventivoRigaId })
-      .from(abbonamenti)
-      .where(and(eq(abbonamenti.preventivoId, id), isNull(abbonamenti.deletedAt))),
-  ]);
+      db
+        .select({ id: abbonamenti.id, rigaId: abbonamenti.preventivoRigaId })
+        .from(abbonamenti)
+        .where(and(eq(abbonamenti.preventivoId, id), isNull(abbonamenti.deletedAt))),
+      allegatiDi(db, { preventivoId: id }),
+      leggiArchivio(db),
+    ]);
 
   const regole = p.snapshot.regole as unknown as RegoleFiscali;
   const cliente = p.snapshot.cliente as {
@@ -383,6 +390,26 @@ export default async function PreventivoPage({ params }: { params: Promise<{ id:
               </Table>
             )}
           </section>
+
+          <Card>
+            <CardHeader
+              title="Allegati"
+              description="File e link legati al preventivo: capitolati, richieste del cliente, materiali."
+            />
+            <div className="flex flex-col gap-4">
+              {allegati.length > 0 ? (
+                <ElencoDocumenti
+                  documenti={allegati.map(({ d, caricatoDa }) => rigaDocumento(d, caricatoDa))}
+                />
+              ) : (
+                <p className="text-sm text-fg-2">Nessun allegato.</p>
+              )}
+              <AllegaDocumenti
+                destinazione={{ preventivoId: id }}
+                configurato={!!archivio.config}
+              />
+            </div>
+          </Card>
         </div>
 
         <div className="flex flex-col gap-4">

@@ -64,6 +64,13 @@
       "when": 1794329557093,
       "tag": "0008_data_preventivo",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794355502960,
+      "tag": "0009_allegati_ovunque",
+      "breakpoints": true
     }
   ]
 }

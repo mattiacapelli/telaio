@@ -12,10 +12,15 @@ const email = process.env.SEED_ADMIN_EMAIL ?? "mattia@telaio.local";
 const password = process.env.SEED_ADMIN_PASSWORD ?? "telaio-dev-2026";
 const CODICE = "E2E-TKT-001";
 const BUCKET = "telaio-e2e";
+const CODICE_ALTRO = "E2E-TKT-002";
+const OGGETTO = "E2E allegati preventivo";
 
 test.describe.configure({ mode: "serial" });
 
 let progettoId = "";
+let altroProgettoId = "";
+let preventivoId = "";
+let clienteRefId = "";
 let configPrecedente: unknown = null;
 let ticketPrecedente: unknown = null;
 
@@ -27,8 +32,28 @@ async function accedi(page: Page) {
   await expect(page).toHaveURL(/localhost:\d+\/$/);
 }
 
+async function caricaFile(page: Page, nome: string, contenuto: string) {
+  const bottone = page.getByRole("button", { name: "Carica il file" });
+  // la pagina può non essere ancora idratata quando si sceglie il file: si riprova
+  await expect(async () => {
+    await page.getByLabel("File da caricare").setInputFiles({
+      name: nome,
+      mimeType: "text/plain",
+      buffer: Buffer.from(contenuto),
+    });
+    await expect(bottone).toBeVisible({ timeout: 2000 });
+  }).toPass();
+  await bottone.click();
+  // caricato davvero: compare il collegamento per scaricarlo, non solo il nome nell'elenco in attesa
+  await expect(page.getByRole("link", { name: `Scarica ${nome}` })).toBeVisible();
+}
+
 async function pulisci() {
-  await sql`delete from progetto_documenti where progetto_id in (select id from progetti where codice = ${CODICE})`;
+  await sql`delete from progetto_documenti where progetto_id in (select id from progetti where codice in (${CODICE}, ${CODICE_ALTRO}))
+    or preventivo_id in (select id from preventivi where oggetto = ${OGGETTO})
+    or nome like 'e2e-all-%'`;
+  await sql`delete from progetti where codice = ${CODICE_ALTRO}`;
+  await sql`delete from preventivi where oggetto = ${OGGETTO}`;
   await sql`delete from ticket where progetto_id in (select id from progetti where codice = ${CODICE})`;
   await sql`delete from progetti where codice = ${CODICE}`;
 }
@@ -41,8 +66,16 @@ test.beforeAll(async () => {
   const [t] = await sql`select valore from impostazioni where chiave = 'ticket'`;
   ticketPrecedente = t?.valore ?? null;
   await sql`delete from impostazioni where chiave = 'ticket'`;
+  [{ id: clienteRefId }] = await sql`select id from clienti_ref where twenty_company_id = 'demo-1'`;
   [{ id: progettoId }] =
-    await sql`insert into progetti (codice, nome) values (${CODICE}, 'E2E ticket e documenti') returning id`;
+    await sql`insert into progetti (codice, nome, cliente_ref_id) values (${CODICE}, 'E2E ticket e documenti', ${clienteRefId}) returning id`;
+  [{ id: altroProgettoId }] =
+    await sql`insert into progetti (codice, nome) values (${CODICE_ALTRO}, 'E2E allegati altrui') returning id`;
+  [{ id: preventivoId }] = await sql`
+    insert into preventivi (ragione_sociale_id, cliente_ref_id, anno, oggetto, snapshot)
+    select (select id from ragioni_sociali order by created_at limit 1), ${clienteRefId}, 2026, ${OGGETTO}, snapshot
+    from preventivi where snapshot is not null limit 1
+    returning id`;
 });
 
 test.afterAll(async () => {
@@ -142,7 +175,7 @@ test("documenti del progetto: carica, scarica uguale, anteprima, elimina; il fil
     mimeType: "text/plain",
     buffer: contenuto,
   });
-  await page.getByLabel("Categoria").selectOption("contratto");
+  await page.getByLabel("Categoria", { exact: true }).selectOption("contratto");
   await page.getByLabel("Descrizione", { exact: true }).fill("Versione firmata");
   await page.getByRole("button", { name: "Carica il file" }).click();
   await expect(page.getByText("contratto è prova.txt")).toBeVisible();
@@ -492,4 +525,143 @@ test("pagina Ticket: lavagna di tutti i progetti di default, tabella a richiesta
     await page.keyboard.press("t");
     await expect(page).toHaveURL(/\/ticket$/, { timeout: 1000 });
   }).toPass();
+});
+
+// ── Allegati: link, file su preventivi e clienti, file presi dall'archivio ──────────
+
+test("link su un progetto: si aggiunge, si apre fuori, indirizzi non http sono rifiutati", async ({
+  page,
+}) => {
+  await accedi(page);
+  await page.goto(`/progetti/${progettoId}`);
+  await page.getByRole("tab", { name: "Aggiungi un link" }).click();
+
+  await page.getByLabel("Titolo del link").fill("Design su Figma");
+  await page.getByLabel("Indirizzo del link").fill("javascript:alert(1)");
+  await page.getByRole("button", { name: "Aggiungi il link" }).click();
+  await expect(page.getByText(/Indirizzo non valido/)).toBeVisible();
+
+  await page.getByLabel("Indirizzo del link").fill("https://www.figma.com/file/abc");
+  await page.getByLabel("Categoria del link").selectOption("design");
+  await page.getByRole("button", { name: "Aggiungi il link" }).click();
+  const link = page.getByRole("link", { name: "Design su Figma", exact: true });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("href", "https://www.figma.com/file/abc");
+  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(link).toHaveAttribute("rel", /noopener/);
+  await expect(page.getByText("figma.com ·")).toBeVisible();
+
+  // un link non è un file: niente da scaricare
+  const [l] =
+    await sql`select id, tipo, chiave, url from progetto_documenti where progetto_id = ${progettoId} and nome = 'Design su Figma'`;
+  expect(l).toMatchObject({ tipo: "link", chiave: null, url: "https://www.figma.com/file/abc" });
+  expect((await page.request.get(`/api/documenti/${l.id}`)).status()).toBe(404);
+
+  // si elimina senza toccare il bucket
+  await page.getByRole("button", { name: "Elimina Design su Figma" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Elimina" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByRole("link", { name: "Design su Figma", exact: true })).toBeHidden();
+});
+
+test("file su progetto e su preventivo; il preventivo li tiene nella sua cartella del bucket", async ({
+  page,
+}) => {
+  await accedi(page);
+  await page.goto(`/progetti/${progettoId}`);
+  await caricaFile(page, "e2e-all-specifiche.txt", "specifiche del progetto");
+
+  await page.goto(`/preventivi/${preventivoId}`);
+  await expect(page.getByText("Nessun allegato.")).toBeVisible();
+  await caricaFile(page, "e2e-all-brief.txt", "brief del cliente");
+  await page.getByRole("tab", { name: "Aggiungi un link" }).click();
+  await page.getByLabel("Titolo del link").fill("Capitolato online");
+  await page.getByLabel("Indirizzo del link").fill("https://esempio.it/capitolato");
+  await page.getByRole("button", { name: "Aggiungi il link" }).click();
+  await expect(page.getByRole("link", { name: "Capitolato online", exact: true })).toBeVisible();
+
+  const [d] =
+    await sql`select id, chiave from progetto_documenti where preventivo_id = ${preventivoId} and nome = 'e2e-all-brief.txt'`;
+  expect(d.chiave).toMatch(new RegExp(`^e2e/preventivi/${preventivoId}/${d.id}/`));
+  const scarico = await page.request.get(`/api/documenti/${d.id}`);
+  expect(scarico.status()).toBe(200);
+  expect(await scarico.text()).toBe("brief del cliente");
+});
+
+test("scheda cliente: una cartella per progetto, i preventivi tutti insieme, nulla degli altri clienti", async ({
+  page,
+}) => {
+  // un file in un progetto che non è di questo cliente
+  await sql`insert into progetto_documenti (progetto_id, nome, chiave, dimensione_byte) values (${altroProgettoId}, 'e2e-all-altrui.txt', 'e2e/altrui', 1)`;
+  await accedi(page);
+  await page.goto("/clienti/demo-1");
+  await expect(page.getByRole("heading", { name: "Documenti" })).toBeVisible();
+
+  const cartella = page.locator("details", { hasText: CODICE });
+  await expect(cartella).toContainText("E2E ticket e documenti");
+  await expect(cartella.getByText("e2e-all-specifiche.txt")).toBeVisible();
+  await expect(page.getByText("e2e-all-altrui.txt")).toHaveCount(0);
+
+  const preventivi = page.locator("section", {
+    has: page.getByRole("heading", { name: "Documenti" }),
+  });
+  await expect(preventivi.getByText("e2e-all-brief.txt")).toBeVisible();
+  await expect(preventivi.getByText("Capitolato online")).toBeVisible();
+  // la provenienza porta al preventivo
+  await expect(preventivi.locator(`a[href="/preventivi/${preventivoId}"]`).first()).toBeVisible();
+});
+
+test("dall'archivio: un file già caricato si allega al cliente senza ricaricarlo; l'oggetto resta finché serve", async ({
+  page,
+}) => {
+  await accedi(page);
+  await page.goto("/clienti/demo-1");
+  await page.getByRole("tab", { name: "Dall'archivio" }).click();
+  await page.getByLabel("Cerca nell'archivio").fill("e2e-all-brief");
+  await expect(page.getByText("Preventivo", { exact: false }).first()).toBeVisible();
+  await page.getByLabel("Scegli e2e-all-brief.txt").check();
+  await page.getByRole("button", { name: "Allega il file" }).click();
+  await expect(page.getByText("File allegato")).toBeVisible();
+
+  const righe =
+    await sql`select id, chiave, preventivo_id, cliente_ref_id from progetto_documenti where nome = 'e2e-all-brief.txt' and deleted_at is null order by created_at`;
+  expect(righe).toHaveLength(2);
+  expect(righe[1].chiave).toBe(righe[0].chiave);
+  expect(righe[1].cliente_ref_id).toBe(clienteRefId);
+
+  // già allegato: l'errore è chiaro
+  await page.getByLabel("Cerca nell'archivio").fill("e2e-all-brief");
+  await page.getByLabel("Scegli e2e-all-brief.txt").check();
+  await page.getByRole("button", { name: "Allega il file" }).click();
+  await expect(page.getByText(/già allegato qui/)).toBeVisible();
+
+  // si elimina quello del preventivo: il file serve ancora al cliente
+  await page.goto(`/preventivi/${preventivoId}`);
+  await page.getByRole("button", { name: "Elimina e2e-all-brief.txt" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Elimina" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect((await page.request.get(`/api/documenti/${righe[0].id}`)).status()).toBe(404);
+  const ancora = await page.request.get(`/api/documenti/${righe[1].id}`);
+  expect(ancora.status()).toBe(200);
+  expect(await ancora.text()).toBe("brief del cliente");
+
+  // eliminando l'ultimo allegato, il file sparisce davvero dal bucket
+  await page.goto("/clienti/demo-1");
+  await page.getByRole("button", { name: "Elimina e2e-all-brief.txt" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Elimina" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  expect((await page.request.get(`/api/documenti/${righe[1].id}`)).status()).toBe(404);
+});
+
+test("la ricerca trova link e file di preventivi e clienti", async ({ page }) => {
+  await accedi(page);
+  const r = await page.request.get("/api/ricerca?q=capitolato");
+  const trovati = (await r.json()) as { tipo: string; titolo: string; href: string }[];
+  expect(trovati).toContainEqual(
+    expect.objectContaining({
+      tipo: "documento",
+      titolo: "Capitolato online",
+      href: `/preventivi/${preventivoId}`,
+    }),
+  );
 });

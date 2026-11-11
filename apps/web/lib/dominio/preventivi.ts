@@ -9,6 +9,7 @@ import {
 import {
   and,
   type Database,
+  eliminaAllegatiPreventivo,
   eq,
   inArray,
   isNull,
@@ -21,6 +22,7 @@ import {
   ragioniSociali,
 } from "@telaio/db";
 import { z } from "zod";
+import { archivioPronto, eliminaOggetto } from "../archivio/s3";
 import { dataValida, oggi, reData } from "../date";
 import { regoleDa } from "../regole";
 import { emettiEvento } from "../webhooks";
@@ -393,7 +395,7 @@ export async function aggiornaPreventivoBozza(
 
 /** Si elimina solo una bozza: dopo l'invio il preventivo ha numero e storia, e si rifiuta o scade. */
 export async function eliminaPreventivoBozza(db: Database, id: string) {
-  await db.transaction(async (tx) => {
+  const daRimuovere = await db.transaction(async (tx) => {
     const [p] = await tx
       .select()
       .from(preventivi)
@@ -402,7 +404,17 @@ export async function eliminaPreventivoBozza(db: Database, id: string) {
     if (!p) throw new Error("Preventivo non trovato");
     if (p.stato !== "bozza") throw new Error("Si può eliminare solo un preventivo in bozza");
     await tx.update(preventivi).set({ deletedAt: new Date() }).where(eq(preventivi.id, id));
+    // anche i suoi allegati: i file passano dall'archivio solo se nessun altro allegato li usa
+    return eliminaAllegatiPreventivo(tx, id);
   });
+  if (daRimuovere.length > 0) {
+    try {
+      const archivio = await archivioPronto(db);
+      await Promise.all(daRimuovere.map((chiave) => eliminaOggetto(archivio, chiave)));
+    } catch {
+      // già tolti dal preventivo: un file rimasto nel bucket non è più raggiungibile dall'app
+    }
+  }
   return { id, eliminato: true };
 }
 

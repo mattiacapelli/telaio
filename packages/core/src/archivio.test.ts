@@ -3,6 +3,7 @@ import {
   archivioConfigSchema,
   chiaveOggetto,
   formattaDimensione,
+  linkDatiSchema,
   nomeFileSicuro,
   normalizzaPrefisso,
 } from "./archivio";
@@ -67,14 +68,31 @@ describe("chiaveOggetto", () => {
     expect(
       chiaveOggetto({
         prefisso: "/telaio",
-        progettoId: "p1",
+        cartella: "progetti",
+        proprietarioId: "p1",
         documentoId: "d1",
         nome: "../a b.pdf",
       }),
     ).toBe("telaio/progetti/p1/d1/a b.pdf");
     expect(
-      chiaveOggetto({ prefisso: "", progettoId: "p1", documentoId: "d1", nome: "x.txt" }),
-    ).toBe("progetti/p1/d1/x.txt");
+      chiaveOggetto({
+        prefisso: "",
+        cartella: "preventivi",
+        proprietarioId: "q1",
+        documentoId: "d1",
+        nome: "x.txt",
+      }),
+    ).toBe("preventivi/q1/d1/x.txt");
+  });
+});
+
+describe("linkDatiSchema", () => {
+  it("accetta solo indirizzi http(s) senza credenziali", () => {
+    const ok = linkDatiSchema.parse({ titolo: " Figma ", url: " https://figma.com/file/1 " });
+    expect(ok).toEqual({ titolo: "Figma", url: "https://figma.com/file/1" });
+    for (const url of ["javascript:alert(1)", "ftp://x.it", "https://u:p@x.it", "non un url", ""])
+      expect(linkDatiSchema.safeParse({ titolo: "x", url }).success).toBe(false);
+    expect(linkDatiSchema.safeParse({ titolo: " ", url: "https://x.it" }).success).toBe(false);
   });
 });
 

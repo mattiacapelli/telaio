@@ -693,21 +693,62 @@ export const STRUMENTI_MCP: StrumentoMcp[] = [
   },
   {
     nome: "elenca_documenti_progetto",
-    descrizione: "Documenti di un progetto o di un suo ticket.",
+    descrizione: "File e link di un progetto o di un suo ticket.",
+    scrittura: false,
+    stato: "attivo",
+    gruppo: "Documenti",
+  },
+  {
+    nome: "elenca_allegati",
+    descrizione:
+      "File e link di un progetto, di un preventivo o di un cliente (anche di un ticket).",
+    scrittura: false,
+    stato: "attivo",
+    gruppo: "Documenti",
+  },
+  {
+    nome: "allegati_cliente",
+    descrizione:
+      "Tutti gli allegati di un cliente: i suoi, quelli dei suoi progetti e dei suoi preventivi, con la provenienza.",
+    scrittura: false,
+    stato: "attivo",
+    gruppo: "Documenti",
+  },
+  {
+    nome: "elenca_archivio",
+    descrizione:
+      "File già nell'archivio (uno per oggetto), cercabili per nome: servono per allegarli altrove senza ricaricarli.",
     scrittura: false,
     stato: "attivo",
     gruppo: "Documenti",
   },
   {
     nome: "carica_documento",
-    descrizione: "Carica un file (base64, fino a 10 MB) nell'archivio S3 del progetto.",
+    descrizione:
+      "Carica un file (base64, fino a 10 MB) nell'archivio S3 e lo allega a un progetto (o ticket), a un preventivo o a un cliente.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Documenti",
+  },
+  {
+    nome: "aggiungi_link",
+    descrizione:
+      "Allega un link (http o https) a un progetto (o ticket), a un preventivo o a un cliente.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Documenti",
+  },
+  {
+    nome: "collega_documenti_archivio",
+    descrizione:
+      "Allega a un progetto (o ticket), a un preventivo o a un cliente file già nell'archivio, senza copiarli.",
     scrittura: true,
     stato: "attivo",
     gruppo: "Documenti",
   },
   {
     nome: "scarica_documento",
-    descrizione: "Scarica un documento in base64 (fino a 10 MB).",
+    descrizione: "Scarica un file in base64 (fino a 10 MB); i link non si scaricano.",
     scrittura: false,
     stato: "attivo",
     gruppo: "Documenti",
@@ -721,7 +762,8 @@ export const STRUMENTI_MCP: StrumentoMcp[] = [
   },
   {
     nome: "elimina_documento",
-    descrizione: "Elimina un documento dal progetto e dall'archivio.",
+    descrizione:
+      "Elimina un allegato (file o link); il file lascia l'archivio solo se nessun altro allegato lo usa.",
     scrittura: true,
     stato: "attivo",
     gruppo: "Documenti",

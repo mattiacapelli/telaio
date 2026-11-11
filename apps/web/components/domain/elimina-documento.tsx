@@ -1,17 +1,29 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { eliminaDocumentoAction } from "@/app/(app)/progetti/documenti-actions";
+import { eliminaDocumentoAction } from "@/app/(app)/allegati-actions";
 import { FormModal } from "@/components/ui/form-modal";
 
-export function EliminaDocumento({ id, nome }: { id: string; nome: string }) {
+export function EliminaDocumento({
+  id,
+  nome,
+  link = false,
+}: {
+  id: string;
+  nome: string;
+  link?: boolean;
+}) {
   return (
     <FormModal
       trigger={<Trash2 aria-label={`Elimina ${nome}`} />}
       triggerVariant="ghost"
       triggerSize="icon"
-      title="Elimina documento"
-      description={`Vuoi eliminare «${nome}»? Il file viene rimosso dall'archivio e non si può recuperare.`}
+      title={link ? "Elimina link" : "Elimina documento"}
+      description={
+        link
+          ? `Vuoi eliminare il link «${nome}»?`
+          : `Vuoi eliminare «${nome}»? Se non è allegato altrove, il file viene rimosso dall'archivio e non si può recuperare.`
+      }
       submitLabel="Elimina"
       action={eliminaDocumentoAction}
     >

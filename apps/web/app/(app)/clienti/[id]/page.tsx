@@ -6,6 +6,7 @@ import {
   staAccettato,
 } from "@telaio/core";
 import {
+  allegatiDelCliente,
   clientiRef,
   conti,
   desc,
@@ -17,9 +18,11 @@ import {
   sql,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Folder } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AllegaDocumenti } from "@/components/domain/allega-documenti";
+import { ElencoDocumenti, rigaDocumento } from "@/components/domain/elenco-documenti";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +32,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatsRow } from "@/components/ui/stats";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { leggiArchivio } from "@/lib/archivio/config";
 import { formatData } from "@/lib/date";
 import { sqlCanoneAnnuo, sqlUnaTantum } from "@/lib/queries";
 import { STATO_PREVENTIVO } from "@/lib/stati";
@@ -52,7 +56,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     db.select().from(clientiRef).where(eq(clientiRef.twentyCompanyId, id)),
   ]);
   const refId = ref?.id ?? "00000000-0000-0000-0000-000000000000";
-  const [prev, versati, somme] = await Promise.all([
+  const [prev, versati, somme, allegati, archivio] = await Promise.all([
     db
       .select({
         p: preventivi,
@@ -73,7 +77,20 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     db.execute<{ da_incassare: number; canoni: number }>(sql`
       select coalesce((select sum(r.importo_cent - coalesce((select sum(i.importo_cent) from incassi i where i.rata_id = r.id and i.deleted_at is null),0)) from rate r where r.cliente_ref_id = ${refId} and r.stato in ('da_incassare','parziale','scaduta')),0)::int da_incassare,
              coalesce((select sum(a.importo_rata_cent * (case a.periodicita when 'mensile' then 12 when 'trimestrale' then 4 when 'semestrale' then 2 else 1 end)) from abbonamenti a where a.cliente_ref_id = ${refId} and a.stato = 'attivo' and a.deleted_at is null),0)::int canoni`),
+    ref ? allegatiDelCliente(db, ref.id) : Promise.resolve([]),
+    leggiArchivio(db),
   ]);
+
+  // Allegati del cliente: i suoi, una «cartella» per ogni progetto, e tutti quelli dei preventivi insieme.
+  const diretti = allegati.filter((a) => !a.progetto && !a.preventivo);
+  const dePreventivi = allegati.filter((a) => a.preventivo);
+  const cartelle = new Map<string, { codice: string; nome: string; righe: typeof allegati }>();
+  for (const a of allegati) {
+    if (!a.progetto) continue;
+    const c = cartelle.get(a.progetto.id) ?? { ...a.progetto, righe: [] };
+    c.righe.push(a);
+    cartelle.set(a.progetto.id, c);
+  }
 
   const preventivato = prev
     .filter(({ p }) => p.stato !== "bozza")
@@ -257,6 +274,104 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               })}
             </tbody>
           </Table>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3" aria-labelledby="titolo-documenti">
+        <h2 id="titolo-documenti" className="text-base font-semibold">
+          Documenti
+        </h2>
+        {!ref ? (
+          <p className="text-sm text-fg-2">
+            Potrai allegare file e link dopo il primo preventivo o progetto di questo cliente.
+          </p>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader
+                title="Del cliente"
+                description="Contratti quadro, anagrafiche, materiali non legati a un lavoro."
+              />
+              <div className="flex flex-col gap-4">
+                {diretti.length > 0 ? (
+                  <ElencoDocumenti
+                    documenti={diretti.map(({ d, caricatoDa }) => rigaDocumento(d, caricatoDa))}
+                  />
+                ) : (
+                  <p className="text-sm text-fg-2">Nessun allegato.</p>
+                )}
+                <AllegaDocumenti
+                  destinazione={{ clienteRefId: ref.id }}
+                  configurato={!!archivio.config}
+                />
+              </div>
+            </Card>
+
+            <div className="flex flex-col gap-4">
+              <Card>
+                <CardHeader
+                  title="Progetti"
+                  description="Una cartella per progetto: si allega dalla pagina del progetto."
+                />
+                {cartelle.size === 0 ? (
+                  <p className="text-sm text-fg-2">Nessun file nei progetti di questo cliente.</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {[...cartelle.entries()].map(([pid, c]) => (
+                      <li key={pid}>
+                        <details
+                          open={cartelle.size <= 3}
+                          className="group rounded-md border border-line"
+                        >
+                          <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium select-none hover:bg-hover">
+                            <Folder className="size-4 text-fg-3" aria-hidden />
+                            <span className="min-w-0 flex-1 truncate">
+                              <span className="tabular-nums">{c.codice}</span> · {c.nome}
+                            </span>
+                            <Badge>{c.righe.length}</Badge>
+                          </summary>
+                          <div className="border-t border-line px-3">
+                            <ElencoDocumenti
+                              documenti={c.righe.map(({ d, caricatoDa }) =>
+                                rigaDocumento(d, caricatoDa),
+                              )}
+                            />
+                            <Link
+                              href={`/progetti/${pid}`}
+                              className="inline-block pb-3 text-xs text-fg-2 hover:underline"
+                            >
+                              Apri il progetto
+                            </Link>
+                          </div>
+                        </details>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+
+              <Card>
+                <CardHeader
+                  title="Preventivi"
+                  description="Gli allegati di tutti i preventivi, insieme."
+                />
+                {dePreventivi.length === 0 ? (
+                  <p className="text-sm text-fg-2">Nessun allegato nei preventivi.</p>
+                ) : (
+                  <ElencoDocumenti
+                    documenti={dePreventivi.map(({ d, caricatoDa, preventivo }) =>
+                      rigaDocumento(d, caricatoDa, {
+                        origine: preventivo && {
+                          etichetta: preventivo.numero ?? "Bozza",
+                          href: `/preventivi/${preventivo.id}`,
+                        },
+                      }),
+                    )}
+                  />
+                )}
+              </Card>
+            </div>
+          </div>
         )}
       </section>
 

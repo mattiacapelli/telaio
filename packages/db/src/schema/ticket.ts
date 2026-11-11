@@ -1,5 +1,7 @@
 import { CATEGORIE_DOCUMENTO, STATI_TICKET, TIPI_TICKET } from "@telaio/core";
+import { sql } from "drizzle-orm";
 import {
+  check,
   date,
   doublePrecision,
   index,
@@ -11,7 +13,9 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { clientiRef } from "./anagrafiche";
 import { users } from "./auth";
+import { preventivi } from "./documenti";
 import { deletedAt, id, timestamps } from "./helpers";
 import { prioritaProgettoEnum, progetti } from "./progetti";
 
@@ -68,22 +72,35 @@ export const ticketCommenti = pgTable(
 );
 
 /**
- * File di un progetto (e, volendo, di un suo ticket). Il contenuto sta nel bucket S3 configurato
- * in Impostazioni → Archiviazione; qui restano nome, dimensione e la chiave dell'oggetto.
+ * Allegati: file nel bucket S3 o link, di un progetto (e, volendo, di un suo ticket), di un
+ * preventivo o di un cliente. Il nome della tabella è rimasto quello storico.
+ *
+ * Il contenuto di un file sta nel bucket configurato in Impostazioni → Archiviazione; qui restano
+ * nome, dimensione e la chiave dell'oggetto. Più allegati possono puntare alla stessa chiave
+ * (un file preso dall'archivio e allegato altrove): l'oggetto si toglie dal bucket solo quando
+ * l'ultimo allegato che lo usa viene eliminato.
  */
 export const progettoDocumenti = pgTable(
   "progetto_documenti",
   {
     id: id(),
-    progettoId: uuid("progetto_id")
-      .notNull()
-      .references(() => progetti.id, { onDelete: "cascade" }),
+    /** esattamente uno tra progetto, preventivo e cliente */
+    progettoId: uuid("progetto_id").references(() => progetti.id, { onDelete: "cascade" }),
+    preventivoId: uuid("preventivo_id").references(() => preventivi.id, { onDelete: "cascade" }),
+    clienteRefId: uuid("cliente_ref_id").references(() => clientiRef.id, { onDelete: "cascade" }),
+    /** solo con un progetto: il ticket a cui è allegato */
     ticketId: uuid("ticket_id").references(() => ticket.id, { onDelete: "set null" }),
-    /** nome originale del file, come lo vede l'utente */
+    tipo: text("tipo", { enum: ["file", "link"] })
+      .notNull()
+      .default("file"),
+    /** nome originale del file (o titolo del link), come lo vede l'utente */
     nome: text("nome").notNull(),
-    chiave: text("chiave").notNull().unique(),
-    dimensioneByte: integer("dimensione_byte").notNull(),
+    /** solo file */
+    chiave: text("chiave"),
+    dimensioneByte: integer("dimensione_byte"),
     tipoMime: text("tipo_mime").notNull().default("application/octet-stream"),
+    /** solo link */
+    url: text("url"),
     categoria: categoriaDocumentoEnum("categoria").notNull().default("altro"),
     descrizione: text("descrizione"),
     caricatoDaId: text("caricato_da_id").references(() => users.id, { onDelete: "set null" }),
@@ -92,6 +109,22 @@ export const progettoDocumenti = pgTable(
   },
   (t) => [
     index("progetto_documenti_progetto_idx").on(t.progettoId, t.createdAt),
+    index("progetto_documenti_preventivo_idx").on(t.preventivoId, t.createdAt),
+    index("progetto_documenti_cliente_idx").on(t.clienteRefId, t.createdAt),
     index("progetto_documenti_ticket_idx").on(t.ticketId),
+    index("progetto_documenti_chiave_idx").on(t.chiave),
+    check(
+      "progetto_documenti_un_proprietario",
+      sql`num_nonnulls(${t.progettoId}, ${t.preventivoId}, ${t.clienteRefId}) = 1`,
+    ),
+    check(
+      "progetto_documenti_ticket_del_progetto",
+      sql`${t.ticketId} is null or ${t.progettoId} is not null`,
+    ),
+    check(
+      "progetto_documenti_file_o_link",
+      sql`(${t.tipo} = 'file' and ${t.chiave} is not null and ${t.dimensioneByte} is not null and ${t.url} is null)
+        or (${t.tipo} = 'link' and ${t.url} is not null and ${t.chiave} is null)`,
+    ),
   ],
 );

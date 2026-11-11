@@ -16,10 +16,13 @@ import {
 } from "@telaio/core";
 import {
   aggiungiRisorsa,
+  allegatiDelCliente,
+  allegatiDi,
   and,
   asc,
   cambiaStatoProgetto,
   clientiRef,
+  collegaDocumentiEsistenti,
   commentaTicket,
   creaProgetto,
   creaProgettoDaPreventivo,
@@ -32,6 +35,7 @@ import {
   eliminaRisorsa,
   eliminaTicket,
   eq,
+  fileInArchivio,
   ilike,
   isNull,
   modificaDocumento,
@@ -39,9 +43,11 @@ import {
   modificaRisorsa,
   modificaTicket,
   or,
+  type Proprietario,
   progetti,
   progettoRisorse,
   registraDocumento,
+  registraLink,
   spostaTicket,
   sql,
   ticket,
@@ -95,6 +101,62 @@ const ticketCampi = {
 };
 
 const risorsaCampi = risorsaSchema.shape;
+
+/** A chi si allega: esattamente uno tra progetto, preventivo e cliente. */
+const DESTINAZIONE = {
+  progettoId: id.optional(),
+  preventivoId: id.optional(),
+  clienteRefId: id.optional().describe("id locale del cliente (clienti_ref), non quello di Twenty"),
+};
+
+function proprietarioDa(i: {
+  progettoId?: string;
+  preventivoId?: string;
+  clienteRefId?: string;
+}): Proprietario {
+  const indicati = [i.progettoId, i.preventivoId, i.clienteRefId].filter(Boolean);
+  if (indicati.length !== 1)
+    throw new Error("Indica uno solo tra progettoId, preventivoId e clienteRefId");
+  if (i.progettoId) return { progettoId: i.progettoId };
+  if (i.preventivoId) return { preventivoId: i.preventivoId };
+  return { clienteRefId: i.clienteRefId as string };
+}
+
+function allegatoMcp(
+  d: {
+    id: string;
+    tipo: "file" | "link";
+    nome: string;
+    categoria: string;
+    descrizione: string | null;
+    tipoMime: string;
+    dimensioneByte: number | null;
+    url: string | null;
+    progettoId: string | null;
+    preventivoId: string | null;
+    clienteRefId: string | null;
+    ticketId: string | null;
+    createdAt: Date;
+  },
+  caricatoDa: string | null,
+) {
+  return {
+    id: d.id,
+    tipo: d.tipo,
+    nome: d.nome,
+    categoria: d.categoria,
+    descrizione: d.descrizione,
+    tipoMime: d.tipoMime,
+    dimensioneByte: d.dimensioneByte,
+    url: d.url,
+    progettoId: d.progettoId,
+    preventivoId: d.preventivoId,
+    clienteRefId: d.clienteRefId,
+    ticketId: d.ticketId,
+    caricatoDa,
+    creatoIl: d.createdAt,
+  };
+}
 
 /** Progetti, risorse, ticket, commenti, documenti e impostazioni dei ticket. */
 export const PROGETTI: Record<string, Strumento> = {
@@ -433,26 +495,49 @@ export const PROGETTI: Record<string, Strumento> = {
     return { id: commentoId, eliminato: true };
   }),
 
-  // ── Documenti ────────────────────────────────────────────────────────────────
+  // ── Documenti e link (progetti, ticket, preventivi, clienti) ─────────────────
   elenca_documenti_progetto: strumento(
     { progettoId: id, ticketId: id.optional() },
     async (db, { progettoId, ticketId }) =>
-      (await documentiDelProgetto(db, progettoId, { ticketId })).map(({ d, caricatoDa }) => ({
-        id: d.id,
-        nome: d.nome,
-        categoria: d.categoria,
-        descrizione: d.descrizione,
-        tipoMime: d.tipoMime,
-        dimensioneByte: d.dimensioneByte,
-        ticketId: d.ticketId,
-        caricatoDa,
-        creatoIl: d.createdAt,
+      (await documentiDelProgetto(db, progettoId, { ticketId })).map(({ d, caricatoDa }) =>
+        allegatoMcp(d, caricatoDa),
+      ),
+  ),
+
+  elenca_allegati: strumento({ ...DESTINAZIONE, ticketId: id.optional() }, async (db, i) =>
+    (await allegatiDi(db, proprietarioDa(i), { ticketId: i.ticketId })).map(({ d, caricatoDa }) =>
+      allegatoMcp(d, caricatoDa),
+    ),
+  ),
+
+  allegati_cliente: strumento(
+    { clienteRefId: id.describe("id locale del cliente (clienti_ref)") },
+    async (db, { clienteRefId }) =>
+      (await allegatiDelCliente(db, clienteRefId)).map(
+        ({ d, caricatoDa, progetto, preventivo }) => ({
+          ...allegatoMcp(d, caricatoDa),
+          progetto: progetto?.codice ?? null,
+          preventivo: preventivo ? (preventivo.numero ?? "Bozza") : null,
+        }),
+      ),
+  ),
+
+  elenca_archivio: strumento(
+    { testo: z.string().max(100).optional(), limite: z.number().int().min(1).max(100).optional() },
+    async (db, { testo, limite }) =>
+      (await fileInArchivio(db, { testo, limite })).map((f) => ({
+        documentoId: f.id,
+        nome: f.nome,
+        dimensioneByte: f.dimensioneByte,
+        tipoMime: f.tipoMime,
+        origine: f.origine,
+        creatoIl: f.createdAt,
       })),
   ),
 
   carica_documento: strumento(
     {
-      progettoId: id,
+      ...DESTINAZIONE,
       ticketId: id.optional(),
       nome: z.string().min(1).max(300),
       contenutoBase64: z.string().min(1).describe("contenuto del file in base64, fino a 10 MB"),
@@ -461,6 +546,7 @@ export const PROGETTI: Record<string, Strumento> = {
       descrizione: z.string().max(500).optional(),
     },
     async (db, i) => {
+      const proprietario = proprietarioDa(i);
       const corpo = Buffer.from(i.contenutoBase64, "base64");
       if (corpo.length === 0) throw new Error("Il file è vuoto o il base64 non è valido");
       if (corpo.length > Math.min(LIMITE_MCP_BYTE, LIMITE_FILE_BYTE))
@@ -468,9 +554,16 @@ export const PROGETTI: Record<string, Strumento> = {
       const archivio = await archivioPronto(db);
       const nome = nomeFileSicuro(i.nome);
       const documentoId = randomUUID();
+      const [cartella, proprietarioId] =
+        "progettoId" in proprietario
+          ? (["progetti", proprietario.progettoId] as const)
+          : "preventivoId" in proprietario
+            ? (["preventivi", proprietario.preventivoId] as const)
+            : (["clienti", proprietario.clienteRefId] as const);
       const chiave = chiaveOggetto({
         prefisso: archivio.config.prefisso,
-        progettoId: i.progettoId,
+        cartella,
+        proprietarioId,
         documentoId,
         nome,
       });
@@ -479,7 +572,7 @@ export const PROGETTI: Record<string, Strumento> = {
       try {
         await registraDocumento(db, {
           id: documentoId,
-          progettoId: i.progettoId,
+          ...proprietario,
           ticketId: i.ticketId ?? null,
           nome,
           chiave,
@@ -498,9 +591,52 @@ export const PROGETTI: Record<string, Strumento> = {
     },
   ),
 
+  aggiungi_link: strumento(
+    {
+      ...DESTINAZIONE,
+      ticketId: id.optional(),
+      titolo: z.string().min(1).max(200),
+      url: z.string().max(2000).describe("indirizzo http o https"),
+      categoria: z.enum(CATEGORIE_DOCUMENTO).optional(),
+      descrizione: z.string().max(500).optional(),
+    },
+    async (db, i) => {
+      const l = await registraLink(db, {
+        ...proprietarioDa(i),
+        ticketId: i.ticketId ?? null,
+        titolo: i.titolo,
+        url: i.url,
+        categoria: i.categoria,
+        descrizione: i.descrizione,
+      });
+      return { id: l.id, titolo: i.titolo };
+    },
+  ),
+
+  collega_documenti_archivio: strumento(
+    {
+      ...DESTINAZIONE,
+      ticketId: id.optional(),
+      documentoIds: z
+        .array(id)
+        .min(1)
+        .max(20)
+        .describe("id restituiti da elenca_archivio: il file non viene copiato"),
+    },
+    async (db, i) => ({
+      allegati: await collegaDocumentiEsistenti(db, {
+        ...proprietarioDa(i),
+        ticketId: i.ticketId ?? null,
+        documentoIds: i.documentoIds,
+      }),
+    }),
+  ),
+
   scarica_documento: strumento({ id }, async (db, { id: documentoId }) => {
     const d = await documentoPerId(db, documentoId);
     if (!d) throw new Error("Documento non trovato");
+    if (!d.chiave || d.dimensioneByte === null)
+      throw new Error(`«${d.nome}» è un link, non un file: ${d.url}`);
     if (d.dimensioneByte > LIMITE_MCP_BYTE)
       throw new Error("Il file supera i 10 MB: scaricalo dall'app");
     const { corpo } = await leggiOggetto(await archivioPronto(db), d.chiave);
@@ -529,8 +665,10 @@ export const PROGETTI: Record<string, Strumento> = {
 
   elimina_documento: strumento({ id }, async (db, { id: documentoId }) => {
     const d = await eliminaDocumento(db, documentoId);
-    // già tolto dal progetto: se il bucket non risponde il file resta lì, ma l'app non lo raggiunge più
-    await eliminaOggetto(await archivioPronto(db), d.chiave).catch(() => {});
+    // già tolto dall'elenco: se il bucket non risponde il file resta lì, ma l'app non lo raggiunge più;
+    // se un altro allegato usa ancora lo stesso file, resta nel bucket
+    if (d.chiaveDaRimuovere)
+      await eliminaOggetto(await archivioPronto(db), d.chiaveDaRimuovere).catch(() => {});
     return { id: documentoId, nome: d.nome, eliminato: true };
   }),
 

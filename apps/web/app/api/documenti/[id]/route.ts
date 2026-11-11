@@ -18,7 +18,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ errore: "Non trovato" }, { status: 404 });
   const db = getDb();
   const d = await documentoPerId(db, id);
-  if (!d) return NextResponse.json({ errore: "Documento non trovato" }, { status: 404 });
+  if (!d?.chiave || d.dimensioneByte === null)
+    return NextResponse.json({ errore: "Documento non trovato" }, { status: 404 });
 
   try {
     const archivio = await archivioPronto(db);
