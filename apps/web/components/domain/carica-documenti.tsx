@@ -83,7 +83,10 @@ export function CaricaDocumenti({
       try {
         esito = JSON.parse(xhr.responseText);
       } catch {
-        esito.errore = "Risposta non valida dal server";
+        esito.errore =
+          xhr.status === 413
+            ? "Il server rifiuta file così grandi: il limite del proxy è più basso di quello dell'app"
+            : `Risposta non valida dal server (codice ${xhr.status})`;
       }
       const problemi = [
         ...(esito.errore ? [esito.errore] : []),
