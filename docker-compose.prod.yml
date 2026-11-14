@@ -2,6 +2,10 @@
 # Non si usa a mano: `deploy/deploy.sh <versione>` pubblica una versione e `deploy/compose.sh` lancia
 # docker compose con il file di variabili e la versione corrente. Vedi docs/deploy.md.
 #
+# Postgres e Redis NON sono qui: Telaio usa quelli condivisi di /opt/infrastructure (container
+# `postgres` e `redis` sulla rete esterna `data`), con database `telaio`/utente `telaio_user` e
+# utente Redis `telaio` sul db 2 (il db 0 è di Twenty, il 5 di OpenPanel: tutti usano il prefisso `bull`).
+#
 # Separato dal compose di sviluppo: stesso nome di progetto solo qui (telaio-prod), quindi volumi,
 # reti e container non si mescolano con quelli di sviluppo.
 name: telaio-prod
@@ -18,49 +22,6 @@ x-hardening: &hardening
   cap_drop: ["ALL"]
 
 services:
-  postgres:
-    image: postgres:18-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: telaio
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?imposta POSTGRES_PASSWORD in .env.production}
-      POSTGRES_DB: telaio
-    volumes:
-      - pgdata:/var/lib/postgresql
-    networks: [backend]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U telaio -d telaio"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 20s
-    mem_limit: ${POSTGRES_MEM_LIMIT:-1g}
-    cpus: ${POSTGRES_CPUS:-1.0}
-    logging: *logging
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    # noeviction: BullMQ non deve perdere chiavi; appendonly: le code sopravvivono a un riavvio.
-    command:
-      - sh
-      - -c
-      - exec redis-server --appendonly yes --maxmemory-policy noeviction --requirepass "$$REDIS_PASSWORD"
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?imposta REDIS_PASSWORD in .env.production}
-      REDISCLI_AUTH: ${REDIS_PASSWORD}
-    volumes:
-      - redisdata:/data
-    networks: [backend]
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
-      interval: 10s
-      timeout: 3s
-      retries: 6
-    mem_limit: ${REDIS_MEM_LIMIT:-256m}
-    cpus: ${REDIS_CPUS:-0.5}
-    logging: *logging
-
   # Job una tantum: applica le migrazioni prima che parta la nuova versione di web e worker.
   migrate:
     image: ${TELAIO_REGISTRY:-ghcr.io/mattiacapelli}/telaio-worker:${TELAIO_VERSION:?imposta TELAIO_VERSION}
@@ -69,9 +30,10 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: ${DATABASE_URL:?imposta DATABASE_URL in .env.production}
-    networks: [backend]
-    depends_on:
-      postgres: { condition: service_healthy }
+    networks: [data]
+    # Job one-shot: il healthcheck ereditato dall'immagine worker non ha senso qui.
+    healthcheck:
+      disable: true
     logging: *logging
 
   web:
@@ -105,16 +67,15 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-}
     # Il proxy Nginx UI raggiunge web tramite l'alias telaio-web sulla rete esterna proxy.
-    # backend resta interna per DB/Redis; edge consente a web di chiamare servizi esterni.
+    # data porta a Postgres/Redis/RustFS condivisi; edge consente a web di chiamare servizi esterni.
     networks:
-      backend: {}
+      data: {}
       edge: {}
       proxy:
         aliases:
           - telaio-web
     depends_on:
       migrate: { condition: service_completed_successfully }
-      redis: { condition: service_healthy }
     mem_limit: ${WEB_MEM_LIMIT:-768m}
     cpus: ${WEB_CPUS:-1.0}
     logging: *logging
@@ -134,18 +95,18 @@ services:
       BACKUP_KEEP: ${WORKER_BACKUP_KEEP:-7}
     volumes:
       - backups:/backups
-    networks: [backend, edge]
+    networks: [data, edge]
     depends_on:
       migrate: { condition: service_completed_successfully }
-      redis: { condition: service_healthy }
     mem_limit: ${WORKER_MEM_LIMIT:-512m}
     cpus: ${WORKER_CPUS:-0.5}
     logging: *logging
 
 networks:
-  # Database e Redis vivono solo qui: nessun accesso da fuori e nessuna uscita verso internet.
-  backend:
-    internal: true
+  # Rete esterna dei servizi dati condivisi (/opt/infrastructure): postgres, redis, rustfs.
+  data:
+    external: true
+    name: data
   edge: {}
   # Rete esterna già condivisa con il container nginx-ui.
   proxy:
@@ -153,6 +114,4 @@ networks:
     name: proxy
 
 volumes:
-  pgdata:
-  redisdata:
   backups:

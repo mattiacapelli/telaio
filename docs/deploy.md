@@ -10,19 +10,21 @@ Internet ──443──▶ nginx-ui (Docker, Let's Encrypt)
                          ▼ rete Docker esterna "proxy" → telaio-web:3000
               ┌─────────────── Docker Compose (progetto telaio-prod) ───────────────┐
               │  web ──┬── rete "proxy" (condivisa con nginx-ui)                    │
-              │        ├── rete "backend" (interna) ── postgres 18                  │
-              │  worker┘                              └─ redis 7                    │
+              │        └── rete "data" (esterna) ── postgres, redis, rustfs         │
+              │  worker┘   (condivisi, in /opt/infrastructure, non di Telaio)       │
               │  migrate (job una tantum, prima di web e worker)                    │
               └─────────────────────────────────────────────────────────────────────┘
 ```
 
 La porta locale `127.0.0.1:3100` resta disponibile solo per diagnostica e health check dal VPS.
-PostgreSQL e Redis non pubblicano porte host.
+PostgreSQL e Redis sono **condivisi** con le altre applicazioni del server e non pubblicano porte host.
 
 - Un solo `Dockerfile` (multi-stage) con due immagini: `telaio-web` (Next.js standalone) e `telaio-worker`
   (job BullMQ; con un altro comando esegue anche le migrazioni).
-- Postgres e Redis non hanno porte pubbliche e stanno su una rete Docker interna. Solo `web` e `worker`
-  hanno anche accesso a internet (Twenty, SMTP, webhook in uscita).
+- Postgres e Redis **non sono nel compose di Telaio**: sono i container condivisi `postgres` e `redis` di
+  `/opt/infrastructure`, sulla rete Docker esterna `data` (senza porte pubbliche). Telaio vi usa il database
+  `telaio` (owner `telaio_user`) e l'utente Redis `telaio` sul db 2 (il db 0 è di Twenty, il 5 di OpenPanel).
+  Solo `web` e `worker` hanno anche accesso a internet (Twenty, SMTP, webhook in uscita).
 - Lo sviluppo locale resta separato: `docker-compose.yml` e `.env` non cambiano.
 
 | File                                    | A cosa serve                                                                    |
@@ -41,9 +43,10 @@ PostgreSQL e Redis non pubblicano porte host.
 
 - Il nuovo VPS Ubuntu 24.04 con Docker Engine e Docker Compose.
 - La rete Docker esterna `proxy` già esistente e condivisa con `nginx-ui`.
+- L'infrastruttura condivisa (`/opt/infrastructure`): container `postgres` e `redis` **healthy** sulla rete esterna `data`, con il database `telaio` (owner `telaio_user`) e l'utente Redis ACL `telaio`. Telaio non li crea né li aggiorna.
 - Il dominio `telaio.mattiacapelli.it` puntato a `13.140.222.243`.
 - Il repository GitHub con GitHub Actions abilitate.
-- Il deploy aggiunge il progetto Compose `telaio-prod` in `/opt/apps/telaio`; web si collega a `proxy`, mentre PostgreSQL e Redis restano nella rete backend interna.
+- Il deploy aggiunge il progetto Compose `telaio-prod` in `/opt/apps/telaio`; web si collega a `proxy` e a `data`, dove stanno PostgreSQL e Redis condivisi.
 
 ## 2. DNS
 
@@ -109,23 +112,22 @@ Modifica `/opt/apps/telaio/.env.production` e sostituisci ogni `CAMBIA-…`:
 ```bash
 openssl rand -hex 32   # BETTER_AUTH_SECRET
 openssl rand -hex 16   # SETUP_TOKEN
-openssl rand -hex 24   # POSTGRES_PASSWORD, poi un altro per REDIS_PASSWORD
 ```
 
-| Variabile                             | Note                                                                                                                                                                                                                     |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `BETTER_AUTH_URL`                     | `https://telaio.mattiacapelli.it`. Da qui derivano cookie, origini consentite e **passkey** (rpID = hostname): se cambia, le passkey registrate non valgono più                                                          |
-| `SETUP_TOKEN`                         | codice per la **prima configurazione** (`/setup`), almeno 16 caratteri (`openssl rand -hex 16`). In produzione il wizard non parte senza, e rifiuta il valore di esempio. Dopo il setup puoi toglierlo                   |
-| `BETTER_AUTH_SECRET`                  | firma i cookie e **cifra i segreti 2FA**: se lo perdi, la 2FA non è più utilizzabile. Si salva nel backup (cifrato)                                                                                                      |
-| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | solo caratteri esadecimali: finiscono dentro un URL                                                                                                                                                                      |
-| `DATABASE_URL`, `REDIS_URL`           | già costruiti dalle password; host `postgres` e `redis` della rete Docker                                                                                                                                                |
-| `TWENTY_API_URL`, `TWENTY_API_KEY`    | senza, in produzione l'elenco clienti resta **vuoto**: i clienti di esempio esistono solo in sviluppo                                                                                                                    |
-| `SMTP_*`                              | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit). Mittente, firma e prova di invio si gestiscono poi in Impostazioni → Email e mittenti                                                            |
-| `S3_*`                                | facoltative: il bucket dei documenti dei progetti si configura da Impostazioni → Archiviazione (chiavi cifrate nel database); qui un ripiego. Il backup del database non contiene i file: proteggili dal lato del bucket |
-| `TELAIO_REGISTRY`                     | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                                    |
-| `WEB_PORT`                            | 3100 (porta dedicata a Telaio)                                                                                                                                                                                           |
-| `*_MEM_LIMIT`, `*_CPUS`               | limiti di risorse, opzionali                                                                                                                                                                                             |
-| `BACKUP_*`                            | vedi sezione Backup                                                                                                                                                                                                      |
+| Variabile                                                  | Note                                                                                                                                                                                                                     |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_URL`                                          | `https://telaio.mattiacapelli.it`. Da qui derivano cookie, origini consentite e **passkey** (rpID = hostname): se cambia, le passkey registrate non valgono più                                                          |
+| `SETUP_TOKEN`                                              | codice per la **prima configurazione** (`/setup`), almeno 16 caratteri (`openssl rand -hex 16`). In produzione il wizard non parte senza, e rifiuta il valore di esempio. Dopo il setup puoi toglierlo                   |
+| `BETTER_AUTH_SECRET`                                       | firma i cookie e **cifra i segreti 2FA**: se lo perdi, la 2FA non è più utilizzabile. Si salva nel backup (cifrato)                                                                                                      |
+| `DATABASE_URL`, `REDIS_URL`                                | URL completi con le credenziali dei servizi condivisi: `postgres://telaio_user:…@postgres:5432/telaio` e `redis://telaio:…@redis:6379/2` (db 2). Caratteri speciali nella password vanno codificati come percentuale     |
+| `PG_CONTAINER`, `PG_UTENTE`, `PG_ADMIN`, `REDIS_CONTAINER` | opzionali, per gli script `deploy/*.sh`: predefiniti `postgres`, `telaio_user`, `postgres_admin`, `redis`                                                                                                                |
+| `TWENTY_API_URL`, `TWENTY_API_KEY`                         | senza, in produzione l'elenco clienti resta **vuoto**: i clienti di esempio esistono solo in sviluppo                                                                                                                    |
+| `SMTP_*`                                                   | un provider SMTP reale per i solleciti (in produzione non c'è Mailpit). Mittente, firma e prova di invio si gestiscono poi in Impostazioni → Email e mittenti                                                            |
+| `S3_*`                                                     | facoltative: il bucket dei documenti dei progetti si configura da Impostazioni → Archiviazione (chiavi cifrate nel database); qui un ripiego. Il backup del database non contiene i file: proteggili dal lato del bucket |
+| `TELAIO_REGISTRY`                                          | `ghcr.io/<proprietario in minuscolo>`                                                                                                                                                                                    |
+| `WEB_PORT`                                                 | 3100 (porta dedicata a Telaio)                                                                                                                                                                                           |
+| `*_MEM_LIMIT`, `*_CPUS`                                    | limiti di risorse, opzionali                                                                                                                                                                                             |
+| `BACKUP_*`                                                 | vedi sezione Backup                                                                                                                                                                                                      |
 
 `TELAIO_VERSION` non va scritta: la imposta il deploy.
 
@@ -226,7 +228,7 @@ allo SHA del commit.
 4. **Proxy**: installa prima il virtual host bootstrap su Nginx UI, emetti il certificato Let's Encrypt e poi attiva il virtual host definitivo (sezione 5).
 5. **GitHub**: crea l'ambiente `production`, inserisci i quattro secrets e configura le variabili (sezione 6). Mantieni `DEPLOY_AUTOMATICO=false`.
 6. **Build**: esegui un push su `v2`. GitHub Actions esegue CI e pubblica le immagini GHCR, ma non fa deploy.
-7. **Primo deploy**: da Actions → Deploy manuale → Run workflow, inserisci lo SHA completo del commit appena pubblicato. Il workflow copia Compose e script, avvia database e Redis, applica le migrazioni, avvia web e worker e verifica `/api/health`.
+7. **Primo deploy**: da Actions → Deploy manuale → Run workflow, inserisci lo SHA completo del commit appena pubblicato. Il workflow copia Compose e script, controlla che Postgres e Redis condivisi siano sani, applica le migrazioni, avvia web e worker e verifica `/api/health`.
 8. **Setup**: apri `https://telaio.mattiacapelli.it/setup`, inserisci il `SETUP_TOKEN` e completa la creazione dell'azienda e del primo amministratore.
 9. **Autodeploy**: dopo aver verificato login, health check e collegamento a Twenty, imposta la variabile di repository `DEPLOY_AUTOMATICO=true`. I push successivi su `v2` faranno deploy automatico.
 
@@ -288,7 +290,7 @@ restano valide: per chiuderle, `delete from sessions where user_id = …`.
 **Telefono perso senza codici di recupero (2FA):**
 
 ```bash
-./deploy/compose.sh exec -T postgres psql -U telaio -d telaio -c "
+docker exec -i postgres psql -U telaio_user -d telaio -c "
   update users set two_factor_enabled = false where email = 'mario.rossi@example.com';
   delete from two_factors where user_id = (select id from users where email = 'mario.rossi@example.com');"
 ```
@@ -302,7 +304,7 @@ Ogni intervento di questo tipo va preceduto da un backup (`./deploy/backup.sh`).
 Un push su `main` fa partire la pipeline. `deploy/deploy.sh <sha>` esegue, nell'ordine:
 
 1. scarica `telaio-web` e `telaio-worker` della versione;
-2. avvia Postgres e Redis se non sono attivi;
+2. controlla che i container condivisi Postgres e Redis siano **healthy** (altrimenti si ferma: non li avvia);
 3. **backup prima del deploy** (`deploy/backup.sh --prima-del-deploy`): se fallisce, il deploy si ferma;
 4. **migrazioni** (`migrate`, job una tantum con l'immagine del worker): se falliscono, web e worker non vengono
    toccati e la versione in esecuzione resta quella di prima;
@@ -335,7 +337,7 @@ credenziali né messaggi d'errore.
 copia offsite, `.env.production`. Redis contiene solo le code (si ricostruiscono dai job schedulati) e non va salvato.
 
 `deploy/backup.sh`:
-- `pg_dump` in formato custom (compresso, in una sola transazione, quindi consistente) dal container Postgres;
+- `pg_dump` in formato custom (compresso, in una sola transazione, quindi consistente) dal container Postgres condiviso (`docker exec`, utente `telaio_user`);
 - controllo dell'archivio (`pg_restore --list`) e checksum SHA-256 accanto al file;
 - retention configurabile (`BACKUP_KEEP_DAYS`, predefinito 14), con almeno 3 copie sempre conservate;
 - copia offsite **cifrata** con [age](https://github.com/FiloSottile/age), via `rclone` o `rsync`.
@@ -433,7 +435,7 @@ configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 | `Host key verification failed`                               | `VPS_SSH_KNOWN_HOSTS` mancante o non corrispondente al server                                                                                                              |
 | Il deploy riesce ma la verifica esterna fallisce             | Nginx UI o certificato: `docker exec nginx-ui nginx -t`, `curl -I https://telaio.mattiacapelli.it/api/health`, DNS e rete Docker `proxy`                                   |
 | `502 Bad Gateway`                                            | il web non è in ascolto: `./deploy/compose.sh ps` e `logs web`                                                                                                             |
-| `/api/health` risponde 503                                   | guarda quale tra `database` e `redis` è `errore`: `./deploy/compose.sh ps`, `logs postgres` o `logs redis`                                                                 |
+| `/api/health` risponde 503                                   | guarda quale tra `database` e `redis` è `errore`: `./deploy/compose.sh ps`; Postgres e Redis sono condivisi: `docker ps`, `docker logs postgres` o `docker logs redis`     |
 | `port is already allocated` su 3100                          | porta occupata: cambia `WEB_PORT` e l'upstream Nginx                                                                                                                       |
 | Migrazioni fallite                                           | il deploy si ferma prima di toccare web e worker. Leggi l'errore (`./deploy/compose.sh logs migrate`), correggi e ripubblica                                               |
 | Login che non funziona dietro Nginx, errore «Invalid origin» | `BETTER_AUTH_URL` diverso dall'indirizzo reale (http/https, dominio)                                                                                                       |
@@ -447,8 +449,9 @@ configurazione, quindi il wizard non riparte e trovi utenti e dati come prima.
 
 ## 12. Note operative
 
-- **Aggiornare Postgres** (da 18 a una major successiva) non è un semplice cambio di tag: richiede dump e ripristino.
-- Le immagini di base (`postgres:18-alpine`, `redis:7-alpine`) seguono i tag delle convenzioni del progetto; per le patch
-  di sicurezza ricrea i container con `./deploy/compose.sh pull postgres redis && ./deploy/compose.sh up -d`.
+- **Postgres e Redis sono condivisi** (`/opt/infrastructure`): aggiornarli (anche una major di Postgres, che richiede dump e
+  ripristino) riguarda tutte le applicazioni che li usano, non solo Telaio. Si fa lì, non da questo repository.
+- `restore.sh` ricrea il database `telaio` con l'utente amministratore `PG_ADMIN`: su un server condiviso, prima di un
+  ripristino assicurati che le altre applicazioni non ne siano toccate (agisce solo sul database `telaio`).
 - I container web e worker girano senza privilegi (utente `node`, `cap_drop: ALL`, `no-new-privileges`).
 - I segreti stanno solo in `/opt/apps/telaio/.env.production` (600) e nei secrets di GitHub; non entrano mai nelle immagini.
