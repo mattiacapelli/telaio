@@ -30,14 +30,14 @@ umask 077
 
 passo "Dump di PostgreSQL → $FILE"
 # Formato custom: già compresso (zlib), consistente (una sola transazione) e ripristinabile con pg_restore.
-if ! compose exec -T postgres pg_dump -U telaio -d telaio --format=custom --compress=6 > "$FILE.parziale"; then
+if ! pg pg_dump -U "$PG_UTENTE" -d telaio --format=custom --compress=6 > "$FILE.parziale"; then
   rm -f "$FILE.parziale"
   errore "pg_dump fallito"
 fi
 mv "$FILE.parziale" "$FILE"
 
 # L'archivio deve essere leggibile e non vuoto.
-compose exec -T postgres pg_restore --list < "$FILE" > /dev/null || { rm -f "$FILE"; errore "il dump non è valido"; }
+pg pg_restore --list < "$FILE" > /dev/null || { rm -f "$FILE"; errore "il dump non è valido"; }
 (cd "$DESTINAZIONE" && sha256 "$(basename "$FILE")" > "$(basename "$FILE").sha256")
 echo "$(du -h "$FILE" | cut -f1)  $(cut -c1-16 "$FILE.sha256")…"
 
