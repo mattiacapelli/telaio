@@ -23,8 +23,9 @@ if [[ "${TELAIO_SALTA_PULL:-0}" != "1" ]]; then
   compose pull web worker
 fi
 
-passo "Avvio database e Redis (se non già attivi)"
-compose up -d --wait --wait-timeout 120 postgres redis
+passo "Controllo Postgres e Redis condivisi"
+richiedi_sano "$PG_CONTAINER"
+richiedi_sano "$REDIS_CONTAINER"
 
 if [[ -n "$PRECEDENTE" ]]; then
   passo "Backup prima del deploy"

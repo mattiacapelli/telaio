@@ -32,17 +32,17 @@ if [[ "$ARCHIVIO" == *.age ]]; then
   age -d -i "$BACKUP_AGE_IDENTITY" -o "$DUMP" "$ARCHIVIO"
 fi
 
-psql_admin() { compose exec -T postgres psql -U telaio -d postgres -v ON_ERROR_STOP=1 "$@"; }
+psql_admin() { pg psql -U "$PG_ADMIN" -d postgres -v ON_ERROR_STOP=1 "$@"; }
 
 if [[ "$MODO" == "--verifica" ]]; then
   DB="telaio_verifica_$(date +%s)"
   passo "Ripristino in un database temporaneo ($DB): i dati reali non vengono toccati"
-  psql_admin -c "CREATE DATABASE \"$DB\"" >/dev/null
+  psql_admin -c "CREATE DATABASE \"$DB\" OWNER \"$PG_UTENTE\"" >/dev/null
   trap 'psql_admin -c "DROP DATABASE IF EXISTS \"$DB\"" >/dev/null 2>&1 || true; rm -rf "$TEMP"' EXIT
-  compose exec -T postgres pg_restore -U telaio -d "$DB" --no-owner --exit-on-error < "$DUMP"
-  TABELLE="$(compose exec -T postgres psql -U telaio -d "$DB" -tA -c "select count(*) from information_schema.tables where table_schema='public'")"
-  UTENTI="$(compose exec -T postgres psql -U telaio -d "$DB" -tA -c "select count(*) from users")"
-  MIGRAZIONI="$(compose exec -T postgres psql -U telaio -d "$DB" -tA -c "select count(*) from drizzle.__drizzle_migrations")"
+  pg pg_restore -U "$PG_UTENTE" -d "$DB" --no-owner --exit-on-error < "$DUMP"
+  TABELLE="$(pg psql -U "$PG_UTENTE" -d "$DB" -tA -c "select count(*) from information_schema.tables where table_schema='public'")"
+  UTENTI="$(pg psql -U "$PG_UTENTE" -d "$DB" -tA -c "select count(*) from users")"
+  MIGRAZIONI="$(pg psql -U "$PG_UTENTE" -d "$DB" -tA -c "select count(*) from drizzle.__drizzle_migrations")"
   echo "tabelle: $TABELLE · utenti: $UTENTI · migrazioni applicate: $MIGRAZIONI"
   [[ "$TABELLE" -gt 0 && "$MIGRAZIONI" -gt 0 ]] || errore "il backup si ripristina ma è vuoto o incompleto"
   passo "Backup verificato: si ripristina senza errori"
@@ -62,8 +62,8 @@ compose stop web worker
 
 passo "Ricreo il database e ripristino"
 psql_admin -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='telaio' AND pid <> pg_backend_pid()" >/dev/null
-psql_admin -c "DROP DATABASE telaio" -c "CREATE DATABASE telaio"
-compose exec -T postgres pg_restore -U telaio -d telaio --no-owner --exit-on-error < "$DUMP"
+psql_admin -c "DROP DATABASE telaio" -c "CREATE DATABASE telaio OWNER \"$PG_UTENTE\""
+pg pg_restore -U "$PG_UTENTE" -d telaio --no-owner --exit-on-error < "$DUMP"
 
 passo "Allineo le migrazioni e riavvio"
 compose run --rm migrate
