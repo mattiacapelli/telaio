@@ -7,6 +7,9 @@ try {
 } catch {}
 
 const config: NextConfig = {
+  // Solo sviluppo: il pulsante degli indicatori di Next copre il menu dell'account (in basso a sinistra)
+  // e intercetta i clic dei test e2e.
+  devIndicators: false,
   // Immagine Docker: output autonomo (solo il necessario a runtime). In sviluppo resta il build normale.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   // Nel monorepo la traccia dei file deve partire dalla radice, non da apps/web.
