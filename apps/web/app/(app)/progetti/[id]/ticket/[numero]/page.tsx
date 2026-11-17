@@ -3,11 +3,13 @@ import {
   ETICHETTE_PRIORITA,
   ETICHETTE_STATO_TICKET,
   ETICHETTE_TIPO_TICKET,
+  formattaOre,
 } from "@telaio/core";
 import {
   and,
   asc,
   documentiDelProgetto,
+  elencaTempo,
   eq,
   getDb,
   isNull,
@@ -26,6 +28,7 @@ import {
   ModificaTicket,
   NuovoCommento,
 } from "@/components/domain/ticket-modali";
+import { AvviaTimerTicket } from "@/components/domain/timer-ticket";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,7 +63,7 @@ export default async function TicketPage({
   if (!riga) notFound();
   const { t } = riga;
   const codice = codiceTicket(riga.codice, t.numero);
-  const [commenti, documenti, utenti, archivio] = await Promise.all([
+  const [commenti, documenti, utenti, archivio, tempo] = await Promise.all([
     db
       .select({ c: ticketCommenti, autore: users.name })
       .from(ticketCommenti)
@@ -70,6 +73,7 @@ export default async function TicketPage({
     documentiDelProgetto(db, id, { ticketId: t.id }),
     db.select({ id: users.id, nome: users.name }).from(users).orderBy(asc(users.name)),
     leggiArchivio(db),
+    elencaTempo(db, { ticketId: t.id, limite: 50 }),
   ]);
   const nome = (uid: string | null) => utenti.find((u) => u.id === uid)?.nome ?? null;
   const stato = STATO_TICKET[t.stato];
@@ -109,6 +113,7 @@ export default async function TicketPage({
                 scadenza: t.scadenza ?? "",
               }}
             />
+            <AvviaTimerTicket ticketId={t.id} />
             <EliminaTicket id={t.id} codice={codice} />
           </>
         }
@@ -141,6 +146,34 @@ export default async function TicketPage({
                 configurato={!!archivio.config}
               />
             </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Tempo"
+              description={
+                tempo.length
+                  ? `${formattaOre(tempo.reduce((s, x) => s + x.v.minuti, 0))} registrati su questo ticket`
+                  : undefined
+              }
+            />
+            {tempo.length === 0 ? (
+              <p className="text-sm text-fg-2">
+                Nessun tempo registrato. Avvia il timer dal pulsante in alto.
+              </p>
+            ) : (
+              <ul className="divide-y divide-line text-sm">
+                {tempo.map(({ v }) => (
+                  <li key={v.id} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate">
+                      <span className="tabular-nums text-fg-3">{formatData(v.data)}</span>{" "}
+                      {v.descrizione ?? "—"}
+                    </span>
+                    <span className="font-medium tabular-nums">{formattaOre(v.minuti)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           <Card>

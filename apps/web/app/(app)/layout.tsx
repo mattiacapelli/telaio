@@ -1,4 +1,4 @@
-import { eq, getDb, pendingActions, sql } from "@telaio/db";
+import { eq, getDb, pendingActions, sql, timerAttivo } from "@telaio/db";
 import { cookies } from "next/headers";
 import { BadgeApp } from "@/components/pwa/badge-app";
 import { BarraInferiore } from "@/components/shell/barra-inferiore";
@@ -9,16 +9,23 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { requireSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [session, jar, [coda]] = await Promise.all([
+  const [session, jar, [coda], timer] = await Promise.all([
     requireSession(),
     cookies(),
     getDb()
       .select({ n: sql<number>`count(*)::int` })
       .from(pendingActions)
       .where(eq(pendingActions.stato, "in_attesa")),
+    timerAttivo(getDb()),
   ]);
   const utente = { nome: session.user.name, email: session.user.email };
   const inAttesa = coda?.n ?? 0;
+  const timerInCorso = timer?.v.avviatoAt
+    ? {
+        avviatoAt: timer.v.avviatoAt.toISOString(),
+        etichetta: [timer.cliente, timer.contratto].filter(Boolean).join(" · "),
+      }
+    : null;
 
   return (
     <div className="flex h-dvh overflow-hidden bg-surface pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
@@ -28,14 +35,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         iniziaCompatta={jar.get("sidebar")?.value === "compatta"}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header utente={utente} inAttesa={inAttesa} />
+        <Header utente={utente} inAttesa={inAttesa} timer={timerInCorso} />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-6 max-md:gap-6 max-md:pb-24 md:px-8">
             {children}
           </div>
         </main>
       </div>
-      <BarraInferiore inAttesa={inAttesa} />
+      <BarraInferiore inAttesa={inAttesa} timerInCorso={timerInCorso !== null} />
       <CommandPalette />
       <Scorciatoie />
       <BadgeApp conteggio={inAttesa} />

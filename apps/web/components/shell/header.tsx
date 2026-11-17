@@ -17,6 +17,7 @@ import { briciole } from "@/lib/nav";
 import { EVENTO_MENU } from "./barra-inferiore";
 import { openPalette } from "./command-palette";
 import { MenuMobile } from "./menu-mobile";
+import { TimerIndicatore } from "./timer-indicatore";
 
 const CREA = [
   { label: "Nuovo preventivo", href: "/preventivi/nuovo" },
@@ -31,9 +32,12 @@ const CREA = [
 export function Header({
   utente,
   inAttesa,
+  timer,
 }: {
   utente: { nome: string; email: string };
   inAttesa: number;
+  /** il timer in corso, se c'è */
+  timer?: { avviatoAt: string; etichetta: string } | null;
 }) {
   const pathname = usePathname();
   const [menuAperto, setMenuAperto] = useState(false);
@@ -57,6 +61,8 @@ export function Header({
 
       {/* Su telefono la navigazione sta nella barra in basso: qui resta solo la ricerca. */}
       <Breadcrumb voci={briciole(pathname)} className="hidden flex-1 md:block" />
+
+      {timer && <TimerIndicatore avviatoAt={timer.avviatoAt} etichetta={timer.etichetta} />}
 
       <button
         type="button"

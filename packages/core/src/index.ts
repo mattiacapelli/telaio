@@ -4,6 +4,7 @@ export * from "./email";
 export * from "./iva";
 export * from "./money";
 export * from "./numerazione";
+export * from "./ore";
 export * from "./pdf";
 export * from "./preventivo";
 export * from "./progetti";

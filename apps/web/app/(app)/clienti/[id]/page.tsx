@@ -15,6 +15,7 @@ import {
   incassi,
   preventivi,
   ragioniSociali,
+  riepilogoMonteOre,
   sql,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
@@ -22,7 +23,9 @@ import { ExternalLink, Folder } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AllegaDocumenti } from "@/components/domain/allega-documenti";
+import { BarraOre } from "@/components/domain/barra-ore";
 import { ElencoDocumenti, rigaDocumento } from "@/components/domain/elenco-documenti";
+import { MonteOreModal } from "@/components/domain/monte-ore-modal";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,9 +36,10 @@ import { StatsRow } from "@/components/ui/stats";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { leggiArchivio } from "@/lib/archivio/config";
-import { formatData } from "@/lib/date";
+import { formatData, oggi } from "@/lib/date";
 import { sqlCanoneAnnuo, sqlUnaTantum } from "@/lib/queries";
 import { STATO_PREVENTIVO } from "@/lib/stati";
+import { elencaEmittenti } from "@/lib/tempo-opzioni";
 
 export const metadata = { title: "Cliente" };
 export const dynamic = "force-dynamic";
@@ -80,6 +84,9 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     ref ? allegatiDelCliente(db, ref.id) : Promise.resolve([]),
     leggiArchivio(db),
   ]);
+
+  const contrattiOre = ref ? await riepilogoMonteOre(db, oggi(), { clienteRefId: ref.id }) : [];
+  const emittenti = ref ? await elencaEmittenti(db) : [];
 
   // Allegati del cliente: i suoi, una «cartella» per ogni progetto, e tutti quelli dei preventivi insieme.
   const diretti = allegati.filter((a) => !a.progetto && !a.preventivo);
@@ -276,6 +283,44 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           </Table>
         )}
       </section>
+
+      {ref && (
+        <section className="flex flex-col gap-3" aria-labelledby="titolo-monte-ore">
+          <div className="flex items-center justify-between">
+            <h2 id="titolo-monte-ore" className="text-base font-semibold">
+              Monte ore
+            </h2>
+            <MonteOreModal
+              clienti={[{ id: ref.id, nome: cliente.nome }]}
+              emittenti={emittenti}
+              clienteRefId={ref.id}
+            />
+          </div>
+          {contrattiOre.length === 0 ? (
+            <p className="text-sm text-fg-2">Nessun contratto a ore per questo cliente.</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {contrattiOre.map(({ contratto: m, corrente }) => (
+                <Card key={m.id} className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link href={`/monte-ore/${m.id}`} className="font-medium hover:underline">
+                      {m.nome}
+                    </Link>
+                    <Badge variant={m.stato === "attivo" ? "ok" : "neutral"} dot>
+                      {m.stato === "attivo" ? "Attivo" : "Concluso"}
+                    </Badge>
+                  </div>
+                  {corrente ? (
+                    <BarraOre saldo={corrente} />
+                  ) : (
+                    <p className="text-sm text-fg-2">Inizia il {formatData(m.dataInizio)}.</p>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="flex flex-col gap-3" aria-labelledby="titolo-documenti">
         <h2 id="titolo-documenti" className="text-base font-semibold">

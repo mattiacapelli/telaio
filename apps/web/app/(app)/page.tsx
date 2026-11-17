@@ -3,6 +3,7 @@ import {
   formatEuroCompatto,
   prezzoVisualizzato,
   type RegoleFiscali,
+  SOGLIA_ESAURIMENTO,
 } from "@telaio/core";
 import {
   abbonamenti,
@@ -17,6 +18,7 @@ import {
   preventivi,
   ragioniSociali,
   rate,
+  riepilogoMonteOre,
   sql,
 } from "@telaio/db";
 import { twentyDaEnv } from "@telaio/twenty";
@@ -189,6 +191,12 @@ export default async function Dashboard({
   }
   const maxFase = Math.max(1, ...[...fasi.values()].map((f) => f.tot));
 
+  const contrattiOre = await riepilogoMonteOre(db, dataOggi, { stato: "attivo" });
+  const inEsaurimento = contrattiOre.filter(
+    (c) => c.corrente && c.corrente.percentuale >= SOGLIA_ESAURIMENTO,
+  ).length;
+  const oreExtra = contrattiOre.filter((c) => c.cicli.some((x) => x.daFatturare > 0)).length;
+
   const daSistemare = [
     {
       n: dovuto[0]?.n_scaduti ?? 0,
@@ -213,6 +221,18 @@ export default async function Dashboard({
       t: "Fatture in bozza da emettere",
       s: "ricevono il numero all'emissione",
       href: "/fatture",
+    },
+    {
+      n: inEsaurimento,
+      t: "Monte ore in esaurimento",
+      s: `oltre l'${SOGLIA_ESAURIMENTO}% delle ore del periodo`,
+      href: "/monte-ore",
+    },
+    {
+      n: oreExtra,
+      t: "Ore extra da fatturare",
+      s: "oltre il monte dei contratti a ore",
+      href: "/monte-ore",
     },
     {
       n: azioni[0]?.n ?? 0,

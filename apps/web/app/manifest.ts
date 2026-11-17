@@ -38,6 +38,12 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
+        name: "Timer",
+        short_name: "Timer",
+        url: "/timer",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+      {
         name: "Nuovo preventivo",
         short_name: "Preventivo",
         url: "/preventivi/nuovo",

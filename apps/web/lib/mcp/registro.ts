@@ -769,6 +769,117 @@ export const STRUMENTI_MCP: StrumentoMcp[] = [
     gruppo: "Documenti",
   },
   {
+    nome: "elenca_monte_ore",
+    descrizione:
+      "Contratti a ore con il saldo del periodo in corso, filtrabili per cliente e stato.",
+    scrittura: false,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "dettaglio_monte_ore",
+    descrizione:
+      "Un contratto a ore: saldo del periodo, periodi precedenti e tempo registrato nel periodo.",
+    scrittura: false,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "crea_monte_ore",
+    descrizione:
+      "Crea un contratto a ore (es. 10 ore al mese: 600 minuti) per un cliente, con la ragione sociale che emette; i periodi mensili partono dal giorno di inizio e le ore non usate decadono.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "modifica_monte_ore",
+    descrizione:
+      "Modifica un contratto a ore (campi non indicati = invariati); cambiando l'arrotondamento le voci si ricalcolano.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "cambia_stato_monte_ore",
+    descrizione: "Conclude o riapre un contratto a ore.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "elimina_monte_ore",
+    descrizione: "Elimina un contratto a ore senza tempo registrato (altrimenti va concluso).",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "fattura_ore_extra",
+    descrizione:
+      "Crea la bozza di fattura con le ore extra ancora da fatturare di un periodo di un contratto a ore (serve la tariffa delle ore extra).",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "elenca_tempo",
+    descrizione: "Tempo registrato, filtrabile per cliente, contratto, progetto, ticket e periodo.",
+    scrittura: false,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "registra_tempo",
+    descrizione:
+      "Registra tempo lavorato (minuti) per un cliente o un contratto a ore; con un contratto conta arrotondato per eccesso.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "modifica_tempo",
+    descrizione: "Modifica una voce di tempo (campi non indicati = invariati).",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "elimina_tempo",
+    descrizione: "Elimina una voce di tempo: il saldo del contratto si aggiorna.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "stato_timer",
+    descrizione: "Dice se c'è un timer in corso e per chi.",
+    scrittura: false,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "avvia_timer",
+    descrizione: "Avvia il timer (uno solo alla volta) per un cliente o un contratto.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "ferma_timer",
+    descrizione: "Ferma il timer in corso e registra i minuti trascorsi.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
+    nome: "scarta_timer",
+    descrizione: "Scarta il timer in corso senza registrare nulla.",
+    scrittura: true,
+    stato: "attivo",
+    gruppo: "Tempo",
+  },
+  {
     nome: "elenca_audit",
     descrizione: "Registro delle operazioni, filtrabile per entità, azione e periodo.",
     scrittura: false,

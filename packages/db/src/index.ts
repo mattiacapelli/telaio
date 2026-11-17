@@ -8,6 +8,7 @@ export * from "./documenti-pdf";
 export * from "./fattura-da-preventivo";
 export * from "./impostazioni-documenti";
 export * from "./numerazione";
+export * from "./ore";
 export * from "./progetti";
 export * from "./rate-abbonamenti";
 export * from "./schema";
