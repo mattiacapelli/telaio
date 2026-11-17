@@ -170,15 +170,20 @@ test("documenti del progetto: carica, scarica uguale, anteprima, elimina; il fil
   await accedi(page);
   await page.goto(`/progetti/${progettoId}`);
   const contenuto = Buffer.from("Contratto di prova\nriga due\n");
-  await page.getByLabel("File da caricare").setInputFiles({
-    name: "contratto è prova.txt",
-    mimeType: "text/plain",
-    buffer: contenuto,
-  });
+  // la pagina può non essere ancora idratata quando si sceglie il file: si riprova
+  await expect(async () => {
+    await page.getByLabel("File da caricare").setInputFiles({
+      name: "contratto è prova.txt",
+      mimeType: "text/plain",
+      buffer: contenuto,
+    });
+    await expect(page.getByLabel("Categoria", { exact: true })).toBeVisible({ timeout: 2000 });
+  }).toPass();
   await page.getByLabel("Categoria", { exact: true }).selectOption("contratto");
   await page.getByLabel("Descrizione", { exact: true }).fill("Versione firmata");
   await page.getByRole("button", { name: "Carica il file" }).click();
-  await expect(page.getByText("contratto è prova.txt")).toBeVisible();
+  // caricato davvero: compare il collegamento per scaricarlo, non solo il nome nell'elenco in attesa
+  await expect(page.getByRole("link", { name: "Scarica contratto è prova.txt" })).toBeVisible();
   await expect(page.getByText("Versione firmata")).toBeVisible();
 
   const [d] =

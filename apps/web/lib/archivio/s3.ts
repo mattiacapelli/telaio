@@ -30,6 +30,9 @@ function creaClient(config: ArchivioConfig, credenziali: Credenziali | null): S3
       endpoint: config.endpoint || undefined,
       forcePathStyle: config.pathStyle,
       credentials: credenziali ?? undefined,
+      // Un bucket irraggiungibile deve dare un errore, non tenere appesa la richiesta fino al 504 del proxy.
+      requestHandler: { connectionTimeout: 5_000, requestTimeout: 60_000 },
+      maxAttempts: 2,
       // Alcuni servizi compatibili con S3 non accettano i checksum aggiuntivi dell'SDK recente.
       requestChecksumCalculation: "WHEN_REQUIRED",
       responseChecksumValidation: "WHEN_REQUIRED",
