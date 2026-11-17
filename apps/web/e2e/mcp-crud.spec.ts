@@ -60,6 +60,9 @@ async function ko(nome: string, args: Record<string, unknown> = {}): Promise<str
 }
 
 async function pulisci() {
+  await sql`delete from monte_ore_extra where monte_ore_id in (select id from monte_ore where cliente_ref_id in (select id from clienti_ref where nome like ${`${NOME}%`}))`;
+  await sql`delete from voci_tempo where cliente_ref_id in (select id from clienti_ref where nome like ${`${NOME}%`})`;
+  await sql`delete from monte_ore where cliente_ref_id in (select id from clienti_ref where nome like ${`${NOME}%`})`;
   const rs = await sql`select id from ragioni_sociali where nome like ${`${NOME}%`}`;
   const rsIds = rs.map((r: { id: string }) => r.id);
   const prj = await sql`select id from progetti where nome like ${`${NOME}%`}`;
@@ -229,6 +232,22 @@ test("l'elenco degli strumenti comprende il CRUD di ogni entità; la chiave di s
     "elenca_archivio",
     "aggiungi_link",
     "collega_documenti_archivio",
+    // monte ore e tempo
+    "elenca_monte_ore",
+    "dettaglio_monte_ore",
+    "crea_monte_ore",
+    "fattura_ore_extra",
+    "modifica_monte_ore",
+    "cambia_stato_monte_ore",
+    "elimina_monte_ore",
+    "elenca_tempo",
+    "registra_tempo",
+    "modifica_tempo",
+    "elimina_tempo",
+    "stato_timer",
+    "avvia_timer",
+    "ferma_timer",
+    "scarta_timer",
     // già presenti
     "elenca_preventivi",
     "crea_fattura_libera",
@@ -923,6 +942,102 @@ test("allegati: link, file su preventivi e clienti, archivio condiviso", async (
   await ok("elimina_preventivo_bozza", { id: prevId });
   await ok("elimina_documento", { id: allegati[0].id });
   await ok("elimina_documento", { id: link.id });
+});
+
+test("monte ore e tempo: contratto, voci arrotondate, saldo, timer", async () => {
+  const [{ id: clienteId }] =
+    await sql`select id from clienti_ref where nome = ${`${NOME} cliente`}`;
+  const giorno = (fa: number) => new Date(Date.now() - fa * 86_400_000).toISOString().slice(0, 10);
+
+  const [{ id: rsId }] = await sql`select id from ragioni_sociali where nome = ${`${NOME} RS`}`;
+  const { id } = await ok("crea_monte_ore", {
+    clienteRefId: clienteId,
+    ragioneSocialeId: rsId,
+    nome: `${NOME} ore`,
+    minutiIncluse: 600,
+    tariffaExtraCent: 6000,
+    dataInizio: giorno(3),
+  });
+  expect(
+    await ko("crea_monte_ore", {
+      clienteRefId: clienteId,
+      nome: "x",
+      minutiIncluse: 0,
+      dataInizio: giorno(1),
+    }),
+  ).toBeTruthy();
+  expect(
+    (
+      await ok<{ periodoCorrente: { rimanenti: number } }[]>("elenca_monte_ore", {
+        clienteRefId: clienteId,
+      })
+    )[0]?.periodoCorrente.rimanenti,
+  ).toBe(600);
+
+  // 70 minuti con passo 15 contano 75
+  const v = await ok("registra_tempo", {
+    monteOreId: id,
+    data: giorno(1),
+    minuti: 70,
+    descrizione: "mcp",
+  });
+  expect(v.minuti).toBe(75);
+  expect(await ko("registra_tempo", { monteOreId: id, data: "2001-01-01", minuti: 10 })).toContain(
+    "fuori dal periodo",
+  );
+  expect(await ko("registra_tempo", { data: giorno(1), minuti: 10 })).toContain(
+    "cliente o un contratto",
+  );
+  let d = await ok("dettaglio_monte_ore", { id });
+  expect(d.periodoCorrente).toMatchObject({ usati: 75, rimanenti: 525 });
+  expect(d.tempoDelPeriodo).toHaveLength(1);
+  expect(d.tempoDelPeriodo[0]).toMatchObject({
+    minutiEffettivi: 70,
+    minuti: 75,
+    durata: "1 h 15 min",
+  });
+
+  // modifica e nuovo arrotondamento: le voci si ricalcolano
+  await ok("modifica_tempo", { id: v.id, minuti: 100 });
+  expect((await ok("dettaglio_monte_ore", { id })).periodoCorrente.usati).toBe(105);
+  await ok("modifica_monte_ore", { id, arrotondamentoMinuti: 5 });
+  expect((await ok("dettaglio_monte_ore", { id })).periodoCorrente.usati).toBe(100);
+  expect((await ok<unknown[]>("elenca_tempo", { monteOreId: id })).length).toBe(1);
+
+  // ore extra: 100 min usati su 600 → nessuna; con altre 9 ore ne restano 40 da fatturare a 60 €/h
+  expect(await ko("fattura_ore_extra", { id, ciclo: 0 })).toContain("Non ci sono ore extra");
+  await ok("registra_tempo", { monteOreId: id, data: giorno(1), minuti: 540 });
+  const fat = await ok("fattura_ore_extra", { id, ciclo: 0 });
+  expect(fat).toMatchObject({ minuti: 40, importoCent: 4000 });
+  expect(await ko("fattura_ore_extra", { id, ciclo: 0 })).toContain("Non ci sono ore extra");
+  const [bozza] = await sql`select imponibile_cent, stato from fatture where id = ${fat.fatturaId}`;
+  expect(bozza).toMatchObject({ imponibile_cent: 4000, stato: "bozza" });
+  // eliminata la bozza, le ore extra tornano da fatturare
+  await ok("elimina_fattura_bozza", { id: fat.fatturaId });
+  expect((await ok("dettaglio_monte_ore", { id })).periodoCorrente.daFatturare).toBe(40);
+  for (const t of await ok<{ id: string; minuti: number }[]>("elenca_tempo", { monteOreId: id }))
+    if (t.minuti === 540) await ok("elimina_tempo", { id: t.id });
+
+  // timer: uno alla volta
+  expect((await ok("stato_timer")).inCorso).toBe(false);
+  await ok("avvia_timer", { monteOreId: id });
+  expect((await ok("stato_timer")).inCorso).toBe(true);
+  expect(await ko("avvia_timer", { clienteRefId: clienteId })).toContain("già un timer");
+  expect((await ok("ferma_timer")).minuti).toBe(5);
+  await ok("avvia_timer", { clienteRefId: clienteId });
+  await ok("scarta_timer");
+  expect(await ko("ferma_timer")).toContain("Nessun timer");
+
+  // con tempo registrato si conclude, non si elimina
+  expect(await ko("elimina_monte_ore", { id })).toContain("si conclude");
+  await ok("cambia_stato_monte_ore", { id, stato: "concluso" });
+  expect(await ko("registra_tempo", { monteOreId: id, data: giorno(1), minuti: 10 })).toContain(
+    "concluso",
+  );
+  for (const t of await ok<{ id: string }[]>("elenca_tempo", { monteOreId: id }))
+    await ok("elimina_tempo", { id: t.id });
+  await ok("elimina_monte_ore", { id });
+  expect(await ko("dettaglio_monte_ore", { id })).toContain("non trovato");
 });
 
 test("un client MCP senza chiave o con chiave sbagliata non entra", async () => {

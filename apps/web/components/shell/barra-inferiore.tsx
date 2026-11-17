@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, LayoutDashboard, Menu, Receipt, Users } from "lucide-react";
+import { FileText, LayoutDashboard, Menu, Timer, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -12,11 +12,18 @@ const VOCI = [
   { href: "/", etichetta: "Home", icona: LayoutDashboard, esatto: true },
   { href: "/clienti", etichetta: "Clienti", icona: Users },
   { href: "/preventivi", etichetta: "Preventivi", icona: FileText },
-  { href: "/fatture", etichetta: "Fatture", icona: Receipt },
+  { href: "/timer", etichetta: "Timer", icona: Timer },
 ] as const;
 
 /** Navigazione principale a una mano, solo su telefono: le sezioni più usate e il menu completo. */
-export function BarraInferiore({ inAttesa }: { inAttesa: number }) {
+export function BarraInferiore({
+  inAttesa,
+  timerInCorso = false,
+}: {
+  inAttesa: number;
+  /** c'è un timer in corso: un puntino sulla voce Timer */
+  timerInCorso?: boolean;
+}) {
   const pathname = usePathname();
   const attiva = (href: string, esatto?: boolean) =>
     esatto ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
@@ -38,6 +45,13 @@ export function BarraInferiore({ inAttesa }: { inAttesa: number }) {
           >
             <Icona aria-hidden />
             {etichetta}
+            {href === "/timer" && timerInCorso && (
+              <span
+                role="status"
+                aria-label="Timer in corso"
+                className="absolute top-2 left-1/2 ml-2 size-2 animate-pulse rounded-full bg-brand"
+              />
+            )}
           </Link>
         );
       })}

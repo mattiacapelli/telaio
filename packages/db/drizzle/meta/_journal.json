@@ -71,6 +71,20 @@
       "when": 1794355502960,
       "tag": "0009_allegati_ovunque",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794926841340,
+      "tag": "0010_monte_ore_e_tempo",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794928659290,
+      "tag": "0011_monte_ore_emittente_ed_extra",
+      "breakpoints": true
     }
   ]
 }

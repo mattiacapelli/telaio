@@ -755,3 +755,142 @@ export async function generaPdf(dati: DatiPdf, modello: ModelloPdf): Promise<Uin
   doc.setCreator("Telaio");
   return doc.save();
 }
+
+// ── Estratto ore di un contratto a ore ───────────────────────────────────────────────────────
+
+export interface DatiPdfOre {
+  emittente: Anagrafica;
+  cliente: Anagrafica;
+  contratto: string;
+  /** periodo dell'estratto, ISO */
+  inizio: string;
+  fine: string;
+  incluseMinuti: number;
+  usatiMinuti: number;
+  /** minuti oltre il monte nel periodo */
+  extraMinuti: number;
+  voci: { data: string; descrizione: string | null; effettiviMinuti: number; minuti: number }[];
+  /** data di emissione dell'estratto, ISO */
+  data: string;
+}
+
+function oreIt(minuti: number): string {
+  const m = Math.abs(Math.round(minuti));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  const t = h === 0 ? `${r} min` : r === 0 ? `${h} h` : `${h} h ${r} min`;
+  return minuti < 0 ? `-${t}` : t;
+}
+
+/** Genera l'estratto ore di un periodo: riepilogo del monte e dettaglio delle voci di tempo. */
+export async function generaPdfOre(dati: DatiPdfOre, modello: ModelloPdf): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const f = new Foglio(
+    doc,
+    await doc.embedFont(StandardFonts.Helvetica),
+    await doc.embedFont(StandardFonts.HelveticaBold),
+  );
+  const accento = coloreDa(modello.colore);
+  const utile = LARGHEZZA - MARGINE * 2;
+  f.nuovaPagina();
+  f.pagina.drawRectangle({ x: 0, y: ALTEZZA - 4, width: LARGHEZZA, height: 4, color: accento });
+
+  const yTesta = f.y;
+  f.testo(dati.emittente.nome, MARGINE, yTesta - 14, 14, { bold: true });
+  const dX = LARGHEZZA - MARGINE;
+  f.testo("Estratto ore", dX, yTesta - 9, 9, { colore: GRIGIO, destra: true });
+  f.testo(dati.contratto, dX, yTesta - 28, 14, { bold: true, destra: true });
+  f.y = yTesta - 52;
+  f.filetto(MARGINE, MARGINE + utile, f.y);
+  f.y -= 18;
+
+  // cliente
+  f.testo("Cliente", MARGINE, f.y - 8, 8.5, { colore: GRIGIO });
+  f.y = f.blocco(dati.cliente.nome || "-", MARGINE, f.y - 14, 12, utile, { bold: true }) - 12;
+
+  // fascia: periodo, incluse, usate, rimanenti o extra
+  const rimanenti = dati.incluseMinuti - dati.usatiMinuti;
+  const celle: [string, string][] = [
+    ["Periodo", `${dataIt(dati.inizio)} - ${dataIt(dati.fine)}`],
+    ["Incluse", oreIt(dati.incluseMinuti)],
+    ["Usate", oreIt(dati.usatiMinuti)],
+    rimanenti >= 0 ? ["Rimanenti", oreIt(rimanenti)] : ["Ore extra", oreIt(dati.extraMinuti)],
+  ];
+  const hFascia = 42;
+  f.serve(hFascia + 20);
+  f.riquadro(MARGINE, f.y, utile, hFascia, { bordo: LINEA });
+  const wCella = utile / celle.length;
+  celle.forEach(([e, v], i) => {
+    const x = MARGINE + i * wCella;
+    if (i > 0)
+      f.pagina.drawLine({
+        start: { x, y: f.y - 8 },
+        end: { x, y: f.y - hFascia + 8 },
+        thickness: 0.5,
+        color: LINEA,
+      });
+    f.testo(e, x + 12, f.y - 16, 8.5, { colore: GRIGIO });
+    f.testo(v, x + 12, f.y - 32, 11, { bold: true, colore: e === "Ore extra" ? ROSSO : NERO });
+  });
+  f.y -= hFascia + 22;
+
+  // tabella delle voci
+  const colData = MARGINE;
+  const colDesc = MARGINE + 70;
+  const colLav = MARGINE + utile - 90;
+  const colCont = MARGINE + utile;
+  const intesta = () => {
+    f.testo("Data", colData, f.y - 9, 8.5, { colore: GRIGIO });
+    f.testo("Descrizione", colDesc, f.y - 9, 8.5, { colore: GRIGIO });
+    f.testo("Lavorate", colLav, f.y - 9, 8.5, { colore: GRIGIO, destra: true });
+    f.testo("Contate", colCont, f.y - 9, 8.5, { colore: GRIGIO, destra: true });
+    f.y -= 16;
+    f.filetto(MARGINE, MARGINE + utile, f.y);
+  };
+  f.serve(60);
+  intesta();
+  if (dati.voci.length === 0) {
+    f.testo("Nessun tempo registrato nel periodo.", colData, f.y - 22, 9.5, { colore: GRIGIO });
+    f.y -= 30;
+  }
+  for (const v of dati.voci) {
+    const righe = f.righe(v.descrizione ?? "-", 9.5, colLav - colDesc - 70);
+    const h = righe.length * 12 + 10;
+    if (f.y - h < BASSO) {
+      f.nuovaPagina();
+      intesta();
+    }
+    f.testo(dataIt(v.data), colData, f.y - 15, 9.5);
+    righe.forEach((r, i) => f.testo(r, colDesc, f.y - 15 - i * 12, 9.5));
+    f.testo(oreIt(v.effettiviMinuti), colLav, f.y - 15, 9.5, { colore: GRIGIO, destra: true });
+    f.testo(oreIt(v.minuti), colCont, f.y - 15, 9.5, { bold: true, destra: true });
+    f.y -= h;
+    f.filetto(MARGINE, MARGINE + utile, f.y);
+  }
+  f.y -= 14;
+  f.serve(30);
+  f.testo("Totale contato", colLav, f.y - 12, 10, { bold: true, destra: true });
+  f.testo(oreIt(dati.usatiMinuti), colCont, f.y - 12, 11, { bold: true, destra: true });
+  f.y -= 34;
+  f.serve(30);
+  f.blocco(
+    "Le ore lavorate sono arrotondate per eccesso secondo il contratto; il totale contato è quello che scala dal monte ore. Le ore non usate nel periodo decadono.",
+    MARGINE,
+    f.y,
+    8.5,
+    utile,
+    { colore: GRIGIO },
+  );
+
+  f.pagine.forEach((p, i) => {
+    const t = `Emesso il ${dataIt(dati.data)}  -  pagina ${i + 1} di ${f.pagine.length}`;
+    p.drawText(perPdf(t), {
+      x: LARGHEZZA - MARGINE - f.larghezza(t, 8),
+      y: 32,
+      size: 8,
+      font: f.font,
+      color: GRIGIO,
+    });
+  });
+  return doc.save();
+}

@@ -4,6 +4,7 @@ import {
   type DatiPdf,
   decodificaLogo,
   generaPdf,
+  generaPdfOre,
   MODELLO_PDF_PREDEFINITO,
   modelloPdfSchema,
   perPdf,
@@ -479,5 +480,69 @@ describe("PDF di un preventivo con abbonamenti", () => {
     expect(t).toContain("Servizio 1");
     expect(t).toContain("Servizio 60");
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(1);
+  });
+});
+
+describe("estratto ore", () => {
+  const base = {
+    emittente: { nome: "MC Digital" },
+    cliente: { nome: "Trattoria Da Marco" },
+    contratto: "Assistenza sito",
+    inizio: "2026-01-15",
+    fine: "2026-02-14",
+    incluseMinuti: 600,
+    usatiMinuti: 450,
+    extraMinuti: 0,
+    voci: [
+      { data: "2026-01-16", descrizione: "Aggiornamento plugin", effettiviMinuti: 70, minuti: 75 },
+      { data: "2026-01-20", descrizione: null, effettiviMinuti: 15, minuti: 15 },
+    ],
+    data: "2026-02-15",
+  };
+
+  it("contiene emittente, cliente, periodo, riepilogo e voci", async () => {
+    const pdf = await generaPdfOre(base, MODELLO_PDF_PREDEFINITO);
+    expect(Buffer.from(pdf.slice(0, 5)).toString()).toBe("%PDF-");
+    const t = await testoDi(pdf);
+    for (const atteso of [
+      "MC Digital",
+      "Estratto ore",
+      "Assistenza sito",
+      "Trattoria Da Marco",
+      "15/01/2026 - 14/02/2026",
+      "10 h",
+      "7 h 30 min",
+      "Rimanenti",
+      "2 h 30 min",
+      "Aggiornamento plugin",
+      "1 h 15 min",
+    ])
+      expect(t, atteso).toContain(atteso);
+  });
+
+  it("oltre il monte mostra le ore extra; con tante voci va su più pagine", async () => {
+    const voci = Array.from({ length: 90 }, (_, i) => ({
+      data: "2026-01-20",
+      descrizione: `Voce numero ${i} con una descrizione abbastanza lunga da andare a capo nella colonna`,
+      effettiviMinuti: 30,
+      minuti: 30,
+    }));
+    const pdf = await generaPdfOre(
+      { ...base, voci, usatiMinuti: 2700, extraMinuti: 2100 },
+      MODELLO_PDF_PREDEFINITO,
+    );
+    const d = await PDFDocument.load(pdf);
+    expect(d.getPageCount()).toBeGreaterThan(1);
+    const t = await testoDi(pdf);
+    expect(t).toContain("Ore extra");
+    expect(t).toContain("35 h");
+    expect(t).toContain("pagina 2 di");
+  });
+
+  it("senza voci lo dice", async () => {
+    const t = await testoDi(
+      await generaPdfOre({ ...base, voci: [], usatiMinuti: 0 }, MODELLO_PDF_PREDEFINITO),
+    );
+    expect(t).toContain("Nessun tempo registrato nel periodo");
   });
 });

@@ -28,6 +28,7 @@ import { type Strumento, strumento } from "./base";
 import { ANAGRAFICHE } from "./strumenti-anagrafiche";
 import { CONTABILITA } from "./strumenti-contabilita";
 import { EXTRA } from "./strumenti-extra";
+import { ORE } from "./strumenti-ore";
 import { PROGETTI } from "./strumenti-progetti";
 
 export const emettiFatturaSchema = z.object({
@@ -196,6 +197,7 @@ export const STRUMENTI: Record<string, Strumento> = {
   ...ANAGRAFICHE,
   ...CONTABILITA,
   ...PROGETTI,
+  ...ORE,
 };
 
 /** Valida i parametri di uno strumento e applica i default; lancia se non sono validi. */

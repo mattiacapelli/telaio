@@ -1,7 +1,22 @@
-import type { Anagrafica, DatiPdf, RigaPdf } from "@telaio/core";
+import {
+  type Anagrafica,
+  type DatiPdf,
+  type DatiPdfOre,
+  type RigaPdf,
+  storicoMonteOre,
+} from "@telaio/core";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Database } from "./client";
-import { fatturaRighe, fatture, preventivi, preventivoRighe, ragioniSociali } from "./schema";
+import {
+  clientiRef,
+  fatturaRighe,
+  fatture,
+  monteOre,
+  preventivi,
+  preventivoRighe,
+  ragioniSociali,
+  vociTempo,
+} from "./schema";
 
 /** Dati di un documento nel formato che serve al PDF, con il nome del file da proporre. */
 export interface DocumentoPdf {
@@ -250,4 +265,59 @@ export async function datiPdfEsempio(
     splitPayment: rs.splitPayment,
   };
   return { dati, ragioneSocialeId: rs.id, nomeFile: `Anteprima-${tipo}.pdf` };
+}
+
+/**
+ * Estratto ore di un contratto per un periodo (`cicloN`; senza, quello di `oggi`). Null se il
+ * contratto non esiste o il periodo non c'è.
+ */
+export async function datiPdfOre(
+  db: Database,
+  monteOreId: string,
+  oggi: string,
+  cicloN?: number,
+): Promise<{ dati: DatiPdfOre; ragioneSocialeId: string; nomeFile: string } | null> {
+  const [r] = await db
+    .select({ m: monteOre, cliente: clientiRef, rs: ragioniSociali })
+    .from(monteOre)
+    .innerJoin(clientiRef, eq(clientiRef.id, monteOre.clienteRefId))
+    .innerJoin(ragioniSociali, eq(ragioniSociali.id, monteOre.ragioneSocialeId))
+    .where(and(eq(monteOre.id, monteOreId), isNull(monteOre.deletedAt)));
+  if (!r) return null;
+  const voci = await db
+    .select()
+    .from(vociTempo)
+    .where(
+      and(
+        eq(vociTempo.monteOreId, monteOreId),
+        isNull(vociTempo.deletedAt),
+        isNull(vociTempo.avviatoAt),
+      ),
+    )
+    .orderBy(asc(vociTempo.data), asc(vociTempo.createdAt));
+  const { corrente, cicli } = storicoMonteOre(r.m, voci, oggi);
+  const ciclo = cicloN === undefined ? corrente : cicli.find((c) => c.n === cicloN);
+  if (!ciclo) return null;
+  const sue = voci.filter((v) => v.data >= ciclo.inizio && v.data <= ciclo.fine);
+  return {
+    ragioneSocialeId: r.rs.id,
+    nomeFile: `Estratto-ore-${nomeSicuro(r.m.nome)}-${ciclo.inizio}.pdf`,
+    dati: {
+      emittente: anagrafica({ nome: r.rs.nome }, r.rs),
+      cliente: anagrafica({ nome: r.cliente.nome }, r.cliente),
+      contratto: r.m.nome,
+      inizio: ciclo.inizio,
+      fine: ciclo.fine,
+      incluseMinuti: ciclo.incluse,
+      usatiMinuti: ciclo.usati,
+      extraMinuti: ciclo.extra,
+      voci: sue.map((v) => ({
+        data: v.data,
+        descrizione: v.descrizione,
+        effettiviMinuti: v.minutiEffettivi,
+        minuti: v.minuti,
+      })),
+      data: oggi,
+    },
+  };
 }
